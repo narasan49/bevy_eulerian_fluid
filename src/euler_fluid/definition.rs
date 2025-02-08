@@ -65,6 +65,7 @@ use bevy::{
 /// }
 /// ```
 #[derive(Component, Clone, ExtractComponent)]
+#[require(Transform)]
 pub struct FluidSettings {
     pub dx: f32,
     pub dt: f32,
