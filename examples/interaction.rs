@@ -92,9 +92,8 @@ fn on_fluid_setup(
             v: velocity_texture.v0.clone(),
         });
 
-        commands.entity(entity).insert((
-            Mesh2d(mesh),
-            MeshMaterial2d(material),
-        ));
+        commands
+            .entity(entity)
+            .insert((Mesh2d(mesh), MeshMaterial2d(material)));
     }
 }

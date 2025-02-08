@@ -10,7 +10,6 @@ use crate::material::FluidMaterialPlugin;
 use bevy::render::storage::ShaderStorageBuffer;
 use bevy::{
     asset::load_internal_asset,
-    math::vec2,
     prelude::*,
     render::{
         extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
@@ -196,8 +195,8 @@ fn update_geometry(
         .map(|(circle, transform, velocity)| {
             return CircleObstacle {
                 radius: circle.radius,
-                center: transform.translation.xz(),
-                velocity: vec2(velocity.u, velocity.v),
+                transform: transform.compute_matrix(),
+                velocity: velocity.0,
             };
         })
         .collect::<Vec<_>>();
