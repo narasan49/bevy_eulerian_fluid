@@ -67,25 +67,31 @@ impl render_graph::Node for EulerFluidNode {
             State::Init => {
                 if let (
                     CachedPipelineState::Ok(_update_grid_label_pipeline),
-                    CachedPipelineState::Ok(_advection_pipeline),
-                    CachedPipelineState::Ok(_add_force_pipeline),
+                    CachedPipelineState::Ok(_advect_u_pipeline),
+                    CachedPipelineState::Ok(_advect_v_pipeline),
+                    CachedPipelineState::Ok(_apply_force_u_pipeline),
+                    CachedPipelineState::Ok(_apply_force_v_pipeline),
                     CachedPipelineState::Ok(_divergence_pipeline),
                     CachedPipelineState::Ok(_jacobi_iteration_pipeline),
                     CachedPipelineState::Ok(_jacobi_iteration_reverse_pipeline),
-                    CachedPipelineState::Ok(_solve_velocity_pipeline),
+                    CachedPipelineState::Ok(_solve_velocity_u_pipeline),
+                    CachedPipelineState::Ok(_solve_velocity_v_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_initialization_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_iteration_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_solve_pipeline),
                     CachedPipelineState::Ok(_advect_levelset_pipeline),
                 ) = (
                     pipeline_cache.get_compute_pipeline_state(pipelines.update_grid_label_pipeline),
-                    pipeline_cache.get_compute_pipeline_state(pipelines.advection_pipeline),
-                    pipeline_cache.get_compute_pipeline_state(pipelines.add_force_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.advect_u_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.advect_v_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.apply_force_u_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.apply_force_v_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.divergence_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.jacobi_iteration_pipeline),
                     pipeline_cache
                         .get_compute_pipeline_state(pipelines.jacobi_iteration_reverse_pipeline),
-                    pipeline_cache.get_compute_pipeline_state(pipelines.solve_velocity_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.solve_velocity_u_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.solve_velocity_v_pipeline),
                     pipeline_cache.get_compute_pipeline_state(
                         pipelines.recompute_levelset_initialization_pipeline,
                     ),
@@ -147,11 +153,17 @@ impl render_graph::Node for EulerFluidNode {
                 let update_grid_label_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.update_grid_label_pipeline)
                     .unwrap();
-                let advection_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.advection_pipeline)
+                let advect_u_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.advect_u_pipeline)
                     .unwrap();
-                let add_force_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.add_force_pipeline)
+                let advect_v_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.advect_v_pipeline)
+                    .unwrap();
+                let apply_force_u_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.apply_force_u_pipeline)
+                    .unwrap();
+                let apply_force_v_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.apply_force_v_pipeline)
                     .unwrap();
                 let divergence_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.divergence_pipeline)
@@ -162,8 +174,11 @@ impl render_graph::Node for EulerFluidNode {
                 let jacobi_iteration_reverse_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.jacobi_iteration_reverse_pipeline)
                     .unwrap();
-                let solve_velocity_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.solve_velocity_pipeline)
+                let solve_velocity_u_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.solve_velocity_u_pipeline)
+                    .unwrap();
+                let solve_velocity_v_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.solve_velocity_v_pipeline)
                     .unwrap();
                 let recompute_levelset_initialization_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.recompute_levelset_initialization_pipeline)
@@ -198,7 +213,7 @@ impl render_graph::Node for EulerFluidNode {
                     );
                     pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
 
-                    pass.set_pipeline(&advection_pipeline);
+                    pass.set_pipeline(&advect_u_pipeline);
                     pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(
@@ -211,8 +226,15 @@ impl render_graph::Node for EulerFluidNode {
                         size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
+                    
+                    pass.set_pipeline(&advect_v_pipeline);
+                    pass.dispatch_workgroups(
+                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.1 + 1,
+                        1,
+                    );
 
-                    pass.set_pipeline(&add_force_pipeline);
+                    pass.set_pipeline(&apply_force_u_pipeline);
                     pass.set_bind_group(
                         1,
                         &bind_groups.uniform_bind_group,
@@ -223,6 +245,13 @@ impl render_graph::Node for EulerFluidNode {
                     pass.dispatch_workgroups(
                         size.0 + 1,
                         size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        1,
+                    );
+
+                    pass.set_pipeline(&apply_force_v_pipeline);
+                    pass.dispatch_workgroups(
+                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.1 + 1,
                         1,
                     );
 
@@ -254,7 +283,7 @@ impl render_graph::Node for EulerFluidNode {
                         );
                     }
 
-                    pass.set_pipeline(&solve_velocity_pipeline);
+                    pass.set_pipeline(&solve_velocity_u_pipeline);
                     pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
                     pass.set_bind_group(
                         1,
@@ -266,6 +295,13 @@ impl render_graph::Node for EulerFluidNode {
                     pass.dispatch_workgroups(
                         size.0 + 1,
                         size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        1,
+                    );
+
+                    pass.set_pipeline(&solve_velocity_v_pipeline);
+                    pass.dispatch_workgroups(
+                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.1 + 1,
                         1,
                     );
 

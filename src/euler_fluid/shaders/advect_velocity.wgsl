@@ -9,13 +9,11 @@
 
 @group(2) @binding(0) var<uniform> constants: SimulationUniform;
 
-@compute
-@workgroup_size(1, 64, 1)
-fn advection(
+@compute @workgroup_size(1, 64, 1)
+fn advect_u(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let x_u = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    let x_v = vec2<i32>(x_u.y, x_u.x);
 
     let label_u = textureLoad(grid_label, x_u - vec2<i32>(0, 1)).r;
     let label_uplus = textureLoad(grid_label, x_u).r;
@@ -32,19 +30,26 @@ fn advection(
             textureStore(u1, x_u, vec4<f32>(backtraced_u, 0.0, 0.0, 0.0));
         }
     }
+}
 
-    let label_v = textureLoad(grid_label, x_v - vec2<i32>(0, 1)).r;
-    let label_vplus = textureLoad(grid_label, x_v).r;
+@compute @workgroup_size(64, 1, 1)
+fn advect_v(
+    @builtin(global_invocation_id) invocation_id: vec3<u32>,
+) {
+    let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
+
+    let label_v = textureLoad(grid_label, x - vec2<i32>(0, 1)).r;
+    let label_vplus = textureLoad(grid_label, x).r;
     if (label_v == 0 || label_vplus == 0) {
-        textureStore(v1, x_v, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+        textureStore(v1, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
     } else {
-        let backtraced_x_v: vec2<f32> = runge_kutta(u0, v0, x_v, constants.dt);
+        let backtraced_x: vec2<f32> = runge_kutta(u0, v0, x, constants.dt);
         let dim_v = vec2<f32>(textureDimensions(v0));
-        if (backtraced_x_v.x < 0.0 || backtraced_x_v.x > dim_v.x - 1.0 || backtraced_x_v.y < 0.0 || backtraced_x_v.y > dim_v.y - 1.0) {
-            textureStore(v1, x_v, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+        if (backtraced_x.x < 0.0 || backtraced_x.x > dim_v.x - 1.0 || backtraced_x.y < 0.0 || backtraced_x.y > dim_v.y - 1.0) {
+            textureStore(v1, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
         } else {
-            let backtraced_v: f32 = v_at(v0, backtraced_x_v);
-            textureStore(v1, x_v, vec4<f32>(backtraced_v, 0.0, 0.0, 0.0));
+            let backtraced_v: f32 = v_at(v0, backtraced_x);
+            textureStore(v1, x, vec4<f32>(backtraced_v, 0.0, 0.0, 0.0));
         }
     }
 }
@@ -92,9 +97,4 @@ fn v_at(
     let v11 = textureLoad(v, vec2<i32>(i + 1, j + 1)).r;
 
     return mix(mix(v00, v10, fract_i), mix(v01, v11, fract_i), fract_j);
-}
-
-fn gausian_2d(x: f32, y: f32, sigma: f32) -> f32 {
-    let b = -1.0 / (2.0 * sigma * sigma);
-    return exp(b * (x * x + y * y));
 }
