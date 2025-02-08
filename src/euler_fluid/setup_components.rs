@@ -64,7 +64,6 @@ pub(crate) fn watch_fluid_component(
             Some(t) => t.compute_matrix(),
             None => Mat4::IDENTITY,
         };
-        info!("fluid_transform: {fluid_transform:?}");
 
         let uniform = SimulationUniform {
             dx: settings.dx,
