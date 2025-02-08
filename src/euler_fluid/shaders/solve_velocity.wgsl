@@ -11,51 +11,53 @@
 
 @group(3) @binding(1) var grid_label: texture_storage_2d<r32uint, read_write>;
 
-@compute
-@workgroup_size(1, 64, 1)
-fn solve_velocity(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
+@compute @workgroup_size(1, 64, 1)
+fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
+    let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let x_u = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-
-    let grid_label_u0 = textureLoad(grid_label, x_u - vec2<i32>(1, 0)).r;
-    let grid_label_u1 = textureLoad(grid_label, x_u).r;
+    let grid_label_u0 = textureLoad(grid_label, x - vec2<i32>(1, 0)).r;
+    let grid_label_u1 = textureLoad(grid_label, x).r;
     if (grid_label_u0 == 2) {
-        let u_solid = textureLoad(u1, x_u - vec2<i32>(1, 0)).r;
-        textureStore(u0, x_u, vec4<f32>(u_solid, 0.0, 0.0, 0.0));
+        let u_solid = textureLoad(u1, x - vec2<i32>(1, 0)).r;
+        textureStore(u0, x, vec4<f32>(u_solid, 0.0, 0.0, 0.0));
     } else if (grid_label_u1 == 2) {
-        let u_solid = textureLoad(u1, x_u).r;
-        textureStore(u0, x_u, vec4<f32>(u_solid, 0.0, 0.0, 0.0));
+        let u_solid = textureLoad(u1, x).r;
+        textureStore(u0, x, vec4<f32>(u_solid, 0.0, 0.0, 0.0));
     } else {
-        let p1_u = textureLoad(p1, x_u).r;
+        let p1_u = textureLoad(p1, x).r;
         var p0_u = 0.0;
-        if x_u.x != 0 {
-            p0_u = textureLoad(p1, x_u - vec2<i32>(1, 0)).r;
+        if x.x != 0 {
+            p0_u = textureLoad(p1, x - vec2<i32>(1, 0)).r;
         }
-        let u = textureLoad(u1, x_u);
+        let u = textureLoad(u1, x);
         let du = vec4<f32>(factor * (p1_u - p0_u), 0.0, 0.0, 0.0);
-        textureStore(u0, x_u, u - du);
+        textureStore(u0, x, u - du);
     }
+}
 
-    let x_v = vec2<i32>(x_u.y, x_u.x);
+@compute @workgroup_size(64, 1, 1)
+fn solve_velocity_v(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
+    let factor = constants.dt / (constants.dx * constants.rho);
+    let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let grid_label_v0 = textureLoad(grid_label, x_v - vec2<i32>(0, 1)).r;
-    let grid_label_v1 = textureLoad(grid_label, x_v).r;
+    let grid_label_v0 = textureLoad(grid_label, x - vec2<i32>(0, 1)).r;
+    let grid_label_v1 = textureLoad(grid_label, x).r;
     if (grid_label_v0 == 2) {
-        let v_solid = textureLoad(v1, x_v - vec2<i32>(0, 1)).r;
-        textureStore(v0, x_v, vec4<f32>(v_solid, 0.0, 0.0, 0.0));
+        let v_solid = textureLoad(v1, x - vec2<i32>(0, 1)).r;
+        textureStore(v0, x, vec4<f32>(v_solid, 0.0, 0.0, 0.0));
     } else if (grid_label_v1 == 2) {
-        let v_solid = textureLoad(v1, x_v).r;
-        textureStore(v0, x_v, vec4<f32>(v_solid, 0.0, 0.0, 0.0));
+        let v_solid = textureLoad(v1, x).r;
+        textureStore(v0, x, vec4<f32>(v_solid, 0.0, 0.0, 0.0));
     } else {
-        let p1_v = textureLoad(p1, x_v).r;
+        let p1_v = textureLoad(p1, x).r;
         var p0_v = 0.0;
-        if x_v.y != 0 {
-            p0_v = textureLoad(p1, x_v - vec2<i32>(0, 1)).r;
+        if x.y != 0 {
+            p0_v = textureLoad(p1, x - vec2<i32>(0, 1)).r;
         }
-        let v = textureLoad(v1, x_v);
+        let v = textureLoad(v1, x);
         let dv = vec4<f32>(factor * (p1_v - p0_v), 0.0, 0.0, 0.0);
-        textureStore(v0, x_v, v - dv);
+        textureStore(v0, x, v - dv);
     }
 }
 
