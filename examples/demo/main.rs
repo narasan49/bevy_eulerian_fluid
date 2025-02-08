@@ -86,32 +86,36 @@ fn setup_scene(mut commands: Commands) {
         ))
         .insert(Name::new("Light"));
 
-    commands.spawn(FluidSettings {
-        dx: 1.0f32,
-        dt: 0.5f32,
-        rho: 1.293f32,
-        gravity: Vec2::ZERO,
-        size: (512, 512),
-        initial_fluid_level: 1.0f32,
-    });
+    commands.spawn((
+        FluidSettings {
+            dx: 1.0f32,
+            dt: 0.5f32,
+            rho: 1.293f32,
+            gravity: Vec2::ZERO,
+            size: (512, 512),
+            initial_fluid_level: 1.0f32,
+        },
+        Transform::from_translation(Vec3::new(0.0, 1.0, 1.0)),
+    ));
 }
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<&VelocityTextures, Added<VelocityTextures>>,
+    query: Query<(Entity, &VelocityTextures), Added<VelocityTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for velocity_texture in &query {
-        let mesh =
-            meshes.add(Mesh::from(Plane3d::default()).translated_by(Vec3::new(0.0, 1.0, 1.0)));
+    for (entity, velocity_texture) in &query {
+        let mesh = meshes.add(Mesh::from(Plane3d::default()));
         let material = materials.add(VelocityMaterial {
             u_range: Vec2::new(-0.01, 0.01),
             v_range: Vec2::new(-0.01, 0.01),
             u: velocity_texture.u0.clone(),
             v: velocity_texture.v0.clone(),
         });
-        commands.spawn((Mesh3d(mesh), MeshMaterial3d(material)));
+        commands
+            .entity(entity)
+            .insert((Mesh3d(mesh), MeshMaterial3d(material)));
     }
 }
 
@@ -129,8 +133,8 @@ fn update_geometry(
     let t = frame.0 as f32 * dt;
     let freq = 0.1;
     for (_circle, mut transform, mut velocity) in &mut object_query {
-        let u = 100.0 * freq * f32::cos(t * freq);
-        velocity.u = u;
+        let u = 0.2 * freq * f32::cos(t * freq);
+        velocity.x = u;
         transform.translation.x += u * dt;
     }
 }
@@ -158,14 +162,14 @@ fn add_object(
             let mut rng = rand::thread_rng();
             commands.spawn((
                 geometry::Circle {
-                    radius: rng.gen_range(10..50) as f32,
+                    radius: rng.gen_range(0.02..0.1),
                 },
                 Transform::from_translation(vec3(
-                    rng.gen_range(0..512) as f32,
+                    rng.gen_range(0.0..1.0),
                     0.0,
-                    rng.gen_range(0..512) as f32,
+                    rng.gen_range(0.0..1.0),
                 )),
-                geometry::Velocity { u: 0.0, v: 0.0 },
+                geometry::Velocity(Vec2::ZERO),
             ));
         }
     }

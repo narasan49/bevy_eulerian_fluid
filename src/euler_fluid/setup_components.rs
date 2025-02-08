@@ -16,11 +16,11 @@ use super::definition::{
 
 pub(crate) fn watch_fluid_component(
     mut commands: Commands,
-    query: Query<(Entity, &FluidSettings), Added<FluidSettings>>,
+    query: Query<(Entity, &FluidSettings, Option<&Transform>), Added<FluidSettings>>,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (entity, settings) in &query {
+    for (entity, settings, transform) in &query {
         let size = settings.size;
 
         if size.0 != size.1 {
@@ -63,12 +63,19 @@ pub(crate) fn watch_fluid_component(
             grid_label,
         };
 
+        let fluid_transform = match transform {
+            Some(t) => t.compute_matrix(),
+            None => Mat4::IDENTITY,
+        };
+        info!("fluid_transform: {fluid_transform:?}");
+
         let uniform = SimulationUniform {
             dx: settings.dx,
             dt: settings.dt,
             rho: settings.rho,
             gravity: settings.gravity,
             initial_fluid_level: settings.initial_fluid_level,
+            fluid_transform,
         };
 
         let local_forces = LocalForces {
