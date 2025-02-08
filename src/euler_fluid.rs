@@ -115,15 +115,15 @@ impl Plugin for FluidPlugin {
 
         load_internal_asset!(
             app,
-            fluid_bind_group::ADVECTION_SHADER_HANDLE,
-            "euler_fluid/shaders/advection.wgsl",
+            fluid_bind_group::ADVECT_VELOCITY_SHADER_HANDLE,
+            "euler_fluid/shaders/advect_velocity.wgsl",
             Shader::from_wgsl
         );
 
         load_internal_asset!(
             app,
-            fluid_bind_group::ADD_FORCE_SHADER_HANDLE,
-            "euler_fluid/shaders/add_force.wgsl",
+            fluid_bind_group::APPLY_FORCE_SHADER_HANDLE,
+            "euler_fluid/shaders/apply_force.wgsl",
             Shader::from_wgsl
         );
 
