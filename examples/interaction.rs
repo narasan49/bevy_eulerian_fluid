@@ -2,6 +2,7 @@ extern crate bevy_eulerian_fluid;
 
 use bevy::{
     asset::AssetMetaCheck,
+    math::vec3,
     prelude::*,
     render::{
         settings::{Backends, WgpuSettings},
@@ -11,6 +12,7 @@ use bevy::{
 
 use bevy_eulerian_fluid::{
     definition::{FluidSettings, VelocityTextures},
+    geometry,
     material::VelocityMaterial,
     FluidPlugin,
 };
@@ -74,6 +76,16 @@ fn setup_scene(mut commands: Commands) {
             initial_fluid_level: 1.0f32,
         },
         Transform::default().with_scale(Vec3::splat(256.0)),
+    ));
+
+    commands.spawn((
+        geometry::RectangleComponent {
+            rectangle: Rectangle {
+                half_size: Vec2::splat(16.0),
+            },
+        },
+        Transform::from_translation(vec3(128.0, 128.0, 0.0)),
+        geometry::Velocity(Vec2::ZERO),
     ));
 }
 

@@ -105,6 +105,14 @@ pub struct VelocityTextures {
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SolidVelocityTextures {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub u_solid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub v_solid: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct PressureTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub p0: Handle<Image>,
@@ -120,12 +128,14 @@ pub struct DivergenceTextures {
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct LevelsetTextures {
-    // levelset between fluid and empty grids. 0: fluid interface, positive: empty grids, negative: fluid grids.
+    /// levelset between fluid and empty grids. 0: fluid interface, positive: empty grids, negative: fluid grids.
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub levelset: Handle<Image>,
-    // grid label which describe grid state. 0: empty, 1: fluid, 2: solid.
-    #[storage_texture(1, image_format = R32Uint, access = ReadWrite)]
-    pub grid_label: Handle<Image>,
+    pub levelset_air0: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub levelset_air1: Handle<Image>,
+    /// levelset between fluid and solids.
+    #[storage_texture(2, image_format = R32Float, access = ReadWrite)]
+    pub levelset_solid: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -143,17 +153,31 @@ pub struct CircleObstacle {
     pub velocity: Vec2,
 }
 
+#[derive(Clone, ShaderType)]
+pub struct RectangleObstacle {
+    pub half_size: Vec2,
+    pub transform: Mat4,
+    pub inverse_transform: Mat4,
+    pub velocity: Vec2,
+}
+
 #[derive(Resource, Clone, ExtractResource, AsBindGroup)]
 pub struct Obstacles {
     #[storage(0, read_only, visibility(compute))]
     pub circles: Handle<ShaderStorageBuffer>,
+    #[storage(1, read_only, visibility(compute))]
+    pub rectangles: Handle<ShaderStorageBuffer>,
 }
 
 impl FromWorld for Obstacles {
     fn from_world(world: &mut World) -> Self {
         let mut buffers = world.resource_mut::<Assets<ShaderStorageBuffer>>();
         let circles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        Self { circles }
+        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
+        Self {
+            circles,
+            rectangles,
+        }
     }
 }
 
@@ -180,6 +204,7 @@ pub struct JumpFloodingUniformBuffer {
 #[derive(Bundle)]
 pub struct FluidSimulationBundle {
     pub velocity_textures: VelocityTextures,
+    pub solid_velocity_textures: SolidVelocityTextures,
     pub pressure_textures: PressureTextures,
     pub divergence_textures: DivergenceTextures,
     pub levelset_textures: LevelsetTextures,

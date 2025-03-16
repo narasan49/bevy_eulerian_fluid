@@ -1,4 +1,4 @@
-@group(0) @binding(0) var levelset: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(1) var levelset: texture_storage_2d<r32float, read_write>;
 
 @group(1) @binding(0) var seeds_x: texture_storage_2d<r32float, read_write>;
 @group(1) @binding(1) var seeds_y: texture_storage_2d<r32float, read_write>;

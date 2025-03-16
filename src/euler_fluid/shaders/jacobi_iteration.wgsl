@@ -1,5 +1,6 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 #import bevy_fluid::coordinate::{left, right, bottom, top};
+#import bevy_fluid::area_fraction::area_fractions;
 
 @group(0) @binding(0) var<uniform> constants: SimulationUniform;
 
@@ -8,92 +9,105 @@
 
 @group(2) @binding(0) var div: texture_storage_2d<r32float, read_write>;
 
-@group(3) @binding(1) var grid_label: texture_storage_2d<r32uint, read_write>;
+@group(3) @binding(1) var levelset_air: texture_storage_2d<r32float, read_write>; // nx, ny
+@group(3) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>; // nx + 1, ny + 1
 
-@compute
-@workgroup_size(8, 8, 1)
+@compute @workgroup_size(8, 8, 1)
 fn jacobi_iteration(
     @builtin(global_invocation_id) invocation_id: vec3<u32>
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    let label = textureLoad(grid_label, x).r;
-    if (label == 2) {
+
+    let levelset_air_ij = textureLoad(levelset_air, x).r;
+    if (abs(levelset_air_ij) < 1.0e-6) {
         textureStore(p1, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
         return;
     }
     
-    let coef = 4.0 
-        - is_solid(grid_label, left(x))
-        - is_solid(grid_label, right(x))
-        - is_solid(grid_label, bottom(x))
-        - is_solid(grid_label, top(x));
+    let x_top = top(x);
+    let x_right = right(x);
+    let x_bottom = bottom(x);
+    let x_left = left(x);
 
-    if (coef == 0.0) {
+    let f = area_fractions(levelset_solid, x);
+
+    let p_iminusj = textureLoad(p0, x_left).r;
+    let p_iplusj = textureLoad(p0, x_right).r;
+    let p_ijminus = textureLoad(p0, x_bottom).r;
+    let p_ijplus = textureLoad(p0, x_top).r;
+
+    let levelset_air_iminusj = textureLoad(levelset_air, x_left).r;
+    let levelset_air_iplusj = textureLoad(levelset_air, x_right).r;
+    let levelset_air_ijminus = textureLoad(levelset_air, x_bottom).r;
+    let levelset_air_ijplus = textureLoad(levelset_air, x_top).r;
+
+    let coef = f.iminusj * (1.0 - max(0.0, levelset_air_iminusj) / levelset_air_ij) 
+        + f.iplusj * (1.0 - max(0.0, levelset_air_iplusj) / levelset_air_ij)
+        + f.ijminus * (1.0 - max(0.0, levelset_air_ijminus) / levelset_air_ij)
+        + f.ijplus * (1.0 - max(0.0, levelset_air_ijplus) / levelset_air_ij);
+    
+    if (abs(coef) < 1.0e-6) {
         textureStore(p1, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
         return;
-    } else {
-        let p_left = pij(p0, grid_label, left(x));
-        let p_right = pij(p0, grid_label, right(x));
-        let p_bottom = pij(p0, grid_label, bottom(x));
-        let p_top = pij(p0, grid_label, top(x));
-        let div_ij = textureLoad(div, x).r;
-
-        let factor = constants.dx * constants.rho / constants.dt;
-        let p = (1.0 / coef) * (p_left + p_right + p_bottom + p_top - factor * div_ij);
-        textureStore(p1, x, vec4<f32>(p, 0.0, 0.0, 0.0));
     }
+    let div_ij = textureLoad(div, x).r;
+
+    let factor = constants.dx * constants.rho / constants.dt;
+    let p = (step(levelset_air_iminusj, 0.0) * f.iminusj * p_iminusj
+        + step(levelset_air_iplusj, 0.0) * f.iplusj * p_iplusj
+        + step(levelset_air_ijminus, 0.0) * f.ijminus * p_ijplus
+        + step(levelset_air_ijplus, 0.0) * f.ijplus * p_ijminus
+        - factor * div_ij) / coef;
+    
+    textureStore(p1, x, vec4<f32>(p, 0.0, 0.0, 0.0));
 }
 
-@compute
-@workgroup_size(8, 8, 1)
+@compute @workgroup_size(8, 8, 1)
 fn jacobi_iteration_reverse(
     @builtin(global_invocation_id) invocation_id: vec3<u32>
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    let label = textureLoad(grid_label, x).r;
-    if (label == 2) {
+
+    let levelset_air_ij = textureLoad(levelset_air, x).r;
+    if (abs(levelset_air_ij) < 1.0e-6) {
         textureStore(p0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
         return;
     }
     
-    let coef = 4.0 
-        - is_solid(grid_label, left(x))
-        - is_solid(grid_label, right(x))
-        - is_solid(grid_label, bottom(x))
-        - is_solid(grid_label, top(x));
+    let x_top = top(x);
+    let x_right = right(x);
+    let x_bottom = bottom(x);
+    let x_left = left(x);
 
-    if (coef == 0.0) {
+    let f = area_fractions(levelset_solid, x);
+
+    let p_iminusj = textureLoad(p1, x_left).r;
+    let p_iplusj = textureLoad(p1, x_right).r;
+    let p_ijminus = textureLoad(p1, x_bottom).r;
+    let p_ijplus = textureLoad(p1, x_top).r;
+
+    let levelset_air_iminusj = textureLoad(levelset_air, x_left).r;
+    let levelset_air_iplusj = textureLoad(levelset_air, x_right).r;
+    let levelset_air_ijminus = textureLoad(levelset_air, x_bottom).r;
+    let levelset_air_ijplus = textureLoad(levelset_air, x_top).r;
+
+    let coef = f.iminusj * (1.0 - max(0.0, levelset_air_iminusj) / levelset_air_ij) 
+        + f.iplusj * (1.0 - max(0.0, levelset_air_iplusj) / levelset_air_ij)
+        + f.ijminus * (1.0 - max(0.0, levelset_air_ijminus) / levelset_air_ij)
+        + f.ijplus * (1.0 - max(0.0, levelset_air_ijplus) / levelset_air_ij);
+
+    if (abs(coef) < 1.0e-6) {
         textureStore(p0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
         return;
-    } else {
-        let p_left = pij(p1, grid_label, left(x));
-        let p_right = pij(p1, grid_label, right(x));
-        let p_bottom = pij(p1, grid_label, bottom(x));
-        let p_top = pij(p1, grid_label, top(x));
-        let div_ij = textureLoad(div, x).r;
-
-        let factor = constants.dx * constants.rho / constants.dt;
-        let p = (1.0 / coef) * (p_left + p_right + p_bottom + p_top - factor * div_ij);
-        textureStore(p0, x, vec4<f32>(p, 0.0, 0.0, 0.0));
     }
-}
+    
+    let div_ij = textureLoad(div, x).r;
+    let factor = constants.dx * constants.rho / constants.dt;
+    let p = (step(levelset_air_iminusj, 0.0) * f.iminusj * p_iminusj
+        + step(levelset_air_iplusj, 0.0) * f.iplusj * p_iplusj
+        + step(levelset_air_ijminus, 0.0) * f.ijminus * p_ijplus
+        + step(levelset_air_ijplus, 0.0) * f.ijplus * p_ijminus
+        - factor * div_ij) / coef;
 
-fn pij(p: texture_storage_2d<r32float, read_write>, label: texture_storage_2d<r32uint, read_write>, x: vec2<i32>) -> f32 {
-    return textureLoad(p, x).r * is_fluid(label, x);
-}
-
-fn is_solid(label: texture_storage_2d<r32uint, read_write>, x: vec2<i32>) -> f32 {
-    if (textureLoad(label, x).r == 2) {
-        return 1.0;
-    } else {
-        return 0.0;
-    }
-}
-
-fn is_fluid(label: texture_storage_2d<r32uint, read_write>, x: vec2<i32>) -> f32 {
-    if (textureLoad(label, x).r == 1) {
-        return 1.0;
-    } else {
-        return 0.0;
-    }
+    textureStore(p0, x, vec4<f32>(p, 0.0, 0.0, 0.0));
 }

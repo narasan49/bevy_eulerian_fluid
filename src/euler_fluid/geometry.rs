@@ -6,4 +6,9 @@ pub struct Circle {
 }
 
 #[derive(Component, Deref, DerefMut)]
+pub struct RectangleComponent {
+    pub rectangle: Rectangle,
+}
+
+#[derive(Component, Deref, DerefMut)]
 pub struct Velocity(pub Vec2);

@@ -19,8 +19,8 @@ use bevy_eulerian_fluid::{
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: f32 = 640.0;
-const HEIGHT: f32 = 360.0;
-const SIZE: (u32, u32) = (256, 256);
+const HEIGHT: f32 = 640.0;
+const SIZE: (u32, u32) = (256, 512);
 
 fn main() {
     let mut app = App::new();
@@ -88,7 +88,7 @@ fn on_fluid_setup(
     for (entity, levelset_textures, velocity_textures) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
-            levelset: levelset_textures.levelset.clone(),
+            levelset: levelset_textures.levelset_air0.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
             offset: 0.0,
             scale: -100.0,
