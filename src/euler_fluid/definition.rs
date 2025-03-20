@@ -172,8 +172,8 @@ pub struct Obstacles {
 impl FromWorld for Obstacles {
     fn from_world(world: &mut World) -> Self {
         let mut buffers = world.resource_mut::<Assets<ShaderStorageBuffer>>();
-        let circles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
+        let circles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
+        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
         Self {
             circles,
             rectangles,

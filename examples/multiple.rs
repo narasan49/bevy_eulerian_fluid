@@ -13,10 +13,13 @@ use bevy_eulerian_fluid::{
     material::VelocityMaterial,
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{
+    fps_counter::FpsCounterPlugin, mouse_motion, solid_boundaries::solid_boundaries,
+};
 
 const WIDTH: f32 = 640.0;
 const HEIGHT: f32 = 360.0;
+const SIZE: usize = 128;
 
 fn main() {
     // [workaround] Asset meta files cannot be found on browser.
@@ -54,6 +57,7 @@ fn main() {
         .add_plugins(FluidPlugin)
         .add_plugins(FpsCounterPlugin)
         .add_systems(Startup, setup_scene)
+        .add_systems(Startup, solid_boundaries::<SIZE, SIZE>)
         .add_systems(Update, (mouse_motion, on_fluid_setup))
         .run();
 }
@@ -62,12 +66,11 @@ fn setup_scene(mut commands: Commands) {
     info!("initialize scene.");
     commands.spawn(Camera2d);
 
-    let size = 128u32;
     for i in 0..4 {
         for j in 0..2 {
             let translation = Vec3::new(
-                (i * size) as f32 * 1.1 - size as f32 * 1.6,
-                (j * size) as f32 * 1.1 - size as f32 * 0.8,
+                (i * SIZE) as f32 * 1.1 - SIZE as f32 * 1.6,
+                (j * SIZE) as f32 * 1.1 - SIZE as f32 * 0.8,
                 0.0,
             );
             commands
@@ -76,12 +79,12 @@ fn setup_scene(mut commands: Commands) {
                     dt: 0.5f32,
                     rho: 1.293f32,
                     gravity: Vec2::ZERO,
-                    size: (size, size),
+                    size: (SIZE as u32, SIZE as u32),
                     initial_fluid_level: 1.0f32,
                 })
                 .insert(
                     Transform::default()
-                        .with_scale(Vec3::splat(size as f32))
+                        .with_scale(Vec3::splat(SIZE as f32))
                         .with_translation(translation),
                 );
         }

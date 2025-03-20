@@ -16,7 +16,9 @@ use bevy_eulerian_fluid::{
     material::VelocityMaterial,
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{
+    fps_counter::FpsCounterPlugin, mouse_motion, solid_boundaries::solid_boundaries,
+};
 
 const WIDTH: f32 = 640.0;
 const HEIGHT: f32 = 360.0;
@@ -57,6 +59,7 @@ fn main() {
     .add_plugins(FluidPlugin)
     .add_plugins(FpsCounterPlugin)
     .add_systems(Startup, setup_scene)
+    .add_systems(Startup, solid_boundaries::<256, 256>)
     .add_systems(Update, on_fluid_setup)
     .add_systems(Update, mouse_motion);
 

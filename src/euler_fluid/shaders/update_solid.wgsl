@@ -105,87 +105,6 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-
-    {
-        let identity = mat4x4<f32>(
-            vec4<f32>(1.0, 0.0, 0.0, 0.0),
-            vec4<f32>(0.0, 1.0, 0.0, 0.0),
-            vec4<f32>(0.0, 0.0, 1.0, 0.0),
-            vec4<f32>(0.0, 0.0, 0.0, 1.0),
-        );
-        let top_rectangle = Rectangle(
-            vec2<f32>(256.0, 3.0),
-            identity,
-            identity,
-            vec2<f32>(0.0, 0.0),
-        );
-        let level_rect = level_rectangle(top_rectangle, vec2<f32>(x) - vec2<f32>(0.5));
-        if (level > level_rect) {
-            level = level_rect;
-        }
-
-        let left_rectangle = Rectangle(
-            vec2<f32>(3.0, 256.0),
-            identity,
-            identity,
-            vec2<f32>(0.0, 0.0),
-        );
-        let level_rectangle_left = level_rectangle(left_rectangle, vec2<f32>(x) - vec2<f32>(0.5));
-        if (level > level_rectangle_left) {
-            level = level_rectangle_left;
-        }
-
-        let bottom_transform = mat4x4<f32>(
-            vec4<f32>(1.0, 0.0, 0.0, 0.0),
-            vec4<f32>(0.0, 1.0, 0.0, 0.0),
-            vec4<f32>(0.0, 0.0, 1.0, 0.0),
-            vec4<f32>(0.0, 255.0, 0.0, 1.0),
-        );
-
-        let inverse_bottom_transform = mat4x4<f32>(
-            vec4<f32>(1.0, 0.0, 0.0, 0.0),
-            vec4<f32>(0.0, 1.0, 0.0, 0.0),
-            vec4<f32>(0.0, 0.0, 1.0, 0.0),
-            vec4<f32>(0.0, -255.0, 0.0, 1.0),
-        );
-
-        let bottom_rectangle = Rectangle(
-            vec2<f32>(256.0, 3.0),
-            bottom_transform,
-            inverse_bottom_transform,
-            vec2<f32>(0.0, 0.0),
-        );
-        let level_rectangle_bottom = level_rectangle(bottom_rectangle, vec2<f32>(x) - vec2<f32>(0.5));
-        if (level > level_rectangle_bottom) {
-            level = level_rectangle_bottom;
-        }
-
-        let right_transform = mat4x4<f32>(
-            vec4<f32>(1.0, 0.0, 0.0, 0.0),
-            vec4<f32>(0.0, 1.0, 0.0, 0.0),
-            vec4<f32>(0.0, 0.0, 1.0, 0.0),
-            vec4<f32>(255.0, 0.0, 0.0, 1.0),
-        );
-
-        let inverse_right_transform = mat4x4<f32>(
-            vec4<f32>(1.0, 0.0, 0.0, 0.0),
-            vec4<f32>(0.0, 1.0, 0.0, 0.0),
-            vec4<f32>(0.0, 0.0, 1.0, 0.0),
-            vec4<f32>(-255.0, 0.0, 0.0, 1.0),
-        );
-
-        let right_rectangle = Rectangle(
-            vec2<f32>(3.0, 256.0),
-            right_transform,
-            inverse_right_transform,
-            vec2<f32>(0.0, 0.0),
-        );
-        let level_rectangle_right = level_rectangle(right_rectangle, vec2<f32>(x) - vec2<f32>(0.5));
-        if (level > level_rectangle_right) {
-            level = level_rectangle_right;
-        }
-    }
-
     if (x.y <= i32(dim_grid.y)) {
         textureStore(u_solid, x, vec4<f32>(u, 0.0, 0.0, 0.0));
     }
@@ -197,6 +116,9 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 fn level_rectangle(rectangle: Rectangle, x: vec2<f32>) -> f32 {
     var level = 1000.0;
+    if (determinant(rectangle.transform) == 0.0) {
+        return level;
+    }
     let x0 = (rectangle.inverse_transform * vec4<f32>(x, 0.0, 1.0)).xy;
     let is_inside_x = abs(x0.x) < rectangle.half_size.x;
     let is_inside_y = abs(x0.y) < rectangle.half_size.y;

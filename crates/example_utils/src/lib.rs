@@ -1,4 +1,5 @@
 pub mod fps_counter;
+pub mod solid_boundaries;
 
 use bevy::{
     input::mouse::MouseMotion,
