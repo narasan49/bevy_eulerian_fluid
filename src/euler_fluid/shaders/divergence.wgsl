@@ -18,8 +18,6 @@ fn divergence(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let x_top = top(x);
     let x_right = right(x);
 
-    let f = area_fractions(levelset_solid, x);
-
     let u_ij = textureLoad(u1, x).r;
     let u_iplusj = textureLoad(u1, x_right).r;
     let v_ij = textureLoad(v1, x).r;
@@ -29,9 +27,15 @@ fn divergence(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let u_solid_iplusj = textureLoad(u_solid, x_right).r;
     let v_solid_ij = textureLoad(v_solid, x).r;
     let v_solid_ijplus = textureLoad(v_solid, x_top).r;
+    
+    let f = area_fractions(levelset_solid, x);
 
-    let rhs = (f.iplusj * u_iplusj - f.iminusj * u_ij + f.ijplus * v_ijplus - f.ijminus * v_ij) 
-        + ((1.0 - f.iplusj) * u_solid_iplusj - (1.0 - f.iminusj) * u_solid_ij + (1.0 - f.ijplus) * v_solid_ijplus - (1.0 - f.ijminus) * v_solid_ij);
+    let du_fluid = f.iplusj * u_iplusj - f.iminusj * u_ij;
+    let dv_fluid = f.ijplus * v_ijplus - f.ijminus * v_ij;
+    let du_solid = (1.0 - f.iplusj) * u_solid_iplusj - (1.0 - f.iminusj) * u_solid_ij;
+    let dv_solid = (1.0 - f.ijplus) * v_solid_ijplus - (1.0 - f.ijminus) * v_solid_ij;
+    
+    let rhs = du_fluid + dv_fluid + du_solid + dv_solid;
 
     textureStore(div, x, vec4<f32>(rhs, 0.0, 0.0, 0.0));
 }

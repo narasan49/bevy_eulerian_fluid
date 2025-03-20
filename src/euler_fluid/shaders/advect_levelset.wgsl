@@ -23,6 +23,12 @@ fn advect_levelset(
     if (x_new.y > f32(size.y) - 1.0) {
         x_new.y = f32(size.y) - 1.0;
     }
+    if (x_new.x < 0.0) {
+        x_new.x = 0.0;
+    }
+    if (x_new.y < 0.0) {
+        x_new.y = 0.0;
+    }
     let level = interpolate2d_grid_center(levelset0, x_new);
     textureStore(levelset1, x, vec4<f32>(level, 0.0, 0.0, 0.0));
 }
