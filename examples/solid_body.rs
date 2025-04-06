@@ -67,14 +67,19 @@ fn setup_scene(
 ) {
     commands.spawn(Camera2d);
 
-    commands.spawn(FluidSettings {
-        dx: 1.0f32,
-        dt: 0.5f32,
-        rho: 997f32, // water
-        gravity: Vec2::Y,
-        size: SIZE,
-        initial_fluid_level: 0.9,
-    });
+    let fluid_domain_rectangle = Rectangle::from_size(Vec2::new(SIZE.0 as f32, SIZE.1 as f32));
+    commands.spawn((
+        FluidSettings {
+            dx: 1.0f32,
+            dt: 0.5f32,
+            rho: 997f32, // water
+            gravity: Vec2::Y,
+            size: SIZE,
+            initial_fluid_level: 0.9,
+        },
+        Mesh2d(meshes.add(fluid_domain_rectangle)),
+        Transform::default().with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0)),
+    ));
 
     let circle = Circle::new(10.0);
     let circle_mesh = meshes.add(circle);
@@ -106,11 +111,7 @@ fn on_fluid_setup(
         });
 
         commands.entity(entity).insert((
-            Mesh2d(mesh.clone()),
             MeshMaterial2d(material),
-            Transform::default()
-                .with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0))
-                .with_scale(Vec3::new(SIZE.0 as f32, SIZE.1 as f32, 0.0)),
         ));
 
         let material_velocity = velocity_materials.add(VelocityMaterial {
