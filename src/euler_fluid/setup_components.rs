@@ -42,7 +42,7 @@ pub(crate) fn watch_fluid_component(
 
         let grid_label = images.new_texture_storage(size, TextureFormat::R32Uint);
 
-        let levelset = images.new_texture_storage(size, TextureFormat::R32Float);
+        let levelset_air = images.new_texture_storage(size, TextureFormat::R32Float);
         let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
         let jump_flooding_seeds_y = images.new_texture_storage(size, TextureFormat::R32Float);
 
@@ -56,7 +56,7 @@ pub(crate) fn watch_fluid_component(
         let divergence_textures = DivergenceTextures { div };
 
         let levelset_textures = LevelsetTextures {
-            levelset,
+            levelset_air,
             grid_label,
         };
 
