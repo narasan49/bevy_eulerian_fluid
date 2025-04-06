@@ -14,7 +14,7 @@ use bevy::{
 
 use bevy_eulerian_fluid::{
     definition::{FluidSettings, SimulationUniform, VelocityTextures},
-    geometry::{self},
+    obstacle::{self},
     material::VelocityMaterial,
     FluidPlugin,
 };
@@ -127,7 +127,7 @@ fn update(mut query: Query<&mut SimulationUniform>, _time: Res<Time>) {
 
 fn update_geometry(
     frame: Res<FrameCount>,
-    mut object_query: Query<(&geometry::Circle, &mut Transform, &mut geometry::Velocity)>,
+    mut object_query: Query<(&obstacle::Circle, &mut Transform, &mut obstacle::Velocity)>,
 ) {
     let dt = 0.5;
     let t = frame.0 as f32 * dt;
@@ -142,7 +142,7 @@ fn update_geometry(
 fn button_update(
     mut commands: Commands,
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<Button>, With<ResetButton>)>,
-    object_query: Query<Entity, With<geometry::Circle>>,
+    object_query: Query<Entity, With<obstacle::Circle>>,
 ) {
     for interaction in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -161,7 +161,7 @@ fn add_object(
         if *interaction == Interaction::Pressed {
             let mut rng = rand::thread_rng();
             commands.spawn((
-                geometry::Circle {
+                obstacle::Circle {
                     radius: rng.gen_range(0.02..0.1),
                 },
                 Transform::from_translation(vec3(
@@ -169,7 +169,7 @@ fn add_object(
                     0.0,
                     rng.gen_range(0.0..1.0),
                 )),
-                geometry::Velocity(Vec2::ZERO),
+                obstacle::Velocity(Vec2::ZERO),
             ));
         }
     }
