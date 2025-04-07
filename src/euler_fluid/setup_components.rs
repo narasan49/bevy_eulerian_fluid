@@ -44,7 +44,8 @@ pub(crate) fn watch_fluid_component(
         let p0 = images.new_texture_storage(size, TextureFormat::R32Float);
         let p1 = images.new_texture_storage(size, TextureFormat::R32Float);
 
-        let levelset_air = images.new_texture_storage(size, TextureFormat::R32Float);
+        let levelset_air0 = images.new_texture_storage(size, TextureFormat::R32Float);
+        let levelset_air1 = images.new_texture_storage(size, TextureFormat::R32Float);
         let levelset_solid = images.new_texture_storage(size_vertex, TextureFormat::R32Float);
 
         let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
@@ -62,7 +63,8 @@ pub(crate) fn watch_fluid_component(
         let divergence_textures = DivergenceTextures { div };
 
         let levelset_textures = LevelsetTextures {
-            levelset_air,
+            levelset_air0,
+            levelset_air1,
             levelset_solid,
         };
 
