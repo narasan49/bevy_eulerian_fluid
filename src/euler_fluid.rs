@@ -1,6 +1,6 @@
 pub mod definition;
 pub mod fluid_bind_group;
-pub mod obstacle;
+pub mod geometry;
 pub mod render_node;
 pub mod setup_components;
 
@@ -24,18 +24,14 @@ use definition::{
     PressureTextures, SimulationUniform, VelocityTextures,
 };
 use fluid_bind_group::FluidPipelines;
-use obstacle::Velocity;
+use geometry::Velocity;
 
 use render_node::{EulerFluidNode, FluidLabel};
 
 use setup_components::watch_fluid_component;
-use crate::definition::SolidVelocityTextures;
 
 const FLUID_UNIFORM_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x8B9323522322463BA8CF530771C532EF);
-
-const AREA_FRACTION_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x02488F1BF9B14CB2892350B9C578F330);
 
 const COORDINATE_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x9F8E2E5B1E5F40C096C31175C285BF11);
@@ -48,7 +44,6 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins(ExtractComponentPlugin::<FluidBindGroups>::default())
             .add_plugins(ExtractComponentPlugin::<VelocityTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<SolidVelocityTextures>::default())
             .add_plugins(ExtractComponentPlugin::<PressureTextures>::default())
             .add_plugins(ExtractComponentPlugin::<DivergenceTextures>::default())
             .add_plugins(ExtractComponentPlugin::<LevelsetTextures>::default())
@@ -92,6 +87,13 @@ impl Plugin for FluidPlugin {
 
         load_internal_asset!(
             app,
+            COORDINATE_SHADER_HANDLE,
+            "euler_fluid/shaders/coordinate.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
             fluid_bind_group::INITIALIZE_GRID_CENTER_SHADER_HANDLE,
             "euler_fluid/shaders/initialize_grid_center.wgsl",
             Shader::from_wgsl
@@ -106,8 +108,8 @@ impl Plugin for FluidPlugin {
 
         load_internal_asset!(
             app,
-            fluid_bind_group::UPDATE_SOLID_SHADER_HANDLE,
-            "euler_fluid/shaders/update_solid.wgsl",
+            fluid_bind_group::UPDATE_GRID_LABEL_SHADER_HANDLE,
+            "euler_fluid/shaders/update_grid_label.wgsl",
             Shader::from_wgsl
         );
 
@@ -173,20 +175,6 @@ impl Plugin for FluidPlugin {
             "euler_fluid/shaders/advect_levelset.wgsl",
             Shader::from_wgsl
         );
-
-        load_internal_asset!(
-            app,
-            AREA_FRACTION_SHADER_HANDLE,
-            "euler_fluid/shaders/utils/area_fraction.wgsl",
-            Shader::from_wgsl
-        );
-
-        load_internal_asset!(
-            app,
-            COORDINATE_SHADER_HANDLE,
-            "euler_fluid/shaders/utils/coordinate.wgsl",
-            Shader::from_wgsl
-        );
     }
 
     fn finish(&self, app: &mut App) {
@@ -198,7 +186,7 @@ impl Plugin for FluidPlugin {
 }
 
 fn update_geometry(
-    query: Query<(&obstacle::Circle, &Transform, &Velocity)>,
+    query: Query<(&geometry::Circle, &Transform, &Velocity)>,
     obstacles: Res<Obstacles>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {

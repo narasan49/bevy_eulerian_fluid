@@ -18,7 +18,6 @@ fn iterate(
     @builtin(global_invocation_id) invocation_id: vec3<u32>
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    let size = vec2<i32>(textureDimensions(seeds_x));
 
     let current_seed = get_seed(x);
     for (var i: i32 = -1; i <= 1; i++) {
@@ -27,9 +26,6 @@ fn iterate(
                 continue;
             }
             let neighbor = vec2<i32>(x.x + i * step, x.y + j * step);
-            if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= size.x || neighbor.y >= size.y) {
-                continue;
-            }
             let neighbor_seed = get_seed(neighbor);
             if (neighbor_seed.x == -1.0 && neighbor_seed.y == -1.0) {
                 continue;

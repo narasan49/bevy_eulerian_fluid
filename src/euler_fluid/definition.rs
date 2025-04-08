@@ -83,7 +83,6 @@ pub struct SimulationUniform {
     pub gravity: Vec2,
     pub initial_fluid_level: f32,
     pub fluid_transform: Mat4,
-    pub size: Vec2,
 }
 
 /// Fluid velocity field.
@@ -106,14 +105,6 @@ pub struct VelocityTextures {
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub struct SolidVelocityTextures {
-    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub u_solid: Handle<Image>,
-    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
-    pub v_solid: Handle<Image>,
-}
-
-#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct PressureTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub p0: Handle<Image>,
@@ -129,15 +120,12 @@ pub struct DivergenceTextures {
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct LevelsetTextures {
-    // levelset between empty air (>=0) vs fluid or solid (<0).
+    // levelset between fluid and empty grids. 0: fluid interface, positive: empty grids, negative: fluid grids.
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub levelset_air0: Handle<Image>,
-    // intermediate levelset between empty air (>=0) vs fluid or solid (<0).
-    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
-    pub levelset_air1: Handle<Image>,
-    // levelset between solid (<0) vs fluid or empty air (>=0).
-    #[storage_texture(2, image_format = R32Float, access = ReadWrite)]
-    pub levelset_solid: Handle<Image>,
+    pub levelset: Handle<Image>,
+    // grid label which describe grid state. 0: empty, 1: fluid, 2: solid.
+    #[storage_texture(1, image_format = R32Uint, access = ReadWrite)]
+    pub grid_label: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -192,7 +180,6 @@ pub struct JumpFloodingUniformBuffer {
 #[derive(Bundle)]
 pub struct FluidSimulationBundle {
     pub velocity_textures: VelocityTextures,
-    pub solid_velocity_textures: SolidVelocityTextures,
     pub pressure_textures: PressureTextures,
     pub divergence_textures: DivergenceTextures,
     pub levelset_textures: LevelsetTextures,
