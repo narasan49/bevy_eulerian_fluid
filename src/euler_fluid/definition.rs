@@ -83,7 +83,6 @@ pub struct SimulationUniform {
     pub gravity: Vec2,
     pub initial_fluid_level: f32,
     pub fluid_transform: Mat4,
-    pub size: Vec2,
 }
 
 /// Fluid velocity field.

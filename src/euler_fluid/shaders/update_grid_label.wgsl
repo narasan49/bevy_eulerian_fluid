@@ -20,7 +20,8 @@ struct Circle {
 fn update_grid_label(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let x = vec2<i32>(i32(global_id.x), i32(global_id.y));
     let dim_grid = textureDimensions(grid_label);
-    let xy = to_world(vec2<f32>(x), dim_grid);
+    let uv = vec2<f32>(f32(x.x) / f32(dim_grid.x), f32(x.y) / f32(dim_grid.y));
+    let xy = (vec4<f32>(uv, 0.0, 1.0) * simulation_uniform.fluid_transform).xy;
 
     // ToDo: User defined boundary conditions
     if (x.x == 0 || x.x == i32(dim_grid.x) - 1 || x.y == 0 || x.y == i32(dim_grid.y) - 1) {
@@ -45,10 +46,13 @@ fn update_grid_label(@builtin(global_invocation_id) global_id: vec3<u32>) {
             break;
         }
         let circle = circles[i];
-        let translation = circle.transform[3].xy;
-        
-        let distance = distance(xy, translation);
-        if distance < circle.radius {
+        let translation = circle.transform[3].xz;
+        let dx = xy.x - translation.x;
+        let dy = xy.y - translation.y;
+        let squared_distance = dx * dx + dy * dy;
+        let squared_radius = circle.radius * circle.radius;
+
+        if squared_distance < squared_radius {
             label = 2u;
             u = circle.velocity.x;
             v = circle.velocity.y;
@@ -64,11 +68,4 @@ fn update_grid_label(@builtin(global_invocation_id) global_id: vec3<u32>) {
         textureStore(u0, x, vec4<f32>(u, 0.0, 0.0, 0.0));
         textureStore(v0, x, vec4<f32>(v, 0.0, 0.0, 0.0));
     }
-}
-
-fn to_world(x: vec2<f32>, dim: vec2<u32>) -> vec2<f32> {
-    let uv = x / vec2<f32>(dim);
-    // [0, 1] -> [-0.5, 0.5] -> [-0.5 * size, 0.5 * size]
-    let xy = vec2<f32>(uv.x - 0.5, -uv.y + 0.5) * simulation_uniform.size;
-    return (simulation_uniform.fluid_transform * vec4<f32>(xy, 0.0, 1.0)).xy;
 }
