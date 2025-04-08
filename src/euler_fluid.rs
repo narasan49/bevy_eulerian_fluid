@@ -1,6 +1,6 @@
 pub mod definition;
 pub mod fluid_bind_group;
-pub mod obstacle;
+pub mod geometry;
 pub mod render_node;
 pub mod setup_components;
 
@@ -24,7 +24,7 @@ use definition::{
     PressureTextures, SimulationUniform, VelocityTextures,
 };
 use fluid_bind_group::FluidPipelines;
-use obstacle::Velocity;
+use geometry::Velocity;
 
 use render_node::{EulerFluidNode, FluidLabel};
 
@@ -186,7 +186,7 @@ impl Plugin for FluidPlugin {
 }
 
 fn update_geometry(
-    query: Query<(&obstacle::Circle, &Transform, &Velocity)>,
+    query: Query<(&geometry::Circle, &Transform, &Velocity)>,
     obstacles: Res<Obstacles>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
