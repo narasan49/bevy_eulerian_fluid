@@ -72,6 +72,7 @@ pub(crate) fn watch_fluid_component(
             gravity: settings.gravity,
             initial_fluid_level: settings.initial_fluid_level,
             fluid_transform,
+            size: Vec2::new(size.0 as f32, size.1 as f32),
         };
 
         let local_forces = LocalForces {
