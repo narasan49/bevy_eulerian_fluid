@@ -7,7 +7,6 @@ pub mod setup_components;
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::material::FluidMaterialPlugin;
-use bevy::render::storage::ShaderStorageBuffer;
 use bevy::{
     asset::load_internal_asset,
     prelude::*,
@@ -20,16 +19,15 @@ use bevy::{
     },
 };
 use definition::{
-    CircleObstacle, DivergenceTextures, JumpFloodingSeedsTextures, LocalForces, Obstacles,
-    PressureTextures, SimulationUniform, VelocityTextures,
+    DivergenceTextures, JumpFloodingSeedsTextures, LocalForces, Obstacles, PressureTextures,
+    SimulationUniform, VelocityTextures,
 };
 use fluid_bind_group::FluidPipelines;
-use obstacle::Velocity;
 
 use render_node::{EulerFluidNode, FluidLabel};
 
-use setup_components::watch_fluid_component;
 use crate::definition::SolidVelocityTextures;
+use setup_components::watch_fluid_component;
 
 const FLUID_UNIFORM_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x8B9323522322463BA8CF530771C532EF);
@@ -57,7 +55,13 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)
-            .add_systems(Update, update_geometry)
+            .add_systems(
+                Update,
+                (
+                    obstacle::update_obstacle_circle,
+                    obstacle::update_obstacle_rectangle,
+                ),
+            )
             .add_systems(Update, watch_fluid_component);
 
         let render_app = app.sub_app_mut(RenderApp);
@@ -195,24 +199,4 @@ impl Plugin for FluidPlugin {
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<FluidPipelines>();
     }
-}
-
-fn update_geometry(
-    query: Query<(&obstacle::Circle, &Transform, &Velocity)>,
-    obstacles: Res<Obstacles>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
-) {
-    let circles = query
-        .iter()
-        .map(|(circle, transform, velocity)| {
-            return CircleObstacle {
-                radius: circle.radius,
-                transform: transform.compute_matrix(),
-                velocity: velocity.0,
-            };
-        })
-        .collect::<Vec<_>>();
-
-    let circles_buffer = buffers.get_mut(&obstacles.circles).unwrap();
-    circles_buffer.set_data(circles);
 }

@@ -20,7 +20,9 @@ use bevy::{
 };
 
 use super::definition::{
-    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform, JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, Obstacles, PressureTextures, SimulationUniform, SolidVelocityTextures, VelocityTextures
+    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform,
+    JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, Obstacles, PressureTextures,
+    SimulationUniform, SolidVelocityTextures, VelocityTextures,
 };
 
 pub(super) const INITIALIZE_GRID_CENTER_SHADER_HANDLE: Handle<Shader> =
@@ -93,7 +95,8 @@ impl FromWorld for FluidPipelines {
             ),
         );
         let velocity_bind_group_layout = VelocityTextures::bind_group_layout(render_device);
-        let solid_velocity_bind_group_layout = SolidVelocityTextures::bind_group_layout(render_device);
+        let solid_velocity_bind_group_layout =
+            SolidVelocityTextures::bind_group_layout(render_device);
         let local_forces_bind_group_layout = LocalForces::bind_group_layout(render_device);
         let pressure_bind_group_layout = PressureTextures::bind_group_layout(render_device);
         let divergence_bind_group_layout = DivergenceTextures::bind_group_layout(render_device);
@@ -178,35 +181,37 @@ impl FromWorld for FluidPipelines {
             zero_initialize_workgroup_memory: false,
         });
 
-        let apply_force_u_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some(Cow::from("Queue AddForcePipeline")),
-            layout: vec![
-                velocity_bind_group_layout.clone(),
-                uniform_bind_group_layout.clone(),
-                local_forces_bind_group_layout.clone(),
-                levelset_bind_group_layout.clone(),
-            ],
-            push_constant_ranges: vec![],
-            shader: APPLY_FORCE_SHADER_HANDLE,
-            shader_defs: vec![],
-            entry_point: Cow::from("apply_force_u"),
-            zero_initialize_workgroup_memory: false,
-        });
+        let apply_force_u_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue AddForcePipeline")),
+                layout: vec![
+                    velocity_bind_group_layout.clone(),
+                    uniform_bind_group_layout.clone(),
+                    local_forces_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: APPLY_FORCE_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("apply_force_u"),
+                zero_initialize_workgroup_memory: false,
+            });
 
-        let apply_force_v_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some(Cow::from("Queue AddForcePipeline")),
-            layout: vec![
-                velocity_bind_group_layout.clone(),
-                uniform_bind_group_layout.clone(),
-                local_forces_bind_group_layout.clone(),
-                levelset_bind_group_layout.clone(),
-            ],
-            push_constant_ranges: vec![],
-            shader: APPLY_FORCE_SHADER_HANDLE,
-            shader_defs: vec![],
-            entry_point: Cow::from("apply_force_v"),
-            zero_initialize_workgroup_memory: false,
-        });
+        let apply_force_v_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue AddForcePipeline")),
+                layout: vec![
+                    velocity_bind_group_layout.clone(),
+                    uniform_bind_group_layout.clone(),
+                    local_forces_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: APPLY_FORCE_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("apply_force_v"),
+                zero_initialize_workgroup_memory: false,
+            });
 
         let divergence_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -272,21 +277,21 @@ impl FromWorld for FluidPipelines {
                 zero_initialize_workgroup_memory: false,
             });
 
-            let solve_velocity_v_pipeline =
-                pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                    label: Some(Cow::from("Queue SolveVelocityPipeline")),
-                    layout: vec![
-                        velocity_bind_group_layout.clone(),
-                        uniform_bind_group_layout.clone(),
-                        pressure_bind_group_layout.clone(),
-                        levelset_bind_group_layout.clone(),
-                    ],
-                    push_constant_ranges: vec![],
-                    shader: SOLVE_VELOCITY_SHADER_HANDLE,
-                    shader_defs: vec![],
-                    entry_point: Cow::from("solve_velocity_v"),
-                    zero_initialize_workgroup_memory: false,
-                });
+        let solve_velocity_v_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue SolveVelocityPipeline")),
+                layout: vec![
+                    velocity_bind_group_layout.clone(),
+                    uniform_bind_group_layout.clone(),
+                    pressure_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: SOLVE_VELOCITY_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("solve_velocity_v"),
+                zero_initialize_workgroup_memory: false,
+            });
 
         let recompute_levelset_initialization_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {

@@ -5,12 +5,22 @@ struct Circle {
     transform: mat4x4<f32>,
     velocity: vec2<f32>,
 }
+
+struct Rectangle {
+    half_size: vec2<f32>,
+    transform: mat4x4<f32>,
+    inverse_transform: mat4x4<f32>,
+    velocity: vec2<f32>,
+    angular_velocity: f32,
+}
+
 @group(0) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
 
 @group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
 @group(2) @binding(0) var<storage, read> circles: array<Circle>;
+@group(2) @binding(1) var<storage, read> rectangles: array<Rectangle>;
 
 @group(3) @binding(0) var<uniform> simulation_uniform: SimulationUniform;
 
@@ -65,6 +75,35 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
             i = i + 1u;
         }
     }
+    
+    let total_rect = arrayLength(&rectangles);
+    i = 0u;
+    loop {
+        if (i >= total_rect) {
+            break;
+        }
+
+        let rectangle = rectangles[i];
+        
+        let level_rectangle = level_rectangle(rectangle, xy_vertex);
+        if (level > level_rectangle) {
+            level = level_rectangle;
+        }
+
+        let level_edge_x = level_rectangle(rectangle, xy_edge_x);
+        if (level_edge_x < 0.0) {
+            u = rectangle_velocity(rectangle, xy_edge_x).x;
+        }
+
+        let level_edge_y = level_rectangle(rectangle, xy_edge_y);
+        if (level_edge_y < 0.0) {
+            v = rectangle_velocity(rectangle, xy_edge_y).y;
+        }
+
+        continuing {
+            i = i + 1u;
+        }
+    }
 
     if (x.y <= i32(dim_grid.y)) {
         textureStore(u_solid, x, vec4<f32>(u, 0.0, 0.0, 0.0));
@@ -80,4 +119,35 @@ fn to_world(x: vec2<f32>, dim: vec2<u32>) -> vec2<f32> {
     // [0, 1] -> [-0.5, 0.5] -> [-0.5 * size, 0.5 * size]
     let xy = vec2<f32>(uv.x - 0.5, -uv.y + 0.5) * simulation_uniform.size;
     return (simulation_uniform.fluid_transform * vec4<f32>(xy, 0.0, 1.0)).xy;
+}
+
+fn level_rectangle(rectangle: Rectangle, x: vec2<f32>) -> f32 {
+    var level = 1000.0;
+    if (determinant(rectangle.transform) == 0.0) {
+        return level;
+    }
+    let x0 = (rectangle.inverse_transform * vec4<f32>(x, 0.0, 1.0)).xy;
+    let is_inside_x = abs(x0.x) < rectangle.half_size.x;
+    let is_inside_y = abs(x0.y) < rectangle.half_size.y;
+    if (is_inside_x) {
+        if (is_inside_y) {
+            level = max(abs(x0.x) - rectangle.half_size.x, abs(x0.y) - rectangle.half_size.y);
+        } else {
+            level = abs(x0.y) - rectangle.half_size.y;
+        }
+    } else {
+        if (is_inside_y) {
+            level = abs(x0.x) - rectangle.half_size.x;
+        } else {
+            level = length(vec2<f32>(abs(x0.x) - rectangle.half_size.x, abs(x0.y) - rectangle.half_size.y));
+        }
+    }
+    return level;
+}
+
+fn rectangle_velocity(rectangle: Rectangle, x: vec2<f32>) -> vec2<f32> {
+    let r = x - rectangle.transform[3].xy;
+    let omega = rectangle.angular_velocity;
+    let v = rectangle.velocity + vec2<f32>(-omega * r.y, omega * r.x);
+    return v;
 }

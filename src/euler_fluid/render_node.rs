@@ -226,7 +226,7 @@ impl render_graph::Node for EulerFluidNode {
                         size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
-                    
+
                     pass.set_pipeline(&advect_v_pipeline);
                     pass.dispatch_workgroups(
                         size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,

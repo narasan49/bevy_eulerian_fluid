@@ -11,7 +11,8 @@ use crate::{
 };
 
 use super::definition::{
-    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures, SolidVelocityTextures,
+    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
+    SolidVelocityTextures,
 };
 
 pub(crate) fn watch_fluid_component(

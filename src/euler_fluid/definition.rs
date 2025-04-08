@@ -155,17 +155,32 @@ pub struct CircleObstacle {
     pub velocity: Vec2,
 }
 
+#[derive(Clone, ShaderType)]
+pub struct RectangleObstacle {
+    pub half_size: Vec2,
+    pub transform: Mat4,
+    pub inverse_transform: Mat4,
+    pub velocity: Vec2,
+    pub angular_velocity: f32,
+}
+
 #[derive(Resource, Clone, ExtractResource, AsBindGroup)]
 pub struct Obstacles {
     #[storage(0, read_only, visibility(compute))]
     pub circles: Handle<ShaderStorageBuffer>,
+    #[storage(1, read_only, visibility(compute))]
+    pub rectangles: Handle<ShaderStorageBuffer>,
 }
 
 impl FromWorld for Obstacles {
     fn from_world(world: &mut World) -> Self {
         let mut buffers = world.resource_mut::<Assets<ShaderStorageBuffer>>();
         let circles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        Self { circles }
+        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
+        Self {
+            circles,
+            rectangles,
+        }
     }
 }
 
