@@ -123,7 +123,7 @@ pub struct DivergenceTextures {
 pub struct LevelsetTextures {
     // levelset between fluid and empty grids. 0: fluid interface, positive: empty grids, negative: fluid grids.
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub levelset_air: Handle<Image>,
+    pub levelset: Handle<Image>,
     // grid label which describe grid state. 0: empty, 1: fluid, 2: solid.
     #[storage_texture(1, image_format = R32Uint, access = ReadWrite)]
     pub grid_label: Handle<Image>,

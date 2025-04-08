@@ -1,4 +1,4 @@
-@group(0) @binding(0) var levelset_air: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var levelset: texture_storage_2d<r32float, read_write>;
 
 @group(1) @binding(0) var seeds_x: texture_storage_2d<r32float, read_write>;
 @group(1) @binding(1) var seeds_y: texture_storage_2d<r32float, read_write>;
@@ -14,10 +14,10 @@ fn calculate_sdf(
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
     let sdf = distance(get_seed(x), vec2<f32>(x));
-    let level = textureLoad(levelset_air, x).r;
+    let level = textureLoad(levelset, x).r;
     var levelset_sign = 1.0;
     if (level < 0.0) {
         levelset_sign = -1.0;
     }
-    textureStore(levelset_air, x, vec4<f32>(levelset_sign * sdf, 0.0, 0.0, 0.0));
+    textureStore(levelset, x, vec4<f32>(levelset_sign * sdf, 0.0, 0.0, 0.0));
 }
