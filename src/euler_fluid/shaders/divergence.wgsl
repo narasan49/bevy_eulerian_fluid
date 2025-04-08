@@ -6,7 +6,7 @@
 
 @group(1) @binding(0) var div: texture_storage_2d<r32float, read_write>;
 
-@group(2) @binding(1) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(2) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
 @group(3) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
 @group(3) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;

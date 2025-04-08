@@ -9,8 +9,8 @@
 
 @group(2) @binding(0) var div: texture_storage_2d<r32float, read_write>;
 
-@group(3) @binding(0) var levelset_air: texture_storage_2d<r32float, read_write>;
-@group(3) @binding(1) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(3) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
+@group(3) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
 @compute @workgroup_size(8, 8, 1)
 fn jacobi_iteration(
@@ -36,7 +36,7 @@ fn update_pressure(
     p: texture_storage_2d<r32float, read_write>,
     x: vec2<i32>,
 ) -> f32 {
-    let levelset_air_ij = textureLoad(levelset_air, x).r;
+    let levelset_air_ij = textureLoad(levelset_air0, x).r;
     if (levelset_air_ij >= 0.0) {
         return 0.0;
     }
@@ -53,10 +53,10 @@ fn update_pressure(
     let p_ijminus = textureLoad(p, x_bottom).r;
     let p_ijplus = textureLoad(p, x_top).r;
 
-    let levelset_air_iminusj = textureLoad(levelset_air, x_left).r;
-    let levelset_air_iplusj = textureLoad(levelset_air, x_right).r;
-    let levelset_air_ijminus = textureLoad(levelset_air, x_bottom).r;
-    let levelset_air_ijplus = textureLoad(levelset_air, x_top).r;
+    let levelset_air_iminusj = textureLoad(levelset_air0, x_left).r;
+    let levelset_air_iplusj = textureLoad(levelset_air0, x_right).r;
+    let levelset_air_ijminus = textureLoad(levelset_air0, x_bottom).r;
+    let levelset_air_ijplus = textureLoad(levelset_air0, x_top).r;
 
     let coef = f.iminusj * (1.0 - max(0.0, levelset_air_iminusj) / levelset_air_ij) 
         + f.iplusj * (1.0 - max(0.0, levelset_air_iplusj) / levelset_air_ij)

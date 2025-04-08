@@ -269,7 +269,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(1, &bind_groups.pressure_bind_group, &[]);
                     pass.set_bind_group(2, &bind_groups.divergence_bind_group, &[]);
                     pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
-                    for _ in 0..5 {
+                    for _ in 0..50 {
                         pass.set_pipeline(&jacobi_iteration_pipeline);
                         pass.dispatch_workgroups(
                             size.0 / WORKGROUP_SIZE,
