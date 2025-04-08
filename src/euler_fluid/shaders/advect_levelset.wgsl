@@ -7,8 +7,7 @@
 
 @group(2) @binding(0) var<uniform> constants: SimulationUniform;
 
-@compute
-@workgroup_size(8, 8, 1)
+@compute @workgroup_size(8, 8, 1)
 fn advect_levelset(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
@@ -16,7 +15,20 @@ fn advect_levelset(
     let label = textureLoad(levelset_air, x).r;
 
     let dt = constants.dt;
-    let x_new = runge_kutta(u0, v0, vec2<f32>(x), dt);
+    let size = textureDimensions(levelset_air);
+    var x_new = runge_kutta(u0, v0, vec2<f32>(x), dt);
+    if (x_new.x > f32(size.x) - 1.0) {
+        x_new.x = f32(size.x) - 1.0;
+    }
+    if (x_new.y > f32(size.y) - 1.0) {
+        x_new.y = f32(size.y) - 1.0;
+    }
+    if (x_new.x < 0.0) {
+        x_new.x = 0.0;
+    }
+    if (x_new.y < 0.0) {
+        x_new.y = 0.0;
+    }
     let new_label = interpolate2d_grid_center(levelset_air, x_new);
     textureStore(levelset_air, x, vec4<f32>(new_label, 0.0, 0.0, 0.0));
 }

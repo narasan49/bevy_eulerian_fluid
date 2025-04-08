@@ -20,9 +20,7 @@ use bevy::{
 };
 
 use super::definition::{
-    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform,
-    JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, Obstacles, PressureTextures,
-    SimulationUniform, VelocityTextures,
+    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform, JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, Obstacles, PressureTextures, SimulationUniform, SolidVelocityTextures, VelocityTextures
 };
 
 pub(super) const INITIALIZE_GRID_CENTER_SHADER_HANDLE: Handle<Shader> =
@@ -30,7 +28,7 @@ pub(super) const INITIALIZE_GRID_CENTER_SHADER_HANDLE: Handle<Shader> =
 pub(super) const INITIALIZE_VELOCITY_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0xE517B3F694A9446B970368B971BF631E);
 
-pub(super) const UPDATE_GRID_LABEL_SHADER_HANDLE: Handle<Shader> =
+pub(super) const UPDATE_SOLID_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x3B7E226FADA549C1A6662BCED3B83535);
 pub(super) const ADVECT_VELOCITY_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x4C394851214E47D3879CA7E1837A2D07);
@@ -56,7 +54,7 @@ pub(super) const ADVECT_LEVELSET_SHADER_HANDLE: Handle<Shader> =
 pub(crate) struct FluidPipelines {
     pub initialize_velocity_pipeline: CachedComputePipelineId,
     pub initialize_grid_center_pipeline: CachedComputePipelineId,
-    pub update_grid_label_pipeline: CachedComputePipelineId,
+    pub update_solid_pipeline: CachedComputePipelineId,
     pub advect_u_pipeline: CachedComputePipelineId,
     pub advect_v_pipeline: CachedComputePipelineId,
     pub apply_force_u_pipeline: CachedComputePipelineId,
@@ -71,6 +69,7 @@ pub(crate) struct FluidPipelines {
     pub recompute_levelset_solve_pipeline: CachedComputePipelineId,
     pub advect_levelset_pipeline: CachedComputePipelineId,
     velocity_bind_group_layout: BindGroupLayout,
+    solid_velocity_bind_group_layout: BindGroupLayout,
     pressure_bind_group_layout: BindGroupLayout,
     divergence_bind_group_layout: BindGroupLayout,
     levelset_bind_group_layout: BindGroupLayout,
@@ -94,6 +93,7 @@ impl FromWorld for FluidPipelines {
             ),
         );
         let velocity_bind_group_layout = VelocityTextures::bind_group_layout(render_device);
+        let solid_velocity_bind_group_layout = SolidVelocityTextures::bind_group_layout(render_device);
         let local_forces_bind_group_layout = LocalForces::bind_group_layout(render_device);
         let pressure_bind_group_layout = PressureTextures::bind_group_layout(render_device);
         let divergence_bind_group_layout = DivergenceTextures::bind_group_layout(render_device);
@@ -134,19 +134,19 @@ impl FromWorld for FluidPipelines {
                 zero_initialize_workgroup_memory: false,
             });
 
-        let update_grid_label_pipeline =
+        let update_solid_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some(Cow::from("Queue UpdateGridLabelPipeline")),
+                label: Some(Cow::from("Queue UpdateSolidPipeline")),
                 layout: vec![
-                    velocity_bind_group_layout.clone(),
+                    solid_velocity_bind_group_layout.clone(),
                     levelset_bind_group_layout.clone(),
                     obstacles_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: UPDATE_GRID_LABEL_SHADER_HANDLE,
+                shader: UPDATE_SOLID_SHADER_HANDLE,
                 shader_defs: vec![],
-                entry_point: Cow::from("update_grid_label"),
+                entry_point: Cow::from("update_solid"),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -215,6 +215,7 @@ impl FromWorld for FluidPipelines {
                     velocity_bind_group_layout.clone(),
                     divergence_bind_group_layout.clone(),
                     levelset_bind_group_layout.clone(),
+                    solid_velocity_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
                 shader: DIVERGENCE_SHADER_HANDLE,
@@ -347,7 +348,7 @@ impl FromWorld for FluidPipelines {
         Self {
             initialize_velocity_pipeline,
             initialize_grid_center_pipeline,
-            update_grid_label_pipeline,
+            update_solid_pipeline,
             advect_u_pipeline,
             advect_v_pipeline,
             apply_force_u_pipeline,
@@ -362,6 +363,7 @@ impl FromWorld for FluidPipelines {
             recompute_levelset_solve_pipeline,
             advect_levelset_pipeline,
             velocity_bind_group_layout,
+            solid_velocity_bind_group_layout,
             pressure_bind_group_layout,
             divergence_bind_group_layout,
             levelset_bind_group_layout,
@@ -377,6 +379,7 @@ impl FromWorld for FluidPipelines {
 #[derive(Component, Clone, ExtractComponent)]
 pub(crate) struct FluidBindGroups {
     pub velocity_bind_group: BindGroup,
+    pub solid_velocity_bind_group: BindGroup,
     pub pressure_bind_group: BindGroup,
     pub divergence_bind_group: BindGroup,
     pub local_forces_bind_group: BindGroup,
@@ -435,6 +438,7 @@ pub(super) fn prepare_fluid_bind_groups(
     query: Query<(
         Entity,
         &VelocityTextures,
+        &SolidVelocityTextures,
         &PressureTextures,
         &DivergenceTextures,
         &LevelsetTextures,
@@ -452,6 +456,7 @@ pub(super) fn prepare_fluid_bind_groups(
     for (
         entity,
         velocity_textures,
+        solid_velocity_textures,
         pressure_textures,
         divergence_textures,
         levelset_textures,
@@ -471,6 +476,15 @@ pub(super) fn prepare_fluid_bind_groups(
         let velocity_bind_group = velocity_textures
             .as_bind_group(
                 &pipelines.velocity_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        let solid_velocity_bind_group = solid_velocity_textures
+            .as_bind_group(
+                &pipelines.solid_velocity_bind_group_layout,
                 &render_device,
                 &mut param,
             )
@@ -535,6 +549,7 @@ pub(super) fn prepare_fluid_bind_groups(
         commands.entity(entity).insert((
             FluidBindGroups {
                 velocity_bind_group,
+                solid_velocity_bind_group,
                 pressure_bind_group,
                 divergence_bind_group,
                 local_forces_bind_group,
