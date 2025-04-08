@@ -106,14 +106,6 @@ pub struct VelocityTextures {
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub struct SolidVelocityTextures {
-    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub u_solid: Handle<Image>,
-    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
-    pub v_solid: Handle<Image>,
-}
-
-#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct PressureTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub p0: Handle<Image>,
@@ -133,8 +125,8 @@ pub struct LevelsetTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub levelset_air: Handle<Image>,
     // grid label which describe grid state. 0: empty, 1: fluid, 2: solid.
-    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
-    pub levelset_solid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Uint, access = ReadWrite)]
+    pub grid_label: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -189,7 +181,6 @@ pub struct JumpFloodingUniformBuffer {
 #[derive(Bundle)]
 pub struct FluidSimulationBundle {
     pub velocity_textures: VelocityTextures,
-    pub solid_velocity_textures: SolidVelocityTextures,
     pub pressure_textures: PressureTextures,
     pub divergence_textures: DivergenceTextures,
     pub levelset_textures: LevelsetTextures,

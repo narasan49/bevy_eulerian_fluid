@@ -16,11 +16,11 @@ fn apply_force_u(
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
     var n = arrayLength(&force);
-    var net_force = constants.gravity.x;
-    // let levelset_air = textureLoad(levelset_air, x).r;
-    // if (levelset_air < 0.0) {
-    //     net_force.x = constants.gravity.x;
-    // }
+    var net_force = vec2<f32>(0.0, 0.0);
+    let levelset_air = textureLoad(levelset_air, x).r;
+    if (levelset_air < 0.0) {
+        net_force.x = constants.gravity.x;
+    }
 
     loop {
         if (n == 0) {
@@ -33,7 +33,7 @@ fn apply_force_u(
     }
 
     let u_val = textureLoad(u1, x).r;
-    textureStore(u1, x, vec4<f32>(u_val + net_force * constants.dt, 0.0, 0.0, 0.0));
+    textureStore(u1, x, vec4<f32>(u_val + net_force.x * constants.dt, 0.0, 0.0, 0.0));
 }
 
 @compute @workgroup_size(64, 1, 1)
@@ -41,13 +41,13 @@ fn apply_force_v(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    var net_force = constants.gravity.y;
+    var net_force = 0.0;
     var n = arrayLength(&force);
-    // let levelset_air = textureLoad(levelset_air, x).r;
+    let levelset_air = textureLoad(levelset_air, x).r;
 
-    // if (levelset_air < 0.0) {
-    //     net_force = constants.gravity.y;
-    // }
+    if (levelset_air < 0.0) {
+        net_force = constants.gravity.y;
+    }
 
     loop {
         if (n == 0) {
