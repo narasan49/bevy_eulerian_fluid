@@ -104,7 +104,7 @@ fn on_fluid_setup(
     for (entity, levelset_textures, velocity_textures) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
-            levelset: levelset_textures.levelset_air0.clone(),
+            levelset: levelset_textures.levelset_air.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
             offset: 0.0,
             scale: -100.0,

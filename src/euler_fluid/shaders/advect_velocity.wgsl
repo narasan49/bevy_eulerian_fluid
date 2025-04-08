@@ -5,7 +5,7 @@
 @group(0) @binding(2) var u1: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(3) var v1: texture_storage_2d<r32float, read_write>;
 
-@group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(1) @binding(1) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
 @group(2) @binding(0) var<uniform> constants: SimulationUniform;
 

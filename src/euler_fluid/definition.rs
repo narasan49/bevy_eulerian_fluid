@@ -129,14 +129,11 @@ pub struct DivergenceTextures {
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct LevelsetTextures {
-    // levelset between empty air (>=0) vs fluid or solid (<0).
+    // levelset between fluid and empty grids. 0: fluid interface, positive: empty grids, negative: fluid grids.
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub levelset_air0: Handle<Image>,
-    // intermediate levelset between empty air (>=0) vs fluid or solid (<0).
+    pub levelset_air: Handle<Image>,
+    // grid label which describe grid state. 0: empty, 1: fluid, 2: solid.
     #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
-    pub levelset_air1: Handle<Image>,
-    // levelset between solid (<0) vs fluid or empty air (>=0).
-    #[storage_texture(2, image_format = R32Float, access = ReadWrite)]
     pub levelset_solid: Handle<Image>,
 }
 
