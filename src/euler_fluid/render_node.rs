@@ -81,7 +81,7 @@ impl render_graph::Node for EulerFluidNode {
                     CachedPipelineState::Ok(_recompute_levelset_solve_pipeline),
                     CachedPipelineState::Ok(_advect_levelset_pipeline),
                 ) = (
-                    pipeline_cache.get_compute_pipeline_state(pipelines.update_grid_label_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.update_solid_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.advect_u_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.advect_v_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.apply_force_u_pipeline),
@@ -150,8 +150,8 @@ impl render_graph::Node for EulerFluidNode {
                 }
             }
             State::Update => {
-                let update_grid_label_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.update_grid_label_pipeline)
+                let update_solid_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.update_solid_pipeline)
                     .unwrap();
                 let advect_u_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.advect_u_pipeline)
@@ -202,8 +202,8 @@ impl render_graph::Node for EulerFluidNode {
                         .begin_compute_pass(&ComputePassDescriptor::default());
                     let size = settings.size;
 
-                    pass.set_pipeline(&update_grid_label_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+                    pass.set_pipeline(&update_solid_pipeline);
+                    pass.set_bind_group(0, &bind_groups.solid_velocity_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(2, &bind_group_resources.obstacles_bind_group, &[]);
                     pass.set_bind_group(
@@ -258,6 +258,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_pipeline(&divergence_pipeline);
                     pass.set_bind_group(1, &bind_groups.divergence_bind_group, &[]);
                     pass.set_bind_group(2, &bind_groups.levelset_bind_group, &[]);
+                    pass.set_bind_group(3, &bind_groups.solid_velocity_bind_group, &[]);
                     pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
 
                     pass.set_bind_group(
@@ -268,7 +269,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(1, &bind_groups.pressure_bind_group, &[]);
                     pass.set_bind_group(2, &bind_groups.divergence_bind_group, &[]);
                     pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
-                    for _ in 0..5 {
+                    for _ in 0..50 {
                         pass.set_pipeline(&jacobi_iteration_pipeline);
                         pass.dispatch_workgroups(
                             size.0 / WORKGROUP_SIZE,
@@ -305,6 +306,16 @@ impl render_graph::Node for EulerFluidNode {
                         1,
                     );
 
+                    pass.set_pipeline(&advect_levelset_pipeline);
+                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+                    pass.set_bind_group(
+                        2,
+                        &bind_groups.uniform_bind_group,
+                        &[bind_groups.uniform_index],
+                    );
+                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+
                     // recompute levelset
                     pass.set_pipeline(&recompute_levelset_initialization_pipeline);
                     pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
@@ -327,16 +338,6 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_pipeline(&recompute_levelset_solve_pipeline);
                     pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
-                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
-
-                    pass.set_pipeline(&advect_levelset_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(
-                        2,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
                     pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
                 }
             }

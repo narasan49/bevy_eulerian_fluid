@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::definition::{
-    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
+    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures, SolidVelocityTextures,
 };
 
 pub(crate) fn watch_fluid_component(
@@ -28,6 +28,7 @@ pub(crate) fn watch_fluid_component(
         }
         let size_u = (size.0 + 1, size.1);
         let size_v = (size.0, size.1 + 1);
+        let size_vertex = (size.0 + 1, size.1 + 1);
 
         let u0 = images.new_texture_storage(size_u, TextureFormat::R32Float);
         let u1 = images.new_texture_storage(size_u, TextureFormat::R32Float);
@@ -35,14 +36,18 @@ pub(crate) fn watch_fluid_component(
         let v0 = images.new_texture_storage(size_v, TextureFormat::R32Float);
         let v1 = images.new_texture_storage(size_v, TextureFormat::R32Float);
 
+        let u_solid = images.new_texture_storage(size_u, TextureFormat::R32Float);
+        let v_solid = images.new_texture_storage(size_v, TextureFormat::R32Float);
+
         let div = images.new_texture_storage(size, TextureFormat::R32Float);
 
         let p0 = images.new_texture_storage(size, TextureFormat::R32Float);
         let p1 = images.new_texture_storage(size, TextureFormat::R32Float);
 
-        let grid_label = images.new_texture_storage(size, TextureFormat::R32Uint);
+        let levelset_air0 = images.new_texture_storage(size, TextureFormat::R32Float);
+        let levelset_air1 = images.new_texture_storage(size, TextureFormat::R32Float);
+        let levelset_solid = images.new_texture_storage(size_vertex, TextureFormat::R32Float);
 
-        let levelset = images.new_texture_storage(size, TextureFormat::R32Float);
         let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
         let jump_flooding_seeds_y = images.new_texture_storage(size, TextureFormat::R32Float);
 
@@ -51,13 +56,16 @@ pub(crate) fn watch_fluid_component(
 
         let velocity_textures = VelocityTextures { u0, v0, u1, v1 };
 
+        let solid_velocity_textures = SolidVelocityTextures { u_solid, v_solid };
+
         let pressure_textures = PressureTextures { p0, p1 };
 
         let divergence_textures = DivergenceTextures { div };
 
         let levelset_textures = LevelsetTextures {
-            levelset,
-            grid_label,
+            levelset_air0,
+            levelset_air1,
+            levelset_solid,
         };
 
         let fluid_transform = match transform {
@@ -72,6 +80,7 @@ pub(crate) fn watch_fluid_component(
             gravity: settings.gravity,
             initial_fluid_level: settings.initial_fluid_level,
             fluid_transform,
+            size: Vec2::new(size.0 as f32, size.1 as f32),
         };
 
         let local_forces = LocalForces {
@@ -88,6 +97,7 @@ pub(crate) fn watch_fluid_component(
             .entity(entity)
             .insert(FluidSimulationBundle {
                 velocity_textures,
+                solid_velocity_textures,
                 pressure_textures,
                 divergence_textures,
                 local_forces,
