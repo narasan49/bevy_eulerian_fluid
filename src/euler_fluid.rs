@@ -87,6 +87,13 @@ impl Plugin for FluidPlugin {
 
         load_internal_asset!(
             app,
+            COORDINATE_SHADER_HANDLE,
+            "euler_fluid/shaders/coordinate.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
             fluid_bind_group::INITIALIZE_GRID_CENTER_SHADER_HANDLE,
             "euler_fluid/shaders/initialize_grid_center.wgsl",
             Shader::from_wgsl
@@ -166,13 +173,6 @@ impl Plugin for FluidPlugin {
             app,
             fluid_bind_group::ADVECT_LEVELSET_SHADER_HANDLE,
             "euler_fluid/shaders/advect_levelset.wgsl",
-            Shader::from_wgsl
-        );
-
-        load_internal_asset!(
-            app,
-            COORDINATE_SHADER_HANDLE,
-            "euler_fluid/shaders/utils/coordinate.wgsl",
             Shader::from_wgsl
         );
     }
