@@ -8,7 +8,7 @@ struct Circle {
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v0: texture_storage_2d<r32float, read_write>;
 
-@group(1) @binding(0) var levelset: texture_storage_2d<r32float, read_write>;
+@group(1) @binding(0) var levelset_air: texture_storage_2d<r32float, read_write>;
 @group(1) @binding(1) var grid_label: texture_storage_2d<r32uint, read_write>;
 
 @group(2) @binding(0) var<storage, read> circles: array<Circle>;
@@ -31,7 +31,7 @@ fn update_grid_label(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     
     let total = arrayLength(&circles);
-    let level = textureLoad(levelset, x).r;
+    let level = textureLoad(levelset_air, x).r;
 
     var i = 0u;
     var label = 0u;
@@ -46,7 +46,7 @@ fn update_grid_label(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
         let circle = circles[i];
         let translation = circle.transform[3].xy;
-        
+
         let distance = distance(xy, translation);
         if distance < circle.radius {
             label = 2u;

@@ -3,7 +3,7 @@
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v0: texture_storage_2d<r32float, read_write>;
 
-@group(1) @binding(0) var levelset: texture_storage_2d<r32float, read_write>;
+@group(1) @binding(0) var levelset_air: texture_storage_2d<r32float, read_write>;
 
 @group(2) @binding(0) var<uniform> constants: SimulationUniform;
 
@@ -13,12 +13,12 @@ fn advect_levelset(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    let label = textureLoad(levelset, x).r;
+    let label = textureLoad(levelset_air, x).r;
 
     let dt = constants.dt;
     let x_new = runge_kutta(u0, v0, vec2<f32>(x), dt);
-    let new_label = interpolate2d_grid_center(levelset, x_new);
-    textureStore(levelset, x, vec4<f32>(new_label, 0.0, 0.0, 0.0));
+    let new_label = interpolate2d_grid_center(levelset_air, x_new);
+    textureStore(levelset_air, x, vec4<f32>(new_label, 0.0, 0.0, 0.0));
 }
 
 fn runge_kutta(

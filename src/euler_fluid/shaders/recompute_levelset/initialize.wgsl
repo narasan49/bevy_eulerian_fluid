@@ -1,4 +1,4 @@
-@group(0) @binding(0) var levelset: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var levelset_air: texture_storage_2d<r32float, read_write>;
 
 @group(1) @binding(0) var seeds_x: texture_storage_2d<r32float, read_write>;
 @group(1) @binding(1) var seeds_y: texture_storage_2d<r32float, read_write>;
@@ -14,7 +14,7 @@ fn initialize(
     @builtin(global_invocation_id) global_id: vec3<u32>
 ) {
     let x = vec2<i32>(i32(global_id.x), i32(global_id.y));
-    let level = textureLoad(levelset, x).r;
+    let level = textureLoad(levelset_air, x).r;
     var min_distance = 10.0;
     var min_distance_seed = vec2<f32>(-1.0, -1.0);
 
@@ -24,7 +24,7 @@ fn initialize(
     }
 
     // find the point to intersect the zero level set
-    let dim = vec2<i32>(textureDimensions(levelset));
+    let dim = vec2<i32>(textureDimensions(levelset_air));
     // array can be looped over only with a constant index
     // let neibors = array<vec2<i32>, 4>(
     //     x + vec2<i32>(-1, 0),
@@ -41,7 +41,7 @@ fn initialize(
         if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= dim.x || neighbor.y >= dim.y) {
             continue;
         }
-        let neighbor_level = textureLoad(levelset, neighbor).r;
+        let neighbor_level = textureLoad(levelset_air, neighbor).r;
         if (sign(level) == sign(neighbor_level)) {
             continue;
         }
