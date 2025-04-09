@@ -1,6 +1,8 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 #import bevy_fluid::area_fraction::area_fraction;
 
+// The number of texture_storage binding for WebGPU is limited to 8.
+// So solve_velocity_u and solve_velocity_v have different bindings for u0, u1 and v0, v1.
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var u1: texture_storage_2d<r32float, read_write>;
 

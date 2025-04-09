@@ -1,6 +1,9 @@
 #import bevy_fluid::coordinate::{left, right, bottom, top};
 #import bevy_fluid::area_fraction::area_fractions;
 
+
+// The number of texture_storage binding for WebGPU is limited to 8.
+// So divergence has only bindings for u1 and v1.
 @group(0) @binding(0) var u1: texture_storage_2d<r32float, read>;
 @group(0) @binding(1) var v1: texture_storage_2d<r32float, read>;
 
