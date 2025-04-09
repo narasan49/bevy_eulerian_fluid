@@ -83,6 +83,7 @@ pub struct SimulationUniform {
     pub gravity: Vec2,
     pub initial_fluid_level: f32,
     pub fluid_transform: Mat4,
+    pub size: Vec2,
 }
 
 /// Fluid velocity field.
@@ -104,6 +105,41 @@ pub struct VelocityTextures {
     pub v1: Handle<Image>,
 }
 
+/// Textures for x-ward velocities.
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub(crate) struct VelocityTexturesU {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub u0: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub u1: Handle<Image>,
+}
+
+/// Textures for y-ward velocities.
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub(crate) struct VelocityTexturesV {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub v0: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub v1: Handle<Image>,
+}
+
+/// Textures for intermediate velocities.
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub(crate) struct VelocityTexturesIntermediate {
+    #[storage_texture(0, image_format = R32Float, access = ReadOnly)]
+    pub u1: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
+    pub v1: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SolidVelocityTextures {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub u_solid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub v_solid: Handle<Image>,
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct PressureTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
@@ -120,12 +156,15 @@ pub struct DivergenceTextures {
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct LevelsetTextures {
-    // levelset between fluid and empty grids. 0: fluid interface, positive: empty grids, negative: fluid grids.
+    // levelset between empty air (>=0) vs fluid or solid (<0).
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub levelset: Handle<Image>,
-    // grid label which describe grid state. 0: empty, 1: fluid, 2: solid.
-    #[storage_texture(1, image_format = R32Uint, access = ReadWrite)]
-    pub grid_label: Handle<Image>,
+    pub levelset_air0: Handle<Image>,
+    // intermediate levelset between empty air (>=0) vs fluid or solid (<0).
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub levelset_air1: Handle<Image>,
+    // levelset between solid (<0) vs fluid or empty air (>=0).
+    #[storage_texture(2, image_format = R32Float, access = ReadWrite)]
+    pub levelset_solid: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -143,17 +182,32 @@ pub struct CircleObstacle {
     pub velocity: Vec2,
 }
 
+#[derive(Clone, ShaderType)]
+pub struct RectangleObstacle {
+    pub half_size: Vec2,
+    pub transform: Mat4,
+    pub inverse_transform: Mat4,
+    pub velocity: Vec2,
+    pub angular_velocity: f32,
+}
+
 #[derive(Resource, Clone, ExtractResource, AsBindGroup)]
 pub struct Obstacles {
     #[storage(0, read_only, visibility(compute))]
     pub circles: Handle<ShaderStorageBuffer>,
+    #[storage(1, read_only, visibility(compute))]
+    pub rectangles: Handle<ShaderStorageBuffer>,
 }
 
 impl FromWorld for Obstacles {
     fn from_world(world: &mut World) -> Self {
         let mut buffers = world.resource_mut::<Assets<ShaderStorageBuffer>>();
         let circles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        Self { circles }
+        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
+        Self {
+            circles,
+            rectangles,
+        }
     }
 }
 
@@ -178,8 +232,12 @@ pub struct JumpFloodingUniformBuffer {
 }
 
 #[derive(Bundle)]
-pub struct FluidSimulationBundle {
+pub(crate) struct FluidSimulationBundle {
     pub velocity_textures: VelocityTextures,
+    pub velocity_textures_u: VelocityTexturesU,
+    pub velocity_textures_v: VelocityTexturesV,
+    pub velocity_textures_intermediate: VelocityTexturesIntermediate,
+    pub solid_velocity_textures: SolidVelocityTextures,
     pub pressure_textures: PressureTextures,
     pub divergence_textures: DivergenceTextures,
     pub levelset_textures: LevelsetTextures,

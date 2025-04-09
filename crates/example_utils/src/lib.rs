@@ -22,7 +22,7 @@ pub fn mouse_motion(
         if let Some(cursor_position) = window.cursor_position() {
             let forces = mouse_motion
                 .read()
-                .map(|mouse| mouse.delta)
+                .map(|mouse| 5.0 * mouse.delta)
                 .collect::<Vec<_>>();
 
             for (local_forces, settings, transform) in &q_fluid {
@@ -45,7 +45,7 @@ pub fn mouse_motion(
 
     let touch_forces = touches
         .iter()
-        .map(|touch| touch.delta())
+        .map(|touch| 5.0 * touch.delta())
         .collect::<Vec<_>>();
     for (local_forces, settings, transform) in &q_fluid {
         let touch_positions = touches

@@ -8,20 +8,16 @@
 @group(2) @binding(0) var<storage, read> force: array<vec2<f32>>;
 @group(2) @binding(1) var<storage, read> position: array<vec2<f32>>;
 
-@group(3) @binding(0) var levelset: texture_storage_2d<r32float, read_write>;
+@group(3) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
 
 @compute @workgroup_size(1, 64, 1)
 fn apply_force_u(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
+    var net_force = constants.gravity.x;
+    
     var n = arrayLength(&force);
-    var net_force = vec2<f32>(0.0, 0.0);
-    let levelset = textureLoad(levelset, x).r;
-    if (levelset < 0.0) {
-        net_force.x = constants.gravity.x;
-    }
-
     loop {
         if (n == 0) {
             break;
@@ -33,7 +29,7 @@ fn apply_force_u(
     }
 
     let u_val = textureLoad(u1, x).r;
-    textureStore(u1, x, vec4<f32>(u_val + net_force.x * constants.dt, 0.0, 0.0, 0.0));
+    textureStore(u1, x, vec4<f32>(u_val + net_force * constants.dt, 0.0, 0.0, 0.0));
 }
 
 @compute @workgroup_size(64, 1, 1)
@@ -41,14 +37,9 @@ fn apply_force_v(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
-    var net_force = 0.0;
+    var net_force = constants.gravity.y;
+    
     var n = arrayLength(&force);
-    let levelset = textureLoad(levelset, x).r;
-
-    if (levelset < 0.0) {
-        net_force = constants.gravity.y;
-    }
-
     loop {
         if (n == 0) {
             break;
