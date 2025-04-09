@@ -73,7 +73,7 @@ fn setup_scene(mut commands: Commands) {
             commands
                 .spawn(FluidSettings {
                     dx: 1.0f32,
-                    dt: 0.5f32,
+                    dt: 0.1f32,
                     rho: 1.293f32,
                     gravity: Vec2::ZERO,
                     size: (size, size),

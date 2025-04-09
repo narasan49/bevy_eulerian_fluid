@@ -2,7 +2,7 @@
 
 This project is a fluid simulation plugin for [Bevy](https://bevyengine.org/).
 
-![img](./docs/bevy-fluid-surface.gif)
+![img](./docs/bevy-fluid-solid-body.gif)
 
 Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
@@ -69,9 +69,23 @@ See also an [interaction example](./examples/interaction.rs) for the detailed im
   - [ ] Two-way coupling with solid body and fluid
   - [ ] Various shapes support
     - [x] Circle
+    - [x] Rectangle
 
 ## Examples
 There are some examples to demonstrate how to visualize and interact to the simulation results:  
+- **Solid-to-fluid feedback**
+
+  ```ps1
+  cargo run --example solid_body
+  ```
+  ![img](./docs/bevy-fluid-solid-body.gif)
+
+- **Fluid surface**
+  ```ps1
+  cargo run --example water_surface
+  ```
+  ![img](./docs/bevy-fluid-surface.gif)
+
 - **Imposing forces with mouse and touch input**
   (Also available [here](https://narasan49.github.io/bevy_eulerian_fluid/))
   ```ps1
@@ -79,24 +93,11 @@ There are some examples to demonstrate how to visualize and interact to the simu
   ```
   ![img](./docs/bevy-fluid-interaction.gif)
 
-- **Solid-to-fluid feedback**
-
-  ```ps1
-  cargo run --example demo
-  ```
-  ![img](./docs/bevy-fluid-solid-to-fluid.gif)
-
 - **Spawn multiple fluids**
   ```ps1
   cargo run --example multiple
   ```
   ![img](./docs/bevy-fluid-multiple-fluids.gif)
-
-- **Fluid surface**
-  ```ps1
-  cargo run --example water_surface
-  ```
-  ![img](./docs/bevy-fluid-surface.gif)
 
 ## Acknowledgments
 The simulation is inspired by and based on the algorithms described in these books:

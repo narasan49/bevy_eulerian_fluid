@@ -70,7 +70,7 @@ fn setup_scene(mut commands: Commands) {
 
     commands.spawn(FluidSettings {
         dx: 1.0f32,
-        dt: 0.5f32,
+        dt: 0.1f32,
         rho: 997f32, // water
         gravity: Vec2::Y,
         size: SIZE,
@@ -88,7 +88,7 @@ fn on_fluid_setup(
     for (entity, levelset_textures, velocity_textures) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
-            levelset: levelset_textures.levelset.clone(),
+            levelset: levelset_textures.levelset_air0.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
             offset: 0.0,
             scale: -100.0,
