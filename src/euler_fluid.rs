@@ -20,7 +20,8 @@ use bevy::{
 };
 use definition::{
     DivergenceTextures, JumpFloodingSeedsTextures, LocalForces, Obstacles, PressureTextures,
-    SimulationUniform, VelocityTextures,
+    SimulationUniform, VelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU,
+    VelocityTexturesV,
 };
 use fluid_bind_group::FluidPipelines;
 
@@ -46,6 +47,9 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins(ExtractComponentPlugin::<FluidBindGroups>::default())
             .add_plugins(ExtractComponentPlugin::<VelocityTextures>::default())
+            .add_plugins(ExtractComponentPlugin::<VelocityTexturesU>::default())
+            .add_plugins(ExtractComponentPlugin::<VelocityTexturesV>::default())
+            .add_plugins(ExtractComponentPlugin::<VelocityTexturesIntermediate>::default())
             .add_plugins(ExtractComponentPlugin::<SolidVelocityTextures>::default())
             .add_plugins(ExtractComponentPlugin::<PressureTextures>::default())
             .add_plugins(ExtractComponentPlugin::<DivergenceTextures>::default())
@@ -145,8 +149,15 @@ impl Plugin for FluidPlugin {
 
         load_internal_asset!(
             app,
-            fluid_bind_group::SOLVE_VELOCITY_SHADER_HANDLE,
-            "euler_fluid/shaders/solve_velocity.wgsl",
+            fluid_bind_group::SOLVE_VELOCITY_U_SHADER_HANDLE,
+            "euler_fluid/shaders/solve_velocity_u.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            fluid_bind_group::SOLVE_VELOCITY_V_SHADER_HANDLE,
+            "euler_fluid/shaders/solve_velocity_v.wgsl",
             Shader::from_wgsl
         );
 

@@ -1,8 +1,8 @@
 #import bevy_fluid::coordinate::{left, right, bottom, top};
 #import bevy_fluid::area_fraction::area_fractions;
 
-@group(0) @binding(2) var u1: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(3) var v1: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var u1: texture_storage_2d<r32float, read>;
+@group(0) @binding(1) var v1: texture_storage_2d<r32float, read>;
 
 @group(1) @binding(0) var div: texture_storage_2d<r32float, read_write>;
 

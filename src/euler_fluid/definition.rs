@@ -106,6 +106,30 @@ pub struct VelocityTextures {
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub(crate) struct VelocityTexturesU {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub u0: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub u1: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub(crate) struct VelocityTexturesV {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub v0: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    pub v1: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub(crate) struct VelocityTexturesIntermediate {
+    #[storage_texture(0, image_format = R32Float, access = ReadOnly)]
+    pub u1: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
+    pub v1: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct SolidVelocityTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub u_solid: Handle<Image>,
@@ -205,8 +229,11 @@ pub struct JumpFloodingUniformBuffer {
 }
 
 #[derive(Bundle)]
-pub struct FluidSimulationBundle {
+pub(crate) struct FluidSimulationBundle {
     pub velocity_textures: VelocityTextures,
+    pub velocity_textures_u: VelocityTexturesU,
+    pub velocity_textures_v: VelocityTexturesV,
+    pub velocity_textures_intermediate: VelocityTexturesIntermediate,
     pub solid_velocity_textures: SolidVelocityTextures,
     pub pressure_textures: PressureTextures,
     pub divergence_textures: DivergenceTextures,

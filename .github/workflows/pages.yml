@@ -16,11 +16,11 @@ jobs:
         - name: install tools
           run: |
             rustup target install wasm32-unknown-unknown
-            cargo install wasm-bindgen-cli@0.2.99
+            cargo install wasm-bindgen-cli@0.2.100
         - name: build
           run: |
-            cargo build --release --target wasm32-unknown-unknown --example interaction
-            wasm-bindgen --target web --out-dir ./out/ --out-name interaction ./target/wasm32-unknown-unknown/release/examples/interaction.wasm
+            cargo build --release --target wasm32-unknown-unknown --example solid_body
+            wasm-bindgen --target web --out-dir ./out/ --out-name solid_body ./target/wasm32-unknown-unknown/release/examples/solid_body.wasm
         - uses: peaceiris/actions-gh-pages@v4
           with:
             github_token: ${{ secrets.GITHUB_TOKEN }}

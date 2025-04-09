@@ -9,7 +9,9 @@ pub struct SolidCircle {
 
 impl SolidCircle {
     pub fn from_circle(circle: Circle) -> Self {
-        SolidCircle { radius: circle.radius }
+        SolidCircle {
+            radius: circle.radius,
+        }
     }
 }
 
@@ -20,7 +22,9 @@ pub struct SolidRectangle {
 
 impl SolidRectangle {
     pub fn from_rectangle(rectangle: Rectangle) -> Self {
-        SolidRectangle { half_size: rectangle.half_size }
+        SolidRectangle {
+            half_size: rectangle.half_size,
+        }
     }
 }
 

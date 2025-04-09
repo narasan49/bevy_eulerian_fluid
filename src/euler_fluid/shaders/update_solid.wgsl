@@ -53,8 +53,8 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let circle = circles[i];
         let translation = circle.transform[3].xy;
 
-        let distance = distance(xy_vertex, translation);
-        let level_vertex = distance - circle.radius;
+        let distance_vertex = distance(xy_vertex, translation);
+        let level_vertex = distance_vertex - circle.radius;
         if level_vertex < level {
             level = level_vertex;
         }
