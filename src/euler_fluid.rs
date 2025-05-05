@@ -173,6 +173,13 @@ impl Plugin for FluidPlugin {
 
         load_internal_asset!(
             app,
+            fluid_bind_group::EXTRAPOLATE_VELOCITY_SHADER_HANDLE,
+            "euler_fluid/shaders/extrapolate_velocity.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
             fluid_bind_group::RECOMPUTE_LEVELSET_INITIALIZE_SHADER_HANDLE,
             "euler_fluid/shaders/recompute_levelset/initialize.wgsl",
             Shader::from_wgsl

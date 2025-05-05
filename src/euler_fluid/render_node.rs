@@ -77,6 +77,8 @@ impl render_graph::Node for EulerFluidNode {
                     CachedPipelineState::Ok(_jacobi_iteration_reverse_pipeline),
                     CachedPipelineState::Ok(_solve_velocity_u_pipeline),
                     CachedPipelineState::Ok(_solve_velocity_v_pipeline),
+                    CachedPipelineState::Ok(_extrapolate_u_pipeline),
+                    CachedPipelineState::Ok(_extrapolate_v_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_initialization_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_iteration_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_solve_pipeline),
@@ -94,6 +96,8 @@ impl render_graph::Node for EulerFluidNode {
                         .get_compute_pipeline_state(pipelines.jacobi_iteration_reverse_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.solve_velocity_u_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.solve_velocity_v_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.extrapolate_u_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.extrapolate_v_pipeline),
                     pipeline_cache.get_compute_pipeline_state(
                         pipelines.recompute_levelset_initialization_pipeline,
                     ),
@@ -185,6 +189,12 @@ impl render_graph::Node for EulerFluidNode {
                 let solve_velocity_v_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.solve_velocity_v_pipeline)
                     .unwrap();
+                let extrapolate_u_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.extrapolate_u_pipeline)
+                    .unwrap();
+                let extrapolate_v_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.extrapolate_v_pipeline)
+                    .unwrap();
                 let recompute_levelset_initialization_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.recompute_levelset_initialization_pipeline)
                     .unwrap();
@@ -222,6 +232,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(0, &bind_groups.pressure_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
                     pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+
                     pass.set_pipeline(&advect_u_pipeline);
                     pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
@@ -351,6 +362,21 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
                     pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+                    
+                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+                    pass.set_pipeline(&extrapolate_u_pipeline);
+                    pass.dispatch_workgroups(
+                        size.0 + 1,
+                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        1,
+                    );
+                    pass.set_pipeline(&extrapolate_v_pipeline);
+                    pass.dispatch_workgroups(
+                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.1 + 1,
+                        1,
+                    );
                 }
             }
         }
