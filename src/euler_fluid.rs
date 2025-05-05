@@ -39,6 +39,9 @@ const AREA_FRACTION_SHADER_HANDLE: Handle<Shader> =
 const COORDINATE_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x9F8E2E5B1E5F40C096C31175C285BF11);
 
+const LEVELSET_UTILS_SHADER_HANDLE: Handle<Shader> = 
+    Handle::weak_from_u128(0x998B1DF79E3044B89B0029DCDD0B2B2C);
+
 pub struct FluidPlugin;
 
 impl Plugin for FluidPlugin {
@@ -116,6 +119,13 @@ impl Plugin for FluidPlugin {
             app,
             fluid_bind_group::UPDATE_SOLID_SHADER_HANDLE,
             "euler_fluid/shaders/update_solid.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            fluid_bind_group::UPDATE_SOLID_PRESSURE_HANDLE,
+            "euler_fluid/shaders/update_solid_pressure.wgsl",
             Shader::from_wgsl
         );
 
@@ -202,6 +212,13 @@ impl Plugin for FluidPlugin {
             "euler_fluid/shaders/utils/coordinate.wgsl",
             Shader::from_wgsl
         );
+
+        load_internal_asset!(
+            app,
+            LEVELSET_UTILS_SHADER_HANDLE,
+            "euler_fluid/shaders/utils/levelset_utils.wgsl",
+            Shader::from_wgsl
+        )
     }
 
     fn finish(&self, app: &mut App) {
