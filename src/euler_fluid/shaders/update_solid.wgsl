@@ -33,7 +33,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let xy_edge_y = to_world(vec2<f32>(x) - vec2<f32>(0.0, 0.5), dim_grid);
 
     // ToDo: User defined boundary conditions
-    if (x.x == 0 || x.x == i32(dim_grid.x) || x.y == 0 || x.y == i32(dim_grid.y)) {
+    if (x.x == 0 || x.x == i32(dim_grid.x) - 1 || x.y == 0 || x.y == i32(dim_grid.y) - 1) {
         textureStore(levelset_solid, x, vec4<f32>(0));
         textureStore(u_solid, x, vec4<f32>(0, 0, 0, 0));
         textureStore(v_solid, x, vec4<f32>(0, 0, 0, 0));
@@ -61,13 +61,13 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let distance_edge_x = distance(xy_edge_x, translation);
         let level_edge_x = distance_edge_x - circle.radius;
-        if (level_edge_x < 0.0) {
+        if (level_edge_x < 0.5) {
             u = circle.velocity.x;
         }
 
         let distance_edge_y = distance(xy_edge_y, translation);
         let level_edge_y = distance_edge_y - circle.radius;
-        if (level_edge_y < 0.0) {
+        if (level_edge_y < 0.5) {
             v = circle.velocity.y;
         }
 
@@ -91,12 +91,12 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
 
         let level_edge_x = level_rectangle(rectangle, xy_edge_x);
-        if (level_edge_x < 0.0) {
+        if (level_edge_x < 0.5) {
             u = rectangle_velocity(rectangle, xy_edge_x).x;
         }
 
         let level_edge_y = level_rectangle(rectangle, xy_edge_y);
-        if (level_edge_y < 0.0) {
+        if (level_edge_y < 0.5) {
             v = rectangle_velocity(rectangle, xy_edge_y).y;
         }
 
@@ -148,6 +148,6 @@ fn level_rectangle(rectangle: Rectangle, x: vec2<f32>) -> f32 {
 fn rectangle_velocity(rectangle: Rectangle, x: vec2<f32>) -> vec2<f32> {
     let r = x - rectangle.transform[3].xy;
     let omega = rectangle.angular_velocity;
-    let v = rectangle.velocity + vec2<f32>(-omega * r.y, omega * r.x);
+    let v = rectangle.velocity + vec2<f32>(-omega * r.y, -omega * r.x);
     return v;
 }

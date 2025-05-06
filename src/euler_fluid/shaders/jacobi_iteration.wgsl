@@ -36,32 +36,30 @@ fn update_pressure(
     p: texture_storage_2d<r32float, read_write>,
     x: vec2<i32>,
 ) -> f32 {
-    let levelset_air_ij = textureLoad(levelset_air0, x).r;
-    if (levelset_air_ij >= 0.0) {
+    let f = area_fractions(levelset_solid, x); // 0: solid, 1: non-solid
+    let f_fluid = area_fractions(levelset_air0, x); // 0: fluid, 1: non-fluid
+
+    let fully_solid = f.iminusj == 0.0 && f.iplusj == 0.0 && f.ijminus == 0.0 && f.ijplus == 0.0;
+    let fully_non_fluid = f_fluid.iminusj == 1.0 && f_fluid.iplusj == 1.0 && f_fluid.ijminus == 1.0 && f_fluid.ijplus == 1.0;
+
+    if (fully_solid || fully_non_fluid) {
         return 0.0;
     }
-    
+
     let x_top = top(x);
     let x_right = right(x);
     let x_bottom = bottom(x);
     let x_left = left(x);
-
-    let f = area_fractions(levelset_solid, x);
 
     let p_iminusj = textureLoad(p, x_left).r;
     let p_iplusj = textureLoad(p, x_right).r;
     let p_ijminus = textureLoad(p, x_bottom).r;
     let p_ijplus = textureLoad(p, x_top).r;
 
-    let levelset_air_iminusj = textureLoad(levelset_air0, x_left).r;
-    let levelset_air_iplusj = textureLoad(levelset_air0, x_right).r;
-    let levelset_air_ijminus = textureLoad(levelset_air0, x_bottom).r;
-    let levelset_air_ijplus = textureLoad(levelset_air0, x_top).r;
-
-    let coef = f.iminusj * (1.0 - max(0.0, levelset_air_iminusj) / levelset_air_ij) 
-        + f.iplusj * (1.0 - max(0.0, levelset_air_iplusj) / levelset_air_ij)
-        + f.ijminus * (1.0 - max(0.0, levelset_air_ijminus) / levelset_air_ij)
-        + f.ijplus * (1.0 - max(0.0, levelset_air_ijplus) / levelset_air_ij);
+    let coef = f.iminusj * (1.0 - f_fluid.iminusj)
+        + f.iplusj * (1.0 - f_fluid.iplusj)
+        + f.ijminus * (1.0 - f_fluid.ijminus)
+        + f.ijplus * (1.0 - f_fluid.ijplus);
     
     if (abs(coef) < 1.0e-6) {
         return 0.0;
@@ -69,10 +67,10 @@ fn update_pressure(
     let div_ij = textureLoad(div, x).r;
     let factor = constants.dx * constants.rho / constants.dt;
     
-    let dp00 = step(0.0, levelset_air_iminusj / levelset_air_ij) * f.iminusj * p_iminusj;
-    let dp10 = step(0.0, levelset_air_iplusj / levelset_air_ij) * f.iplusj * p_iplusj;
-    let dp01 = step(0.0, levelset_air_ijminus / levelset_air_ij) * f.ijminus * p_ijminus;
-    let dp11 = step(0.0, levelset_air_ijplus / levelset_air_ij) * f.ijplus * p_ijplus;
+    let dp00 = f.iminusj * (1.0 - f_fluid.iminusj) * p_iminusj;
+    let dp10 = f.iplusj * (1.0 - f_fluid.iplusj) * p_iplusj;
+    let dp01 = f.ijminus * (1.0 - f_fluid.ijminus) * p_ijminus;
+    let dp11 = f.ijplus * (1.0 - f_fluid.ijplus) * p_ijplus;
     
     return (dp00 + dp10 + dp01 + dp11 - factor * div_ij) / coef;
 }

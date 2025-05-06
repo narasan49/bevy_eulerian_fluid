@@ -64,6 +64,19 @@ fn interp2d_edge_y(
     return mix(mix(v00, v10, fract_i), mix(v01, v11, fract_i), fract_j);
 }
 
+fn interp2d_vertex(
+    y: texture_storage_2d<r32float, read_write>,
+    x: vec2<f32>,
+) -> f32 {
+    let idx = vec2<i32>(round(x));
+    let fract_ij = x + vec2<f32>(0.5) - vec2<f32>(idx);
+    let y00 = textureLoad(y, idx).r;
+    let y10 = textureLoad(y, idx + vec2<i32>(1, 0)).r;
+    let y01 = textureLoad(y, idx + vec2<i32>(0, 1)).r;
+    let y11 = textureLoad(y, idx + vec2<i32>(1, 1)).r;
+    return mix(mix(y00, y10, fract_ij.x), mix(y01, y11, fract_ij.x), fract_ij.y);
+}
+
 fn runge_kutta(
     u: texture_storage_2d<r32float, read_write>,
     v: texture_storage_2d<r32float, read_write>,

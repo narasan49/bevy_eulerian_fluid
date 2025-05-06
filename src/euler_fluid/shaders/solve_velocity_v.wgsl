@@ -20,9 +20,6 @@ fn solve_velocity_v(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let level_minus = textureLoad(levelset_air0, x - vec2<i32>(0, 1)).r;
-    let level_plus = textureLoad(levelset_air0, x).r;
-
     let level_solid_left = textureLoad(levelset_solid, x).r;
     let level_solid_right = textureLoad(levelset_solid, x + vec2<i32>(1, 0)).r;
     let fraction = area_fraction(level_solid_left, level_solid_right);
@@ -32,11 +29,12 @@ fn solve_velocity_v(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         var p_ij = textureLoad(p1, x).r;
         var p_ijminus = textureLoad(p1, x - vec2<i32>(0, 1)).r;
 
-        if (level_minus >= 0.0 && level_plus < 0.0) {
-            p_ijminus = level_minus / level_plus * p_ij;
-        }
-        if (level_plus >= 0.0 && level_minus < 0.0) {
-            p_ij = level_plus / level_minus * p_ijminus;
+        let level_minus = textureLoad(levelset_air0, x).r;
+        let level_plus = textureLoad(levelset_air0, x + vec2<i32>(1, 0)).r;
+        let fluid_fraction = area_fraction(level_minus, level_plus);
+        if (fluid_fraction == 1.0) {
+            textureStore(v0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+            return;
         }
         let v = textureLoad(v1, x);
         let dv = vec4<f32>(factor * (p_ij - p_ijminus), 0.0, 0.0, 0.0);
