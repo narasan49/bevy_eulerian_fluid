@@ -21,9 +21,14 @@ fn update_solid_pressure(
     var p = 0.0;
     for (var i = 0; i <= 2; i += 1) {
         for (var j = 0; j <= 2; j += 1) {
-            let offset = vec2<i32>((i + 3) % 3 - 3, (j + 3) % 3 - 3);
+            var offset = vec2<i32>(i , j);
+            if (i == 2) {
+                offset = vec2<i32>(-1, j);
+            } else if (j == 2) {
+                offset = vec2<i32>(i, -1);
+            }
             let levelset_solid_surface = textureLoad(levelset_solid, surface_floor + offset).r;
-            if (levelset_solid_surface >= 1.0) {
+            if (levelset_solid_surface >= 0.0) {
                 p = textureLoad(p0, surface_floor + offset).r;
                 break;
             }
