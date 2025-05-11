@@ -20,24 +20,36 @@ fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let level_solid_bottom = textureLoad(levelset_solid, x).r;
-    let level_solid_top = textureLoad(levelset_solid, x + vec2<i32>(0, 1)).r;
-    let fraction = area_fraction(level_solid_bottom, level_solid_top);
-    if (fraction < 1.0) {
-        textureStore(u0, x, textureLoad(u_solid, x));
-    } else {
-        var p_ij = textureLoad(p1, x).r;
-        var p_iminusj = textureLoad(p1, x - vec2<i32>(1, 0)).r;
+    let level_solid_centers = array<f32, 6>(
+        textureLoad(levelset_solid, x + vec2<i32>(-1, -1)).r,
+        textureLoad(levelset_solid, x + vec2<i32>(0, -1)).r,
+        textureLoad(levelset_solid, x + vec2<i32>(-1, 0)).r,
+        textureLoad(levelset_solid, x + vec2<i32>(0, 0)).r,
+        textureLoad(levelset_solid, x + vec2<i32>(-1, 1)).r,
+        textureLoad(levelset_solid, x + vec2<i32>(0, 1)).r
+    );
 
-        let level_minus = textureLoad(levelset_air0, x).r;
-        let level_plus = textureLoad(levelset_air0, x + vec2<i32>(0, 1)).r;
-        let fluid_fraction = area_fraction(level_minus, level_plus);
-        if (fluid_fraction == 1.0) {
-            textureStore(u0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
-            return;
-        }
-        let u = textureLoad(u1, x);
-        let du = vec4<f32>(factor * (p_ij - p_iminusj), 0.0, 0.0, 0.0);
-        textureStore(u0, x, u - du);
+    let level_solid_vertex_iminusjminus = 0.25 * (level_solid_centers[0] + level_solid_centers[1] + level_solid_centers[2] + level_solid_centers[3]);
+    let level_solid_vertex_iminusjplus = 0.25 * (level_solid_centers[2] + level_solid_centers[3] + level_solid_centers[4] + level_solid_centers[5]);
+
+    let fraction = area_fraction(level_solid_vertex_iminusjminus, level_solid_vertex_iminusjplus);
+    if (fraction == 0.0) {
+        textureStore(u0, x, textureLoad(u_solid, x));
+        return;
     }
+    
+    var p_ij = textureLoad(p1, x).r;
+    var p_iminusj = textureLoad(p1, x - vec2<i32>(1, 0)).r;
+
+    let level_plus = textureLoad(levelset_air0, x).r;
+    let level_minus = textureLoad(levelset_air0, x - vec2<i32>(1, 0)).r;
+    if (level_minus >= 0.0 && level_plus < 0.0) {
+        p_iminusj = level_minus / level_plus * p_ij;
+    } else if (level_minus < 0.0 && level_plus >= 0.0) {
+        p_ij = level_plus / level_minus * p_iminusj;
+    }
+
+    let u = textureLoad(u1, x);
+    let du = vec4<f32>(factor * (p_ij - p_iminusj), 0.0, 0.0, 0.0);
+    textureStore(u0, x, u - du);
 }

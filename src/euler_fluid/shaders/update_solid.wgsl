@@ -28,7 +28,7 @@ struct Rectangle {
 fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let x = vec2<i32>(i32(global_id.x), i32(global_id.y));
     let dim_grid = textureDimensions(levelset_solid);
-    let xy_vertex = to_world(vec2<f32>(x) - vec2<f32>(0.5), dim_grid);
+    let xy_center = to_world(vec2<f32>(x), dim_grid);
     let xy_edge_x = to_world(vec2<f32>(x) - vec2<f32>(0.5, 0.0), dim_grid);
     let xy_edge_y = to_world(vec2<f32>(x) - vec2<f32>(0.0, 0.5), dim_grid);
 
@@ -53,10 +53,10 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let circle = circles[i];
         let translation = circle.transform[3].xy;
 
-        let distance_vertex = distance(xy_vertex, translation);
-        let level_vertex = distance_vertex - circle.radius;
-        if level_vertex < level {
-            level = level_vertex;
+        let distance_center = distance(xy_center, translation);
+        let level_center = distance_center - circle.radius;
+        if (level_center < level) {
+            level = level_center;
         }
 
         let distance_edge_x = distance(xy_edge_x, translation);
@@ -85,9 +85,9 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let rectangle = rectangles[i];
         
-        let level_rectangle = level_rectangle(rectangle, xy_vertex);
-        if (level > level_rectangle) {
-            level = level_rectangle;
+        let level_center = level_rectangle(rectangle, xy_center);
+        if (level > level_center) {
+            level = level_center;
         }
 
         let level_edge_x = level_rectangle(rectangle, xy_edge_x);

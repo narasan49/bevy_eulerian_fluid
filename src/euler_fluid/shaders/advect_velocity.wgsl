@@ -1,6 +1,5 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 #import bevy_fluid::coordinate::{interp2d_edge_x, interp2d_edge_y, runge_kutta};
-#import bevy_fluid::levelset_utils::project_onto_surface;
 
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v0: texture_storage_2d<r32float, read_write>;

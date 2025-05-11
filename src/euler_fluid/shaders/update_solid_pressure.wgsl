@@ -9,7 +9,7 @@ fn update_solid_pressure(
     @builtin(global_invocation_id) global_invocation_id: vec3<u32>,
 ) {
     let x = vec2<i32>(i32(global_invocation_id.x), i32(global_invocation_id.y));
-    let levelset_solid_x = levelset_solid_grid_center(levelset_solid, x);
+    let levelset_solid_x = textureLoad(levelset_solid, x).r;
 
     if (levelset_solid_x >= 0.0) {
         return;
@@ -22,7 +22,7 @@ fn update_solid_pressure(
     for (var i = 0; i <= 2; i += 1) {
         for (var j = 0; j <= 2; j += 1) {
             let offset = vec2<i32>((i + 3) % 3 - 3, (j + 3) % 3 - 3);
-            let levelset_solid_surface = levelset_solid_grid_center(levelset_solid, surface_floor + offset);
+            let levelset_solid_surface = textureLoad(levelset_solid, surface_floor + offset).r;
             if (levelset_solid_surface >= 1.0) {
                 p = textureLoad(p0, surface_floor + offset).r;
                 break;

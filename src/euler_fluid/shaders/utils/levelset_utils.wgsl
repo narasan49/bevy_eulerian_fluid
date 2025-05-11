@@ -47,16 +47,3 @@ fn snap_to_free_surface(
     let x_surface = round(vec2<f32>(x) - level * level_gradient);
     return x_surface;
 }
-
-fn levelset_solid_grid_center(
-    levelset_solid: texture_storage_2d<r32float, read_write>,
-    x: vec2<i32>,
-) -> f32 {
-    let levelset_solid_iminusjminus = textureLoad(levelset_solid, x).r;
-    let levelset_solid_iplusjminus = textureLoad(levelset_solid, x + vec2<i32>(1, 0)).r;
-    let levelset_solid_iminusjplus = textureLoad(levelset_solid, x + vec2<i32>(0, 1)).r;
-    let levelset_solid_iplusjplus = textureLoad(levelset_solid, x + vec2<i32>(1, 1)).r;
-    return 
-        (levelset_solid_iminusjminus + levelset_solid_iplusjminus +
-        levelset_solid_iminusjplus + levelset_solid_iplusjplus) / 4.0;
-}

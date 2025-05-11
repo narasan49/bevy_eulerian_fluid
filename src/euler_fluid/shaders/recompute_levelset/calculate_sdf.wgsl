@@ -16,9 +16,8 @@ fn calculate_sdf(
     let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
     let sdf = distance(get_seed(x), vec2<f32>(x));
     let level = textureLoad(levelset_air1, x).r;
-    let level_solid = levelset_solid_grid_center(levelset_solid, x);
     var levelset_sign = 1.0;
-    if (level < 0.0 && level_solid >= 0.0) {
+    if (level < 0.0) {
         levelset_sign = -1.0;
     }
 
