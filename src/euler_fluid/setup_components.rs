@@ -64,11 +64,13 @@ pub(crate) fn watch_fluid_component(
         let velocity_textures_u = VelocityTexturesU {
             u0: u0.clone(),
             u1: u1.clone(),
+            u_solid: u_solid.clone(),
         };
 
         let velocity_textures_v = VelocityTexturesV {
             v0: v0.clone(),
             v1: v1.clone(),
+            v_solid: v_solid.clone(),
         };
 
         let velocity_textures_intermediate = VelocityTexturesIntermediate {

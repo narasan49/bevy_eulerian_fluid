@@ -5,6 +5,7 @@
 // So solve_velocity_u and solve_velocity_v have different bindings for u0, u1 and v0, v1.
 @group(0) @binding(0) var v0: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v1: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(2) var v_solid: texture_storage_2d<r32float, read_write>;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
@@ -12,8 +13,6 @@
 
 @group(3) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
 @group(3) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
-
-@group(4) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
 
 @compute @workgroup_size(64, 1, 1)
 fn solve_velocity_v(@builtin(global_invocation_id) invocation_id: vec3<u32>) {

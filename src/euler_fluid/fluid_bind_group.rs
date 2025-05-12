@@ -294,13 +294,12 @@ impl FromWorld for FluidPipelines {
 
         let solve_velocity_u_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some(Cow::from("Queue SolveVelocityPipeline")),
+                label: Some(Cow::from("Queue SolveVelocityUPipeline")),
                 layout: vec![
                     velocity_v_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
                     pressure_bind_group_layout.clone(),
                     levelset_bind_group_layout.clone(),
-                    solid_velocity_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
                 shader: SOLVE_VELOCITY_U_SHADER_HANDLE,
@@ -311,13 +310,12 @@ impl FromWorld for FluidPipelines {
 
         let solve_velocity_v_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some(Cow::from("Queue SolveVelocityPipeline")),
+                label: Some(Cow::from("Queue SolveVelocityVPipeline")),
                 layout: vec![
                     velocity_v_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
                     pressure_bind_group_layout.clone(),
                     levelset_bind_group_layout.clone(),
-                    solid_velocity_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
                 shader: SOLVE_VELOCITY_V_SHADER_HANDLE,
