@@ -356,8 +356,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_pipeline(&recompute_levelset_initialization_pipeline);
                     pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
-                    pass.set_bind_group(2, &bind_groups.pressure_bind_group, &[]);
-                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+                    dispatch_center(&mut pass, size);
 
                     pass.set_pipeline(&recompute_levelset_itertation_pipeline);
                     pass.set_bind_group(0, &bind_groups.jump_flooding_seeds_bind_group, &[]);

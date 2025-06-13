@@ -358,7 +358,6 @@ impl FromWorld for FluidPipelines {
                 layout: vec![
                     levelset_bind_group_layout.clone(),
                     jump_flooding_seeds_bind_group_layout.clone(),
-                    pressure_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
                 shader: RECOMPUTE_LEVELSET_INITIALIZE_SHADER_HANDLE,
