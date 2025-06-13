@@ -97,7 +97,8 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let level_edge_y = level_rectangle(rectangle, xy_edge_y);
         if (level_edge_y < 0.5) {
-            v = rectangle_velocity(rectangle, xy_edge_y).y;
+            // flip the y velocity
+            v = -rectangle_velocity(rectangle, xy_edge_y).y;
         }
 
         continuing {
@@ -148,6 +149,6 @@ fn level_rectangle(rectangle: Rectangle, x: vec2<f32>) -> f32 {
 fn rectangle_velocity(rectangle: Rectangle, x: vec2<f32>) -> vec2<f32> {
     let r = x - rectangle.transform[3].xy;
     let omega = rectangle.angular_velocity;
-    let v = rectangle.velocity + vec2<f32>(-omega * r.y, -omega * r.x);
+    let v = rectangle.velocity + vec2<f32>(-omega * r.y, omega * r.x);
     return v;
 }
