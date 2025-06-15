@@ -112,6 +112,8 @@ pub(crate) struct VelocityTexturesU {
     pub u0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
     pub u1: Handle<Image>,
+    #[storage_texture(2, image_format = R32Float, access = ReadWrite)]
+    pub u_solid: Handle<Image>,
 }
 
 /// Textures for y-ward velocities.
@@ -121,6 +123,8 @@ pub(crate) struct VelocityTexturesV {
     pub v0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
     pub v1: Handle<Image>,
+    #[storage_texture(2, image_format = R32Float, access = ReadWrite)]
+    pub v_solid: Handle<Image>,
 }
 
 /// Textures for intermediate velocities.
