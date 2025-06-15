@@ -22,24 +22,18 @@ fn calculate_sdf(
     }
 
     var level_air = sdf * levelset_sign;
-
-    let level_solid = textureLoad(levelset_solid, x).r;
-    // levelset_solid < 0.0 -> solid
-    // levelset_solid >= 0.0 -> air or fluid
-    // levelset_air < 0.0 -> fluid or solid
-    // levelset_air >= 0.0 -> air
-    if (level_solid < 0.0) {
-        if (level_air < 0.0) {
-            level_air = max(level_air, level_solid);
-        } else {
-            level_air = level_solid;
-        }
-    } else {
-        if (level_air < 0.0) {
-            // noop
-        } else {
-            level_air = min(level_air, level_solid);
-        }
-    }
     textureStore(levelset_air0, x, vec4<f32>(level_air, 0.0, 0.0, 0.0));
+}
+
+fn levelset_solid_grid_center(
+    levelset_solid: texture_storage_2d<r32float, read_write>,
+    x: vec2<i32>,
+) -> f32 {
+    let levelset_solid_iminusjminus = textureLoad(levelset_solid, x).r;
+    let levelset_solid_iplusjminus = textureLoad(levelset_solid, x + vec2<i32>(1, 0)).r;
+    let levelset_solid_iminusjplus = textureLoad(levelset_solid, x + vec2<i32>(0, 1)).r;
+    let levelset_solid_iplusjplus = textureLoad(levelset_solid, x + vec2<i32>(1, 1)).r;
+    return 
+        (levelset_solid_iminusjminus + levelset_solid_iplusjminus +
+        levelset_solid_iminusjplus + levelset_solid_iplusjplus) / 4.0;
 }

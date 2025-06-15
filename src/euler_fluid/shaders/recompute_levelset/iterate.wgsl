@@ -21,27 +21,26 @@ fn iterate(
     let size = vec2<i32>(textureDimensions(seeds_x));
 
     let current_seed = get_seed(x);
+    if (all(current_seed == vec2<f32>(-1.0))) {
+        return;
+    }
     for (var i: i32 = -1; i <= 1; i++) {
         for (var j: i32 = -1; j <= 1; j++) {
             if (i == 0 && j == 0) {
                 continue;
             }
             let neighbor = vec2<i32>(x.x + i * step, x.y + j * step);
-            if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= size.x || neighbor.y >= size.y) {
+            if (any(neighbor < vec2<i32>(0)) || any(size <= neighbor)) {
                 continue;
             }
             let neighbor_seed = get_seed(neighbor);
-            if (neighbor_seed.x == -1.0 && neighbor_seed.y == -1.0) {
-                continue;
-            }
-            
-            if (current_seed.x == -1.0 && current_seed.y == -1.0) {
-                set_seed(x, neighbor_seed);
+            if (all(neighbor_seed == vec2<f32>(-1.0))) {
+                set_seed(neighbor, current_seed);
             } else {
-                let distance_to_seed = distance(vec2<f32>(current_seed.xy), vec2<f32>(x));
-                let distance_to_neighbor = distance(vec2<f32>(neighbor_seed.xy), vec2<f32>(x));
-                if (distance_to_neighbor < distance_to_seed) {
-                    set_seed(x, neighbor_seed);
+                let distance_to_seed = distance(vec2<f32>(current_seed.xy), vec2<f32>(neighbor));
+                let distance_to_neighbor = distance(vec2<f32>(neighbor_seed.xy), vec2<f32>(neighbor));
+                if (distance_to_seed < distance_to_neighbor) {
+                    set_seed(neighbor, current_seed);
                 }
             }
         }

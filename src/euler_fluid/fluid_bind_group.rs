@@ -33,6 +33,8 @@ pub(super) const INITIALIZE_VELOCITY_SHADER_HANDLE: Handle<Shader> =
 
 pub(super) const UPDATE_SOLID_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x3B7E226FADA549C1A6662BCED3B83535);
+pub(super) const UPDATE_SOLID_PRESSURE_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0xD9A3A8F98001448A946FD0AE976F9B96);
 pub(super) const ADVECT_VELOCITY_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x4C394851214E47D3879CA7E1837A2D07);
 pub(super) const APPLY_FORCE_SHADER_HANDLE: Handle<Shader> =
@@ -45,6 +47,8 @@ pub(super) const SOLVE_VELOCITY_U_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x1B95362358B242BCA68804444013F99E);
 pub(super) const SOLVE_VELOCITY_V_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0xbfae85ad7e30440aad02c9ad2870ea51);
+pub(super) const EXTRAPOLATE_VELOCITY_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0x90978F4EBD3942E78B116D156801D737);
 
 pub(super) const RECOMPUTE_LEVELSET_INITIALIZE_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0xAFC6EC29854A413CB0E4113506AE2254);
@@ -60,6 +64,7 @@ pub(crate) struct FluidPipelines {
     pub initialize_velocity_pipeline: CachedComputePipelineId,
     pub initialize_grid_center_pipeline: CachedComputePipelineId,
     pub update_solid_pipeline: CachedComputePipelineId,
+    pub update_solid_pressure_pipeline: CachedComputePipelineId,
     pub advect_u_pipeline: CachedComputePipelineId,
     pub advect_v_pipeline: CachedComputePipelineId,
     pub apply_force_u_pipeline: CachedComputePipelineId,
@@ -69,6 +74,8 @@ pub(crate) struct FluidPipelines {
     pub jacobi_iteration_reverse_pipeline: CachedComputePipelineId,
     pub solve_velocity_u_pipeline: CachedComputePipelineId,
     pub solve_velocity_v_pipeline: CachedComputePipelineId,
+    pub extrapolate_u_pipeline: CachedComputePipelineId,
+    pub extrapolate_v_pipeline: CachedComputePipelineId,
     pub recompute_levelset_initialization_pipeline: CachedComputePipelineId,
     pub recompute_levelset_iteration_pipeline: CachedComputePipelineId,
     pub recompute_levelset_solve_pipeline: CachedComputePipelineId,
@@ -160,6 +167,20 @@ impl FromWorld for FluidPipelines {
                 shader: UPDATE_SOLID_SHADER_HANDLE,
                 shader_defs: vec![],
                 entry_point: Cow::from("update_solid"),
+                zero_initialize_workgroup_memory: false,
+            });
+
+        let update_solid_pressure_pipeline = 
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue UpdateSolidPressurePipeline")),
+                layout: vec![
+                    pressure_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: UPDATE_SOLID_PRESSURE_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("update_solid_pressure"),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -273,7 +294,7 @@ impl FromWorld for FluidPipelines {
 
         let solve_velocity_u_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some(Cow::from("Queue SolveVelocityPipeline")),
+                label: Some(Cow::from("Queue SolveVelocityUPipeline")),
                 layout: vec![
                     velocity_v_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
@@ -289,7 +310,7 @@ impl FromWorld for FluidPipelines {
 
         let solve_velocity_v_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some(Cow::from("Queue SolveVelocityPipeline")),
+                label: Some(Cow::from("Queue SolveVelocityVPipeline")),
                 layout: vec![
                     velocity_v_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
@@ -300,6 +321,34 @@ impl FromWorld for FluidPipelines {
                 shader: SOLVE_VELOCITY_V_SHADER_HANDLE,
                 shader_defs: vec![],
                 entry_point: Cow::from("solve_velocity_v"),
+                zero_initialize_workgroup_memory: false,
+            });
+
+        let extrapolate_u_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue ExtrapolateUPipeline")),
+                layout: vec![
+                    velocity_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: EXTRAPOLATE_VELOCITY_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("extrapolate_u"),
+                zero_initialize_workgroup_memory: false,
+            });
+
+        let extrapolate_v_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue ExtrapolateVPipeline")),
+                layout: vec![
+                    velocity_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: EXTRAPOLATE_VELOCITY_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("extrapolate_v"),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -364,6 +413,7 @@ impl FromWorld for FluidPipelines {
             initialize_velocity_pipeline,
             initialize_grid_center_pipeline,
             update_solid_pipeline,
+            update_solid_pressure_pipeline,
             advect_u_pipeline,
             advect_v_pipeline,
             apply_force_u_pipeline,
@@ -373,6 +423,8 @@ impl FromWorld for FluidPipelines {
             jacobi_iteration_reverse_pipeline,
             solve_velocity_u_pipeline,
             solve_velocity_v_pipeline,
+            extrapolate_u_pipeline,
+            extrapolate_v_pipeline,
             recompute_levelset_initialization_pipeline,
             recompute_levelset_iteration_pipeline,
             recompute_levelset_solve_pipeline,
