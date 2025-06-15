@@ -19,7 +19,11 @@ fn update_solid_pressure(
     // sample positive pressure from the solid surface
     let surface_floor = vec2<i32>(i32(surface.x), i32(surface.y));
     var p = 0.0;
+    var found = false;
     for (var i = 0; i <= 2; i += 1) {
+        if (found) {
+            break;
+        }
         for (var j = 0; j <= 2; j += 1) {
             var offset = vec2<i32>(i , j);
             if (i == 2) {
@@ -30,6 +34,7 @@ fn update_solid_pressure(
             let levelset_solid_surface = textureLoad(levelset_solid, surface_floor + offset).r;
             if (levelset_solid_surface >= 0.0) {
                 p = textureLoad(p0, surface_floor + offset).r;
+                found = true;
                 break;
             }
         }
