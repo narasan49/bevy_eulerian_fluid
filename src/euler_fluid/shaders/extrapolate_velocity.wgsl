@@ -13,7 +13,7 @@ fn extrapolate_u(
 ) {
     let idx = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let level_minus = textureLoad(levelset_air0, idx - vec2<i32>(-1, 0)).r;
+    let level_minus = textureLoad(levelset_air0, idx - vec2<i32>(1, 0)).r;
     let level_plus = textureLoad(levelset_air0, idx).r;
     if (level_minus > 5.0) {
         textureStore(u0, idx, vec4<f32>(0.0, 0.0, 0.0, 0.0));
