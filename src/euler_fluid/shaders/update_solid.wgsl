@@ -16,6 +16,7 @@ struct Rectangle {
 
 @group(0) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(2) var solid_id: texture_storage_2d<r32sint, read_write>;
 
 @group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
@@ -46,6 +47,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var i = 0u;
     var u = 0.0;
     var v = 0.0;
+    var solid_id_sample = -1;
     loop {
         if (i >= num_circles) {
             break;
@@ -57,6 +59,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let level_center = distance_center - circle.radius;
         if (level_center < level) {
             level = level_center;
+            solid_id_sample = i32(i);
         }
 
         let distance_edge_x = distance(xy_edge_x, translation);
@@ -88,6 +91,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let level_center = level_rectangle(rectangle, xy_center);
         if (level > level_center) {
             level = level_center;
+            solid_id_sample = i32(i) + i32(num_circles);
         }
 
         let level_edge_x = level_rectangle(rectangle, xy_edge_x);
@@ -113,6 +117,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         textureStore(v_solid, x, vec4<f32>(v, 0.0, 0.0, 0.0));
     }
     textureStore(levelset_solid, x, vec4<f32>(level, 0.0, 0.0, 0.0));
+    textureStore(solid_id, x, vec4<i32>(solid_id_sample, 0, 0, 0));
 }
 
 fn to_world(x: vec2<f32>, dim: vec2<u32>) -> vec2<f32> {

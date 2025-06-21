@@ -19,6 +19,9 @@ use bevy::{
     },
 };
 
+use crate::definition::{ForcesToSolid, SolidForcesBins};
+use crate::euler_fluid::{ACCUMULATE_FORCES_SHADER_HANDLE, SAMPLE_FORCES_SHADER_HANDLE};
+
 use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform,
     JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, Obstacles, PressureTextures,
@@ -80,6 +83,8 @@ pub(crate) struct FluidPipelines {
     pub recompute_levelset_iteration_pipeline: CachedComputePipelineId,
     pub recompute_levelset_solve_pipeline: CachedComputePipelineId,
     pub advect_levelset_pipeline: CachedComputePipelineId,
+    pub sample_forces_pipeline: CachedComputePipelineId,
+    pub accumulate_forces_pipeline: CachedComputePipelineId,
     velocity_bind_group_layout: BindGroupLayout,
     velocity_u_bind_group_layout: BindGroupLayout,
     velocity_v_bind_group_layout: BindGroupLayout,
@@ -93,6 +98,8 @@ pub(crate) struct FluidPipelines {
     obstacles_bind_group_layout: BindGroupLayout,
     jump_flooding_seeds_bind_group_layout: BindGroupLayout,
     jump_flooding_uniform_bind_group_layout: BindGroupLayout,
+    solid_forces_bins_bind_group_layout: BindGroupLayout,
+    forces_to_solid_bind_group_layout: BindGroupLayout,
 }
 
 impl FromWorld for FluidPipelines {
@@ -128,6 +135,8 @@ impl FromWorld for FluidPipelines {
                 uniform_buffer::<JumpFloodingUniform>(false),
             ),
         );
+        let solid_forces_bins_bind_group_layout = SolidForcesBins::bind_group_layout(render_device);
+        let forces_to_solid_bind_group_layout = ForcesToSolid::bind_group_layout(render_device);
 
         let initialize_velocity_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -170,7 +179,7 @@ impl FromWorld for FluidPipelines {
                 zero_initialize_workgroup_memory: false,
             });
 
-        let update_solid_pressure_pipeline = 
+        let update_solid_pressure_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some(Cow::from("Queue UpdateSolidPressurePipeline")),
                 layout: vec![
@@ -409,6 +418,36 @@ impl FromWorld for FluidPipelines {
                 zero_initialize_workgroup_memory: false,
             });
 
+        let sample_forces_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue SampleForcesPipeline")),
+                layout: vec![
+                    solid_forces_bins_bind_group_layout.clone(),
+                    levelset_bind_group_layout.clone(),
+                    pressure_bind_group_layout.clone(),
+                    solid_velocity_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: SAMPLE_FORCES_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("sample_forces_to_solid"),
+                zero_initialize_workgroup_memory: false,
+            });
+
+        let accumulate_forces_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some(Cow::from("Queue AccumulateForcesPipeline")),
+                layout: vec![
+                    solid_forces_bins_bind_group_layout.clone(),
+                    forces_to_solid_bind_group_layout.clone(),
+                ],
+                push_constant_ranges: vec![],
+                shader: ACCUMULATE_FORCES_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: Cow::from("accumulate_forces"),
+                zero_initialize_workgroup_memory: false,
+            });
+
         Self {
             initialize_velocity_pipeline,
             initialize_grid_center_pipeline,
@@ -429,6 +468,8 @@ impl FromWorld for FluidPipelines {
             recompute_levelset_iteration_pipeline,
             recompute_levelset_solve_pipeline,
             advect_levelset_pipeline,
+            accumulate_forces_pipeline,
+            sample_forces_pipeline,
             velocity_bind_group_layout,
             velocity_u_bind_group_layout,
             velocity_v_bind_group_layout,
@@ -442,6 +483,8 @@ impl FromWorld for FluidPipelines {
             obstacles_bind_group_layout,
             jump_flooding_uniform_bind_group_layout,
             jump_flooding_seeds_bind_group_layout,
+            solid_forces_bins_bind_group_layout,
+            forces_to_solid_bind_group_layout,
         }
     }
 }
@@ -458,6 +501,8 @@ pub(crate) struct FluidBindGroups {
     pub local_forces_bind_group: BindGroup,
     pub levelset_bind_group: BindGroup,
     pub jump_flooding_seeds_bind_group: BindGroup,
+    pub solid_forces_bins_bind_group: BindGroup,
+    pub forces_to_solid_bind_group: BindGroup,
     pub uniform_bind_group: BindGroup,
     pub uniform_index: u32,
 }
@@ -522,6 +567,8 @@ pub(super) fn prepare_fluid_bind_groups(
         &DynamicUniformIndex<SimulationUniform>,
         &JumpFloodingSeedsTextures,
         &JumpFloodingUniformBuffer,
+        &SolidForcesBins,
+        &ForcesToSolid,
     )>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<GpuImage>>,
@@ -543,6 +590,8 @@ pub(super) fn prepare_fluid_bind_groups(
         simulation_uniform_index,
         jump_flooding_seeds_textures,
         jump_flooding_uniform_buffer,
+        solid_forces_bins,
+        forces_to_solid,
     ) in &query
     {
         let simulation_uniform = simulation_uniform.uniforms();
@@ -652,6 +701,23 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
+        let solid_forces_bins_bind_group = solid_forces_bins
+            .as_bind_group(
+                &pipelines.solid_forces_bins_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+        let forces_to_solid_bind_group = forces_to_solid
+            .as_bind_group(
+                &pipelines.forces_to_solid_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
         commands.entity(entity).insert((
             FluidBindGroups {
                 velocity_bind_group,
@@ -664,6 +730,8 @@ pub(super) fn prepare_fluid_bind_groups(
                 local_forces_bind_group,
                 levelset_bind_group,
                 jump_flooding_seeds_bind_group,
+                solid_forces_bins_bind_group,
+                forces_to_solid_bind_group,
                 uniform_bind_group,
                 uniform_index: simulation_uniform_index.index(),
             },

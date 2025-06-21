@@ -1,9 +1,13 @@
 use bevy::{
     prelude::*,
-    render::{render_resource::TextureFormat, storage::ShaderStorageBuffer},
+    render::{
+        render_resource::{BufferUsages, TextureFormat},
+        storage::ShaderStorageBuffer,
+    },
 };
 
 use crate::{
+    definition::{ForcesToSolid, SolidForcesBins, MAX_SOLIDS},
     euler_fluid::definition::{
         FluidSimulationBundle, LocalForces, PressureTextures, SimulationUniform, VelocityTextures,
     },
@@ -38,6 +42,7 @@ pub(crate) fn watch_fluid_component(
 
         let u_solid = images.new_texture_storage(size_u, TextureFormat::R32Float);
         let v_solid = images.new_texture_storage(size_v, TextureFormat::R32Float);
+        let solid_id = images.new_texture_storage(size, TextureFormat::R32Sint);
 
         let div = images.new_texture_storage(size, TextureFormat::R32Float);
 
@@ -53,6 +58,13 @@ pub(crate) fn watch_fluid_component(
 
         let force = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
         let position = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
+
+        let bins_x = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
+        let bins_y = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
+
+        let mut forces_to_solid_buffer = ShaderStorageBuffer::from(vec![Vec2::ZERO; MAX_SOLIDS]);
+        forces_to_solid_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
+        let forces_to_solid = buffers.add(forces_to_solid_buffer);
 
         let velocity_textures = VelocityTextures {
             u0: u0.clone(),
@@ -78,7 +90,11 @@ pub(crate) fn watch_fluid_component(
             u1: u1.clone(),
         };
 
-        let solid_velocity_textures = SolidVelocityTextures { u_solid, v_solid };
+        let solid_velocity_textures = SolidVelocityTextures {
+            u_solid,
+            v_solid,
+            solid_id,
+        };
 
         let pressure_textures = PressureTextures { p0, p1 };
 
@@ -115,6 +131,12 @@ pub(crate) fn watch_fluid_component(
             jump_flooding_seeds_y,
         };
 
+        let solid_forces_bins = SolidForcesBins { bins_x, bins_y };
+
+        let forces_to_solid = ForcesToSolid {
+            forces: forces_to_solid,
+        };
+
         commands
             .entity(entity)
             .insert(FluidSimulationBundle {
@@ -128,6 +150,8 @@ pub(crate) fn watch_fluid_component(
                 local_forces,
                 levelset_textures,
                 jump_flooding_seeds_textures,
+                solid_forces_bins,
+                forces_to_solid,
             })
             .insert(uniform);
     }
