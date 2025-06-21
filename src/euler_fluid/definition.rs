@@ -8,6 +8,8 @@ use bevy::{
     },
 };
 
+pub const MAX_SOLIDS: usize = 256;
+
 /// Setting for fluid simulation. By spawning fluid settings, components required to the simulation will be spawned and the simulation will start.
 /// Simulation result can be found on [`VelocityTextures`].
 /// # Arguments
@@ -142,6 +144,8 @@ pub struct SolidVelocityTextures {
     pub u_solid: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
     pub v_solid: Handle<Image>,
+    #[storage_texture(2, image_format = R32Sint, access = ReadWrite)]
+    pub solid_id: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -177,6 +181,20 @@ pub struct LocalForces {
     pub forces: Handle<ShaderStorageBuffer>,
     #[storage(1, read_only, visibility(compute))]
     pub positions: Handle<ShaderStorageBuffer>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SolidForcesBins {
+    #[storage(0, visibility(compute))]
+    pub bins_x: Handle<ShaderStorageBuffer>,
+    #[storage(1, visibility(compute))]
+    pub bins_y: Handle<ShaderStorageBuffer>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct ForcesToSolid {
+    #[storage(0, visibility(compute))]
+    pub forces: Handle<ShaderStorageBuffer>,
 }
 
 #[derive(Clone, ShaderType)]
@@ -247,4 +265,6 @@ pub(crate) struct FluidSimulationBundle {
     pub levelset_textures: LevelsetTextures,
     pub local_forces: LocalForces,
     pub jump_flooding_seeds_textures: JumpFloodingSeedsTextures,
+    pub solid_forces_bins: SolidForcesBins,
+    pub forces_to_solid: ForcesToSolid,
 }

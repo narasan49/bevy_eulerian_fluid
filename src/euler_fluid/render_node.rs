@@ -6,6 +6,8 @@ use bevy::{
     },
 };
 
+use crate::definition::MAX_SOLIDS;
+
 use super::{
     definition::FluidSettings,
     fluid_bind_group::{
@@ -87,9 +89,12 @@ impl render_graph::Node for EulerFluidNode {
                     CachedPipelineState::Ok(_recompute_levelset_iteration_pipeline),
                     CachedPipelineState::Ok(_recompute_levelset_solve_pipeline),
                     CachedPipelineState::Ok(_advect_levelset_pipeline),
+                    CachedPipelineState::Ok(_sample_forces_pipeline),
+                    CachedPipelineState::Ok(_accumulate_forces_pipeline),
                 ) = (
                     pipeline_cache.get_compute_pipeline_state(pipelines.update_solid_pipeline),
-                    pipeline_cache.get_compute_pipeline_state(pipelines.update_solid_pressure_pipeline),
+                    pipeline_cache
+                        .get_compute_pipeline_state(pipelines.update_solid_pressure_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.advect_u_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.advect_v_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.apply_force_u_pipeline),
@@ -111,6 +116,8 @@ impl render_graph::Node for EulerFluidNode {
                     pipeline_cache
                         .get_compute_pipeline_state(pipelines.recompute_levelset_solve_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.advect_levelset_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.sample_forces_pipeline),
+                    pipeline_cache.get_compute_pipeline_state(pipelines.accumulate_forces_pipeline),
                 ) {
                     self.state = State::Update;
                 }
@@ -211,17 +218,23 @@ impl render_graph::Node for EulerFluidNode {
                 let advect_levelset_pipeline = pipeline_cache
                     .get_compute_pipeline(pipelines.advect_levelset_pipeline)
                     .unwrap();
+                let sample_forces_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.sample_forces_pipeline)
+                    .unwrap();
+                let accumulate_forces_pipeline = pipeline_cache
+                    .get_compute_pipeline(pipelines.accumulate_forces_pipeline)
+                    .unwrap();
 
                 let bind_group_resources = world.resource::<FluidBindGroupResources>();
                 for (_entity, settings, bind_groups, jump_flooding_uniform_bind_groups) in
                     self.query.iter_manual(world)
                 {
-                    let mut pass = render_context
-                        .command_encoder()
-                        .begin_compute_pass(&ComputePassDescriptor {
+                    let mut pass = render_context.command_encoder().begin_compute_pass(
+                        &ComputePassDescriptor {
                             label: Some("Eulerian fluid"),
                             ..default()
-                        });
+                        },
+                    );
                     let size = settings.size;
 
                     pass.set_pipeline(&update_solid_pipeline);
@@ -371,6 +384,19 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
                     dispatch_center(&mut pass, size);
+
+                    // forces to solid
+                    pass.set_pipeline(&sample_forces_pipeline);
+                    pass.set_bind_group(0, &bind_groups.solid_forces_bins_bind_group, &[]);
+                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+                    pass.set_bind_group(2, &bind_groups.pressure_bind_group, &[]);
+                    pass.set_bind_group(3, &bind_groups.solid_velocity_bind_group, &[]);
+                    dispatch_center(&mut pass, size);
+
+                    pass.set_pipeline(&accumulate_forces_pipeline);
+                    pass.set_bind_group(0, &bind_groups.solid_forces_bins_bind_group, &[]);
+                    pass.set_bind_group(1, &bind_groups.forces_to_solid_bind_group, &[]);
+                    pass.dispatch_workgroups(MAX_SOLIDS as u32, 1, 1);
                 }
             }
         }

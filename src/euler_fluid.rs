@@ -19,15 +19,14 @@ use bevy::{
     },
 };
 use definition::{
-    DivergenceTextures, JumpFloodingSeedsTextures, LocalForces, Obstacles, PressureTextures,
-    SimulationUniform, VelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU,
-    VelocityTexturesV,
+    DivergenceTextures, ForcesToSolid, JumpFloodingSeedsTextures, LocalForces, Obstacles,
+    PressureTextures, SimulationUniform, SolidForcesBins, SolidVelocityTextures, VelocityTextures,
+    VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
 };
 use fluid_bind_group::FluidPipelines;
 
 use render_node::{EulerFluidNode, FluidLabel};
 
-use crate::definition::SolidVelocityTextures;
 use setup_components::watch_fluid_component;
 
 const FLUID_UNIFORM_SHADER_HANDLE: Handle<Shader> =
@@ -39,8 +38,17 @@ const AREA_FRACTION_SHADER_HANDLE: Handle<Shader> =
 const COORDINATE_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x9F8E2E5B1E5F40C096C31175C285BF11);
 
-const LEVELSET_UTILS_SHADER_HANDLE: Handle<Shader> = 
+const LEVELSET_UTILS_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x998B1DF79E3044B89B0029DCDD0B2B2C);
+
+const SAMPLE_FORCES_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0x9DCC97E56F80433A94A50E50DF357E6A);
+
+const ACCUMULATE_FORCES_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0xFF0774E1DC464BEEBC4E502073563979);
+
+const FIXED_POINT_CONVERSION_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0xD734D82B93BF4EC4831C2A627F813304);
 
 pub struct FluidPlugin;
 
@@ -59,6 +67,8 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<LevelsetTextures>::default())
             .add_plugins(ExtractComponentPlugin::<JumpFloodingSeedsTextures>::default())
             .add_plugins(ExtractComponentPlugin::<LocalForces>::default())
+            .add_plugins(ExtractComponentPlugin::<ForcesToSolid>::default())
+            .add_plugins(ExtractComponentPlugin::<SolidForcesBins>::default())
             .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)
@@ -225,7 +235,28 @@ impl Plugin for FluidPlugin {
             LEVELSET_UTILS_SHADER_HANDLE,
             "euler_fluid/shaders/utils/levelset_utils.wgsl",
             Shader::from_wgsl
-        )
+        );
+
+        load_internal_asset!(
+            app,
+            SAMPLE_FORCES_SHADER_HANDLE,
+            "euler_fluid/shaders/fluid_to_solid/sample_forces.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            ACCUMULATE_FORCES_SHADER_HANDLE,
+            "euler_fluid/shaders/fluid_to_solid/accumulate_forces.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            FIXED_POINT_CONVERSION_SHADER_HANDLE,
+            "euler_fluid/shaders/fluid_to_solid/fixed_point_conversion.wgsl",
+            Shader::from_wgsl
+        );
     }
 
     fn finish(&self, app: &mut App) {

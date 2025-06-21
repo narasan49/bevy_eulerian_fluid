@@ -55,7 +55,12 @@ pub(crate) fn update_obstacle_circle(
 }
 
 pub(crate) fn update_obstacle_rectangle(
-    query: Query<(&SolidRectangle, &Transform, &Velocity, &AngularVelocity)>,
+    query: Query<(
+        &SolidRectangle,
+        &GlobalTransform,
+        &Velocity,
+        &AngularVelocity,
+    )>,
     obstacles: Res<Obstacles>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
