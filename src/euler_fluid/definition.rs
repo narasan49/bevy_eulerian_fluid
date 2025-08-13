@@ -197,39 +197,22 @@ pub struct ForcesToSolid {
     pub forces: Handle<ShaderStorageBuffer>,
 }
 
-#[derive(Clone, ShaderType)]
-pub struct CircleObstacle {
-    pub radius: f32,
-    pub transform: Mat4,
-    pub velocity: Vec2,
-}
-
-#[derive(Clone, ShaderType)]
-pub struct RectangleObstacle {
-    pub half_size: Vec2,
-    pub transform: Mat4,
-    pub inverse_transform: Mat4,
-    pub velocity: Vec2,
-    pub angular_velocity: f32,
-}
-
 #[derive(Resource, Clone, ExtractResource, AsBindGroup)]
-pub struct Obstacles {
+pub struct SolidObstaclesBuffer {
     #[storage(0, read_only, visibility(compute))]
-    pub circles: Handle<ShaderStorageBuffer>,
-    #[storage(1, read_only, visibility(compute))]
-    pub rectangles: Handle<ShaderStorageBuffer>,
+    pub obstacles: Handle<ShaderStorageBuffer>,
 }
 
-impl FromWorld for Obstacles {
+#[derive(Component, Clone, ExtractComponent)]
+pub struct SolidEntities {
+    pub entities: Vec<Entity>,
+}
+
+impl FromWorld for SolidObstaclesBuffer {
     fn from_world(world: &mut World) -> Self {
         let mut buffers = world.resource_mut::<Assets<ShaderStorageBuffer>>();
-        let circles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
-        Self {
-            circles,
-            rectangles,
-        }
+        let obstacles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
+        Self { obstacles }
     }
 }
 

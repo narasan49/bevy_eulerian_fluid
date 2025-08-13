@@ -1,16 +1,38 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 
+const LARGE_FLOAT: f32 = 1.0e6;
+
+const SHAPE_CIRCLE: u32 = 0;
+const SHAPE_RECTANGLE: u32 = 1;
+const SHAPE_TRIANGLE: u32 = 4;
+
 struct Circle {
     radius: f32,
-    transform: mat4x4<f32>,
-    velocity: vec2<f32>,
 }
 
 struct Rectangle {
     half_size: vec2<f32>,
+}
+
+struct ShapeVariant {
+    shape: u32,
+    values: array<f32, 6>,
+}
+
+fn get_circle(variant: ShapeVariant) -> Circle {
+    return Circle(variant.values[0]);
+}
+
+fn get_rectangle(variant: ShapeVariant) -> Rectangle {
+    return Rectangle(vec2<f32>(variant.values[0], variant.values[1]));
+}
+
+struct SolidObstacle {
+    entity_id: u32,
+    shape: ShapeVariant,
     transform: mat4x4<f32>,
     inverse_transform: mat4x4<f32>,
-    velocity: vec2<f32>,
+    linear_velocity: vec2<f32>,
     angular_velocity: f32,
 }
 
@@ -20,8 +42,7 @@ struct Rectangle {
 
 @group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
-@group(2) @binding(0) var<storage, read> circles: array<Circle>;
-@group(2) @binding(1) var<storage, read> rectangles: array<Rectangle>;
+@group(2) @binding(0) var<storage, read> obstacles: array<SolidObstacle>;
 
 @group(3) @binding(0) var<uniform> simulation_uniform: SimulationUniform;
 
@@ -38,71 +59,39 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         textureStore(levelset_solid, x, vec4<f32>(0));
         textureStore(u_solid, x, vec4<f32>(0, 0, 0, 0));
         textureStore(v_solid, x, vec4<f32>(0, 0, 0, 0));
+        textureStore(solid_id, x, vec4<i32>(-1, 0, 0, 0));
         return;
     }
-    
-    var level = 1.0e6; // initialize to a large value
-    let num_circles = arrayLength(&circles);
 
+    var level = LARGE_FLOAT;
+
+    let num_obstacles = arrayLength(&obstacles);
     var i = 0u;
     var u = 0.0;
     var v = 0.0;
     var solid_id_sample = -1;
     loop {
-        if (i >= num_circles) {
+        if (i >= num_obstacles) {
             break;
         }
-        let circle = circles[i];
-        let translation = circle.transform[3].xy;
-
-        let distance_center = distance(xy_center, translation);
-        let level_center = distance_center - circle.radius;
-        if (level_center < level) {
-            level = level_center;
-            solid_id_sample = i32(i);
+        let obstacle = obstacles[i];
+        let level_obstacle = level_obstacle(obstacle, xy_center);
+        if (level_obstacle < level) {
+            level = level_obstacle;
         }
 
-        let distance_edge_x = distance(xy_edge_x, translation);
-        let level_edge_x = distance_edge_x - circle.radius;
+        if (level_obstacle < 0.5) {
+            solid_id_sample = i32(obstacle.entity_id);
+        }
+
+        let level_edge_x = level_obstacle(obstacle, xy_edge_x);
         if (level_edge_x < 0.5) {
-            u = circle.velocity.x;
+            u = velocity_at(obstacle, xy_edge_x).x;
         }
 
-        let distance_edge_y = distance(xy_edge_y, translation);
-        let level_edge_y = distance_edge_y - circle.radius;
+        let level_edge_y = level_obstacle(obstacle, xy_edge_y);
         if (level_edge_y < 0.5) {
-            v = circle.velocity.y;
-        }
-
-        continuing {
-            i = i + 1u;
-        }
-    }
-    
-    let total_rect = arrayLength(&rectangles);
-    i = 0u;
-    loop {
-        if (i >= total_rect) {
-            break;
-        }
-
-        let rectangle = rectangles[i];
-        
-        let level_center = level_rectangle(rectangle, xy_center);
-        if (level > level_center) {
-            level = level_center;
-            solid_id_sample = i32(i) + i32(num_circles);
-        }
-
-        let level_edge_x = level_rectangle(rectangle, xy_edge_x);
-        if (level_edge_x < 0.5) {
-            u = rectangle_velocity(rectangle, xy_edge_x).x;
-        }
-
-        let level_edge_y = level_rectangle(rectangle, xy_edge_y);
-        if (level_edge_y < 0.5) {
-            // flip the y velocity
-            v = -rectangle_velocity(rectangle, xy_edge_y).y;
+            v = -velocity_at(obstacle, xy_edge_y).y;
         }
 
         continuing {
@@ -127,12 +116,12 @@ fn to_world(x: vec2<f32>, dim: vec2<u32>) -> vec2<f32> {
     return (simulation_uniform.fluid_transform * vec4<f32>(xy, 0.0, 1.0)).xy;
 }
 
-fn level_rectangle(rectangle: Rectangle, x: vec2<f32>) -> f32 {
-    var level = 1000.0;
-    if (determinant(rectangle.transform) == 0.0) {
+fn level_rectangle(rectangle: Rectangle, transform: mat4x4<f32>, inverse_transform: mat4x4<f32>, x: vec2<f32>) -> f32 {
+    var level = LARGE_FLOAT;
+    if (determinant(transform) == 0.0) {
         return level;
     }
-    let x0 = (rectangle.inverse_transform * vec4<f32>(x, 0.0, 1.0)).xy;
+    let x0 = (inverse_transform * vec4<f32>(x, 0.0, 1.0)).xy;
     let is_inside_x = abs(x0.x) < rectangle.half_size.x;
     let is_inside_y = abs(x0.y) < rectangle.half_size.y;
     if (is_inside_x) {
@@ -151,9 +140,29 @@ fn level_rectangle(rectangle: Rectangle, x: vec2<f32>) -> f32 {
     return level;
 }
 
-fn rectangle_velocity(rectangle: Rectangle, x: vec2<f32>) -> vec2<f32> {
-    let r = x - rectangle.transform[3].xy;
-    let omega = rectangle.angular_velocity;
-    let v = rectangle.velocity + vec2<f32>(-omega * r.y, omega * r.x);
+fn velocity_at(
+    obstacle: SolidObstacle,
+    x: vec2<f32>
+) -> vec2<f32> {
+    let r = x - obstacle.transform[3].xy;
+    let omega = obstacle.angular_velocity;
+    let v = obstacle.linear_velocity + vec2<f32>(-omega * r.y, omega * r.x);
     return v;
+}
+
+fn level_obstacle(obstacle: SolidObstacle, x: vec2<f32>) -> f32 {
+    switch (obstacle.shape.shape) {
+        case SHAPE_CIRCLE: {
+            let circle = get_circle(obstacle.shape);
+            let translation = obstacle.transform[3].xy;
+            return distance(x, translation) - circle.radius;
+        }
+        case SHAPE_RECTANGLE: {
+            let rectangle = get_rectangle(obstacle.shape);
+            return level_rectangle(rectangle, obstacle.transform, obstacle.inverse_transform, x);
+        }
+        default: {
+            return LARGE_FLOAT;
+        }
+    }
 }

@@ -1,22 +1,24 @@
 use bevy::{
     prelude::*,
     render::{
+        gpu_readback::Readback,
         render_resource::{BufferUsages, TextureFormat},
         storage::ShaderStorageBuffer,
     },
 };
 
-use crate::{
-    definition::{ForcesToSolid, SolidForcesBins, MAX_SOLIDS},
-    euler_fluid::definition::{
-        FluidSimulationBundle, LocalForces, PressureTextures, SimulationUniform, VelocityTextures,
-    },
-    texture::NewTexture,
-};
-
 use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
     SolidVelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
+};
+use crate::obstacle::SolidObstacle;
+use crate::{
+    definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
+    euler_fluid::definition::{
+        FluidSimulationBundle, LocalForces, PressureTextures, SimulationUniform, VelocityTextures,
+    },
+    fluid_to_solid::forces_to_solid_readback,
+    texture::NewTexture,
 };
 
 pub(crate) fn watch_fluid_component(
@@ -62,9 +64,10 @@ pub(crate) fn watch_fluid_component(
         let bins_x = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
         let bins_y = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
 
-        let mut forces_to_solid_buffer = ShaderStorageBuffer::from(vec![Vec2::ZERO; MAX_SOLIDS]);
+        let mut forces_to_solid_buffer =
+            ShaderStorageBuffer::from(vec![SolidObstacle::default(); 0]);
         forces_to_solid_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
-        let forces_to_solid = buffers.add(forces_to_solid_buffer);
+        let forces_to_solid_buffer = buffers.add(forces_to_solid_buffer);
 
         let velocity_textures = VelocityTextures {
             u0: u0.clone(),
@@ -134,7 +137,11 @@ pub(crate) fn watch_fluid_component(
         let solid_forces_bins = SolidForcesBins { bins_x, bins_y };
 
         let forces_to_solid = ForcesToSolid {
-            forces: forces_to_solid,
+            forces: forces_to_solid_buffer.clone(),
+        };
+
+        let solid_entites = SolidEntities {
+            entities: Vec::new(),
         };
 
         commands
@@ -153,6 +160,10 @@ pub(crate) fn watch_fluid_component(
                 solid_forces_bins,
                 forces_to_solid,
             })
-            .insert(uniform);
+            .insert(uniform)
+            .insert(solid_entites);
+        commands
+            .spawn(Readback::Buffer(forces_to_solid_buffer.clone()))
+            .observe(forces_to_solid_readback);
     }
 }

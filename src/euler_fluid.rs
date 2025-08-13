@@ -1,9 +1,11 @@
 pub mod definition;
 pub mod fluid_bind_group;
+pub mod fluid_to_solid;
 pub mod obstacle;
 pub mod render_node;
 pub mod setup_components;
 
+use crate::definition::SolidObstaclesBuffer;
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::material::FluidMaterialPlugin;
@@ -19,8 +21,8 @@ use bevy::{
     },
 };
 use definition::{
-    DivergenceTextures, ForcesToSolid, JumpFloodingSeedsTextures, LocalForces, Obstacles,
-    PressureTextures, SimulationUniform, SolidForcesBins, SolidVelocityTextures, VelocityTextures,
+    DivergenceTextures, ForcesToSolid, JumpFloodingSeedsTextures, LocalForces, PressureTextures,
+    SimulationUniform, SolidForcesBins, SolidVelocityTextures, VelocityTextures,
     VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
 };
 use fluid_bind_group::FluidPipelines;
@@ -54,7 +56,7 @@ pub struct FluidPlugin;
 
 impl Plugin for FluidPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(ExtractResourcePlugin::<Obstacles>::default())
+        app.add_plugins(ExtractResourcePlugin::<SolidObstaclesBuffer>::default())
             .add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins(ExtractComponentPlugin::<FluidBindGroups>::default())
             .add_plugins(ExtractComponentPlugin::<VelocityTextures>::default())
@@ -72,13 +74,8 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)
-            .add_systems(
-                Update,
-                (
-                    obstacle::update_obstacle_circle,
-                    obstacle::update_obstacle_rectangle,
-                ),
-            )
+            .add_systems(Update, obstacle::construct_rigid_body_buffer_for_gpu)
+            .add_systems(Update, fluid_to_solid::initialize_buffer)
             .add_systems(Update, watch_fluid_component);
 
         let render_app = app.sub_app_mut(RenderApp);
@@ -260,7 +257,8 @@ impl Plugin for FluidPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        app.init_resource::<Obstacles>();
+        // app.init_resource::<Obstacles>();
+        app.init_resource::<SolidObstaclesBuffer>();
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<FluidPipelines>();

@@ -19,14 +19,14 @@ use bevy::{
     },
 };
 
-use crate::definition::{ForcesToSolid, SolidForcesBins};
+use crate::definition::{ForcesToSolid, SolidForcesBins, SolidObstaclesBuffer};
 use crate::euler_fluid::{ACCUMULATE_FORCES_SHADER_HANDLE, SAMPLE_FORCES_SHADER_HANDLE};
 
 use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform,
-    JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, Obstacles, PressureTextures,
-    SimulationUniform, SolidVelocityTextures, VelocityTextures, VelocityTexturesIntermediate,
-    VelocityTexturesU, VelocityTexturesV,
+    JumpFloodingUniformBuffer, LevelsetTextures, LocalForces, PressureTextures, SimulationUniform,
+    SolidVelocityTextures, VelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU,
+    VelocityTexturesV,
 };
 
 pub(super) const INITIALIZE_GRID_CENTER_SHADER_HANDLE: Handle<Shader> =
@@ -125,7 +125,7 @@ impl FromWorld for FluidPipelines {
         let pressure_bind_group_layout = PressureTextures::bind_group_layout(render_device);
         let divergence_bind_group_layout = DivergenceTextures::bind_group_layout(render_device);
         let levelset_bind_group_layout = LevelsetTextures::bind_group_layout(render_device);
-        let obstacles_bind_group_layout = Obstacles::bind_group_layout(render_device);
+        let obstacles_bind_group_layout = SolidObstaclesBuffer::bind_group_layout(render_device);
         let jump_flooding_seeds_bind_group_layout =
             JumpFloodingSeedsTextures::bind_group_layout(render_device);
         let jump_flooding_uniform_bind_group_layout = render_device.create_bind_group_layout(
@@ -745,7 +745,7 @@ pub(super) fn prepare_fluid_bind_groups(
 pub(super) fn prepare_fluid_bind_group_for_resources(
     mut commands: Commands,
     pilelines: Res<FluidPipelines>,
-    obstacles: Res<Obstacles>,
+    obstacles: Res<SolidObstaclesBuffer>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,

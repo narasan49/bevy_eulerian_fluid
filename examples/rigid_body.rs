@@ -1,8 +1,10 @@
 extern crate bevy_eulerian_fluid;
 
+use std::ops::Deref;
+
 use avian2d::{
     math::Vector,
-    prelude::{Gravity, IntoCollider, RigidBody},
+    prelude::{ExternalForce, Gravity, IntoCollider, RigidBody},
     PhysicsPlugins,
 };
 use bevy::{
@@ -17,9 +19,9 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, LevelsetTextures, VelocityTextures},
+    definition::{FluidSettings, LevelsetTextures, PressureTextures, VelocityTextures},
     material::VelocityMaterial,
-    obstacle, FluidPlugin,
+    FluidPlugin,
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
@@ -67,7 +69,8 @@ fn main() {
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
     .add_systems(Startup, (setup_scene, setup_rigid_bodies))
     .add_systems(Update, on_fluid_setup)
-    .add_systems(Update, mouse_motion);
+    .add_systems(Update, mouse_motion)
+    .add_systems(Update, update_gizmos);
 
     app.run();
 }
@@ -104,8 +107,7 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * -0.5, 0.0, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
-        obstacle::SolidCircle::from_circle(circle),
-        obstacle::Velocity(Vec2::ZERO),
+        ExternalForce::default(),
     ));
 
     let rectangle = Rectangle::new(300.0, 20.0);
@@ -118,20 +120,25 @@ fn setup_rigid_bodies(
             .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_8)),
         RigidBody::Static,
         rectangle.collider(),
-        obstacle::SolidRectangle::from_rectangle(rectangle),
-        obstacle::Velocity(Vec2::ZERO),
-        obstacle::AngularVelocity(0.0),
     ));
 }
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<(Entity, &LevelsetTextures, &VelocityTextures), Added<LevelsetTextures>>,
+    query: Query<
+        (
+            Entity,
+            &LevelsetTextures,
+            &VelocityTextures,
+            &PressureTextures,
+        ),
+        Added<LevelsetTextures>,
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (entity, levelset_textures, velocity_textures) in &query {
+    for (entity, levelset_textures, velocity_textures, pressure_textures) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
             levelset: levelset_textures.levelset_air0.clone(),
@@ -166,6 +173,15 @@ fn on_fluid_setup(
             },
             TextColor::WHITE,
         ));
+    }
+}
+
+fn update_gizmos(mut gizmos: Gizmos, query: Query<(&Transform, &ExternalForce), With<RigidBody>>) {
+    for (transform, external_force) in &query {
+        let start = transform.translation.xy();
+        let end = start + external_force.deref() * 0.001;
+        let color = LinearRgba::RED;
+        gizmos.arrow_2d(start, end, color);
     }
 }
 

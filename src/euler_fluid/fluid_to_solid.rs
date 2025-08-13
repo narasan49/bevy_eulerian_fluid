@@ -1,0 +1,42 @@
+use crate::definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS};
+use avian2d::prelude::ExternalForce;
+use bevy::{
+    prelude::*,
+    render::{gpu_readback::ReadbackComplete, storage::ShaderStorageBuffer},
+};
+
+pub(crate) fn forces_to_solid_readback(
+    trigger: Trigger<ReadbackComplete>,
+    mut query: Query<&mut ExternalForce>,
+    query_solidentities: Query<&SolidEntities>,
+) {
+    let data: Vec<Vec2> = trigger.event().to_shader_type();
+    for fluids in &query_solidentities {
+        for (idx, entity) in fluids.entities.iter().enumerate() {
+            let rigid_body = query.get_mut(*entity);
+            if let Ok(mut external_force) = rigid_body {
+                let mut force = data[idx];
+                force.y *= -1.0;
+                external_force.set_force(force);
+                info!("Applied force: {:?}, entity: {:?}", force, entity.index());
+            }
+        }
+    }
+}
+
+pub(crate) fn initialize_buffer(
+    query: Query<(&ForcesToSolid, &SolidForcesBins)>,
+    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+) {
+    info!("Initializing forces to solid buffers");
+    for (forces_to_solid, bins) in query.iter() {
+        let bins_x = buffers.get_mut(&bins.bins_x).unwrap();
+        bins_x.set_data(vec![0.0; MAX_SOLIDS]);
+
+        let bins_y = buffers.get_mut(&bins.bins_y).unwrap();
+        bins_y.set_data(vec![0.0; MAX_SOLIDS]);
+
+        let forces_buffer = buffers.get_mut(&forces_to_solid.forces).unwrap();
+        forces_buffer.set_data(vec![Vec2::ZERO; MAX_SOLIDS]);
+    }
+}
