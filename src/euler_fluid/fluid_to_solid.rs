@@ -1,4 +1,7 @@
-use crate::definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS};
+use crate::{
+    definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
+    physics_time::PhysicsFrameInfo,
+};
 use avian2d::prelude::ExternalForce;
 use bevy::{
     prelude::*,
@@ -9,7 +12,15 @@ pub(crate) fn forces_to_solid_readback(
     trigger: Trigger<ReadbackComplete>,
     mut query: Query<&mut ExternalForce>,
     query_solidentities: Query<&SolidEntities>,
+    physics_frame_info: Res<PhysicsFrameInfo>,
+    mut last_physics_step: Local<u64>,
 ) {
+    if physics_frame_info.step_number == *last_physics_step {
+        info!("Skipping forces to solid readback for physics step {}. GPU readback has already been performed for this step.", *last_physics_step);
+        return;
+    }
+    *last_physics_step = physics_frame_info.step_number;
+
     let data: Vec<Vec2> = trigger.event().to_shader_type();
     for fluids in &query_solidentities {
         for (idx, entity) in fluids.entities.iter().enumerate() {

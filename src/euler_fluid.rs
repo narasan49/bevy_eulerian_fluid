@@ -2,6 +2,7 @@ pub mod definition;
 pub mod fluid_bind_group;
 pub mod fluid_to_solid;
 pub mod obstacle;
+pub mod physics_time;
 pub mod render_node;
 pub mod setup_components;
 
@@ -77,6 +78,8 @@ impl Plugin for FluidPlugin {
             .add_systems(Update, obstacle::construct_rigid_body_buffer_for_gpu)
             .add_systems(Update, fluid_to_solid::initialize_buffer)
             .add_systems(Update, watch_fluid_component);
+
+        app.add_plugins(physics_time::PhysicsFramePlugin);
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app

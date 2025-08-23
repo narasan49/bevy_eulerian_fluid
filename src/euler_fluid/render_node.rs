@@ -6,7 +6,10 @@ use bevy::{
     },
 };
 
-use crate::definition::MAX_SOLIDS;
+use crate::{
+    definition::MAX_SOLIDS,
+    physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
+};
 
 use super::{
     definition::FluidSettings,
@@ -28,6 +31,7 @@ enum State {
     Loading,
     Init,
     Update,
+    Idle,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -122,7 +126,19 @@ impl render_graph::Node for EulerFluidNode {
                     self.state = State::Update;
                 }
             }
-            State::Update => {}
+            State::Update | State::Idle => {
+                let current_step = world.resource::<CurrentPhysicsStepNumberRenderWorld>();
+                let physics_step_numper = world.resource::<PhysicsFrameInfo>().step_number;
+                if current_step.0 == physics_step_numper {
+                    self.state = State::Idle;
+                } else {
+                    let mut current_step =
+                        world.resource_mut::<CurrentPhysicsStepNumberRenderWorld>();
+                    current_step.0 = physics_step_numper;
+                    info!("Updating Euler Fluid Node, step: {}", physics_step_numper);
+                    self.state = State::Update;
+                }
+            }
         }
     }
     fn run<'w>(
@@ -133,6 +149,7 @@ impl render_graph::Node for EulerFluidNode {
     ) -> Result<(), render_graph::NodeRunError> {
         let pipeline_cache = world.resource::<PipelineCache>();
         let pipelines = world.resource::<FluidPipelines>();
+
         match self.state {
             State::Loading => {}
             State::Init => {
@@ -399,6 +416,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.dispatch_workgroups(MAX_SOLIDS as u32, 1, 1);
                 }
             }
+            State::Idle => {}
         }
 
         Ok(())
