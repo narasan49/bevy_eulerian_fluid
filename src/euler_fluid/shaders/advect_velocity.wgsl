@@ -18,7 +18,8 @@ fn advect_u(
     let backtraced_x: vec2<f32> = runge_kutta(u0, v0, x, constants.dt);
     let dim = vec2<f32>(textureDimensions(u0));
     if (!is_inside_domain(backtraced_x, dim)) {
-        textureStore(u1, idx, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+        let u = textureLoad(u0, idx).x;
+        textureStore(u1, idx, vec4<f32>(u, 0.0, 0.0, 0.0));
     } else {
         let backtraced_u = interp2d_edge_x(u0, backtraced_x);
         textureStore(u1, idx, vec4<f32>(backtraced_u, 0.0, 0.0, 0.0));
@@ -35,7 +36,8 @@ fn advect_v(
     let backtraced_x: vec2<f32> = runge_kutta(u0, v0, x, constants.dt);
     let dim = vec2<f32>(textureDimensions(v0));
     if (!is_inside_domain(backtraced_x, dim)) {
-        textureStore(v1, idx, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+        let v = textureLoad(v0, idx).x;
+        textureStore(v1, idx, vec4<f32>(v, 0.0, 0.0, 0.0));
     } else {
         let backtraced_v = interp2d_edge_y(v0, backtraced_x);
         textureStore(v1, idx, vec4<f32>(backtraced_v, 0.0, 0.0, 0.0));
