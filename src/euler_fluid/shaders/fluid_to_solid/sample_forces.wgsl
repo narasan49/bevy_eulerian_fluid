@@ -31,9 +31,8 @@ fn sample_forces_to_solid(
     }
 
     let p = textureLoad(p1, idx).r;
-    let force = vec2<f32>(f.iplusj - f.iminusj, f.ijplus - f.ijminus) * p;
+    let force = -vec2<f32>(f.iplusj - f.iminusj, f.ijplus - f.ijminus) * p;
     atomicAdd(&bins_x[solid_id], f32_to_i32(force.x));
     atomicAdd(&bins_y[solid_id], f32_to_i32(force.y));
-    
-    workgroupBarrier();
+
 }
