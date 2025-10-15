@@ -1,3 +1,4 @@
+use avian2d::{prelude::Physics, sync::SyncSet};
 use bevy::{
     prelude::*,
     render::{
@@ -9,6 +10,21 @@ use bevy::{
 };
 
 pub const MAX_SOLIDS: usize = 256;
+
+pub struct FluidParametersPlugin;
+
+impl Plugin for FluidParametersPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            FixedPostUpdate,
+            update_simulation_uniform.after(SyncSet::First),
+        );
+    }
+
+    fn finish(&self, app: &mut App) {
+        app.init_resource::<FluidTimeStep>();
+    }
+}
 
 /// Setting for fluid simulation. By spawning fluid settings, components required to the simulation will be spawned and the simulation will start.
 /// Simulation result can be found on [`VelocityTextures`].
@@ -67,14 +83,34 @@ pub const MAX_SOLIDS: usize = 256;
 /// }
 /// ```
 #[derive(Component, Clone, ExtractComponent)]
-#[require(Transform)]
+#[require(Transform, FluidGridLength)]
 pub struct FluidSettings {
-    pub dx: f32,
-    pub dt: f32,
     pub rho: f32,
     pub gravity: Vec2,
     pub size: (u32, u32),
     pub initial_fluid_level: f32,
+}
+
+#[derive(Resource, Clone, Copy, ExtractResource)]
+pub struct FluidTimeStep(pub f32);
+
+impl FromWorld for FluidTimeStep {
+    fn from_world(world: &mut World) -> Self {
+        let physics_time = world.resource::<Time<Physics>>();
+        info!("physics_time: {physics_time:?}");
+        let time = world.resource::<Time>();
+        info!("time: {time:?}");
+        Self(physics_time.delta_secs())
+    }
+}
+
+#[derive(Component, Clone, Copy, ExtractComponent)]
+pub struct FluidGridLength(pub f32);
+
+impl Default for FluidGridLength {
+    fn default() -> Self {
+        Self(1.0)
+    }
 }
 
 #[derive(Component, ExtractComponent, ShaderType, Clone, Copy, Default)]
@@ -86,6 +122,26 @@ pub struct SimulationUniform {
     pub initial_fluid_level: f32,
     pub fluid_transform: Mat4,
     pub size: Vec2,
+}
+
+fn update_simulation_uniform(
+    mut query: Query<(
+        &mut SimulationUniform,
+        &FluidGridLength,
+        &FluidSettings,
+        &Transform,
+    )>,
+    time_step: Res<FluidTimeStep>,
+) {
+    for (mut uniform, grid_length, settings, transform) in &mut query {
+        uniform.dx = grid_length.0;
+        uniform.dt = time_step.0;
+        uniform.rho = settings.rho;
+        uniform.gravity = settings.gravity;
+        uniform.initial_fluid_level = settings.initial_fluid_level;
+        uniform.fluid_transform = transform.compute_matrix();
+        uniform.size = Vec2::new(settings.size.0 as f32, settings.size.1 as f32);
+    }
 }
 
 /// Fluid velocity field.

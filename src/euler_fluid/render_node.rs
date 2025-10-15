@@ -135,7 +135,6 @@ impl render_graph::Node for EulerFluidNode {
                     let mut current_step =
                         world.resource_mut::<CurrentPhysicsStepNumberRenderWorld>();
                     current_step.0 = physics_step_numper;
-                    info!("Updating Euler Fluid Node, step: {}", physics_step_numper);
                     self.state = State::Update;
                 }
             }

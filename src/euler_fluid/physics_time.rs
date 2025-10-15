@@ -7,6 +7,8 @@ use bevy::{
     },
 };
 
+use crate::definition::FluidTimeStep;
+
 pub struct PhysicsFramePlugin;
 
 impl Plugin for PhysicsFramePlugin {
@@ -36,9 +38,10 @@ pub struct CurrentPhysicsStepNumberRenderWorld(pub u64);
 pub(crate) fn update_physics_frame_info(
     time: Res<Time<Physics>>,
     mut step: ResMut<PhysicsFrameInfo>,
+    mut time_step: ResMut<FluidTimeStep>,
 ) {
     let delta = time.delta_secs();
     step.delta_secs = delta;
     step.step_number += 1;
-    info!("delta time: {step:?}");
+    time_step.0 = delta;
 }

@@ -11,7 +11,7 @@ use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
     SolidVelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
 };
-use crate::obstacle::SolidObstacle;
+use crate::{definition::FluidGridLength, obstacle::SolidObstacle};
 use crate::{
     definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
     euler_fluid::definition::{
@@ -23,11 +23,14 @@ use crate::{
 
 pub(crate) fn watch_fluid_component(
     mut commands: Commands,
-    query: Query<(Entity, &FluidSettings, Option<&Transform>), Added<FluidSettings>>,
+    query: Query<
+        (Entity, &FluidSettings, &FluidGridLength, Option<&Transform>),
+        Added<FluidSettings>,
+    >,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (entity, settings, transform) in &query {
+    for (entity, settings, grid_length, transform) in &query {
         let size = settings.size;
 
         if size.0 % 64 != 0 || size.1 % 64 != 0 {
@@ -115,8 +118,8 @@ pub(crate) fn watch_fluid_component(
         };
 
         let uniform = SimulationUniform {
-            dx: settings.dx,
-            dt: settings.dt,
+            dx: grid_length.0,
+            dt: 0.0,
             rho: settings.rho,
             gravity: settings.gravity,
             initial_fluid_level: settings.initial_fluid_level,
@@ -161,9 +164,8 @@ pub(crate) fn watch_fluid_component(
                 forces_to_solid,
             })
             .insert(uniform)
-            .insert(solid_entites);
-        commands
-            .spawn(Readback::Buffer(forces_to_solid_buffer.clone()))
+            .insert(solid_entites)
+            .insert(Readback::Buffer(forces_to_solid_buffer.clone()))
             .observe(forces_to_solid_readback);
     }
 }

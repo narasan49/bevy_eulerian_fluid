@@ -79,7 +79,10 @@ impl Plugin for FluidPlugin {
             .add_systems(Update, fluid_to_solid::initialize_buffer)
             .add_systems(Update, watch_fluid_component);
 
-        app.add_plugins(physics_time::PhysicsFramePlugin);
+        app.add_plugins((
+            physics_time::PhysicsFramePlugin,
+            definition::FluidParametersPlugin,
+        ));
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app

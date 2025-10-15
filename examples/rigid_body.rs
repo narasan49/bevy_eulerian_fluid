@@ -4,7 +4,7 @@ use std::ops::Deref;
 
 use avian2d::{
     math::Vector,
-    prelude::{ExternalForce, Gravity, IntoCollider, RigidBody},
+    prelude::{ColliderDensity, ExternalForce, Gravity, IntoCollider, RigidBody},
     PhysicsPlugins,
 };
 use bevy::{
@@ -19,7 +19,10 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, LevelsetTextures, PressureTextures, VelocityTextures},
+    definition::{
+        FluidGridLength, FluidSettings, LevelsetTextures,
+        VelocityTextures,
+    },
     material::VelocityMaterial,
     FluidPlugin,
 };
@@ -81,13 +84,12 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let fluid_domain_rectangle = Rectangle::from_size(Vec2::new(SIZE.0 as f32, SIZE.1 as f32));
     commands.spawn((
         FluidSettings {
-            dx: 1.0f32,
-            dt: 0.1f32,
-            rho: 997f32, // water
+            rho: 99.70, // water in 2D
             gravity: Vec2::Y * 9.8,
             size: SIZE,
             initial_fluid_level: 0.7,
         },
+        FluidGridLength(1.0),
         Mesh2d(meshes.add(fluid_domain_rectangle)),
         Transform::default().with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0)),
     ));
@@ -104,41 +106,22 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(mesh),
         MeshMaterial2d(material),
-        Transform::from_xyz(SIZE.0 as f32 * -0.5, 0.0, 1.0),
+        Transform::from_xyz(SIZE.0 as f32 * -0.5, SIZE.0 as f32 * 0.5, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
         ExternalForce::default(),
-    ));
-
-    let rectangle = Rectangle::new(300.0, 20.0);
-    let rectangle_mesh = meshes.add(rectangle);
-    let rectangle_material = materials.add(Color::srgb(0.7, 0.7, 0.7));
-    commands.spawn((
-        Mesh2d(rectangle_mesh),
-        MeshMaterial2d(rectangle_material),
-        Transform::from_xyz(SIZE.0 as f32 * -0.5, -100.0, 1.0)
-            .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_8)),
-        RigidBody::Static,
-        rectangle.collider(),
+        ColliderDensity(1.0),
     ));
 }
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<
-        (
-            Entity,
-            &LevelsetTextures,
-            &VelocityTextures,
-            &PressureTextures,
-        ),
-        Added<LevelsetTextures>,
-    >,
+    query: Query<(Entity, &LevelsetTextures, &VelocityTextures), Added<LevelsetTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (entity, levelset_textures, velocity_textures, pressure_textures) in &query {
+    for (entity, levelset_textures, velocity_textures) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
             levelset: levelset_textures.levelset_air0.clone(),
@@ -149,7 +132,7 @@ fn on_fluid_setup(
 
         commands.entity(entity).insert(MeshMaterial2d(material));
 
-        let material_velocity = velocity_materials.add(VelocityMaterial {
+        let material = velocity_materials.add(VelocityMaterial {
             u_range: Vec2::new(-10.0, 10.0),
             v_range: Vec2::new(-10.0, 10.0),
             u: velocity_textures.u0.clone(),
@@ -158,7 +141,7 @@ fn on_fluid_setup(
 
         commands.spawn((
             Mesh2d(mesh),
-            MeshMaterial2d(material_velocity),
+            MeshMaterial2d(material),
             Transform::default()
                 .with_translation(Vec3::new(SIZE.0 as f32 * 0.5, 0.0, 0.0))
                 .with_scale(Vec3::new(SIZE.0 as f32, SIZE.1 as f32, 0.0)),
