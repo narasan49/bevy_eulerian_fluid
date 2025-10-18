@@ -1,9 +1,12 @@
 pub mod definition;
 pub mod fluid_bind_group;
+pub mod fluid_to_solid;
 pub mod obstacle;
+pub mod physics_time;
 pub mod render_node;
 pub mod setup_components;
 
+use crate::definition::{FluidGridLength, SolidCenterTextures, SolidObstaclesBuffer};
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::material::FluidMaterialPlugin;
@@ -19,15 +22,14 @@ use bevy::{
     },
 };
 use definition::{
-    DivergenceTextures, JumpFloodingSeedsTextures, LocalForces, Obstacles, PressureTextures,
-    SimulationUniform, VelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU,
-    VelocityTexturesV,
+    DivergenceTextures, ForcesToSolid, JumpFloodingSeedsTextures, LocalForces, PressureTextures,
+    SimulationUniform, SolidForcesBins, SolidVelocityTextures, VelocityTextures,
+    VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
 };
 use fluid_bind_group::FluidPipelines;
 
 use render_node::{EulerFluidNode, FluidLabel};
 
-use crate::definition::SolidVelocityTextures;
 use setup_components::watch_fluid_component;
 
 const FLUID_UNIFORM_SHADER_HANDLE: Handle<Shader> =
@@ -39,14 +41,34 @@ const AREA_FRACTION_SHADER_HANDLE: Handle<Shader> =
 const COORDINATE_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x9F8E2E5B1E5F40C096C31175C285BF11);
 
-const LEVELSET_UTILS_SHADER_HANDLE: Handle<Shader> = 
+const LEVELSET_UTILS_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0x998B1DF79E3044B89B0029DCDD0B2B2C);
 
-pub struct FluidPlugin;
+const SAMPLE_FORCES_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0x9DCC97E56F80433A94A50E50DF357E6A);
+
+const ACCUMULATE_FORCES_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0xFF0774E1DC464BEEBC4E502073563979);
+
+const FIXED_POINT_CONVERSION_SHADER_HANDLE: Handle<Shader> =
+    Handle::weak_from_u128(0xD734D82B93BF4EC4831C2A627F813304);
+
+pub struct FluidPlugin {
+    length_unit: f32,
+}
+
+impl FluidPlugin {
+    pub fn new(length_unit: f32) -> Self {
+        if length_unit <= 0.0 {
+            panic!("length_unit must be positive value.");
+        }
+        Self { length_unit }
+    }
+}
 
 impl Plugin for FluidPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(ExtractResourcePlugin::<Obstacles>::default())
+        app.add_plugins(ExtractResourcePlugin::<SolidObstaclesBuffer>::default())
             .add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins(ExtractComponentPlugin::<FluidBindGroups>::default())
             .add_plugins(ExtractComponentPlugin::<VelocityTextures>::default())
@@ -54,22 +76,26 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<VelocityTexturesV>::default())
             .add_plugins(ExtractComponentPlugin::<VelocityTexturesIntermediate>::default())
             .add_plugins(ExtractComponentPlugin::<SolidVelocityTextures>::default())
+            .add_plugins(ExtractComponentPlugin::<SolidCenterTextures>::default())
             .add_plugins(ExtractComponentPlugin::<PressureTextures>::default())
             .add_plugins(ExtractComponentPlugin::<DivergenceTextures>::default())
             .add_plugins(ExtractComponentPlugin::<LevelsetTextures>::default())
             .add_plugins(ExtractComponentPlugin::<JumpFloodingSeedsTextures>::default())
             .add_plugins(ExtractComponentPlugin::<LocalForces>::default())
+            .add_plugins(ExtractComponentPlugin::<ForcesToSolid>::default())
+            .add_plugins(ExtractComponentPlugin::<SolidForcesBins>::default())
             .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)
-            .add_systems(
-                Update,
-                (
-                    obstacle::update_obstacle_circle,
-                    obstacle::update_obstacle_rectangle,
-                ),
-            )
+            .insert_resource(FluidGridLength(1.0 / self.length_unit))
+            .add_systems(Update, obstacle::construct_rigid_body_buffer_for_gpu)
+            .add_systems(Update, fluid_to_solid::initialize_buffer)
             .add_systems(Update, watch_fluid_component);
+
+        app.add_plugins((
+            physics_time::PhysicsFramePlugin,
+            definition::FluidParametersPlugin,
+        ));
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app
@@ -225,11 +251,33 @@ impl Plugin for FluidPlugin {
             LEVELSET_UTILS_SHADER_HANDLE,
             "euler_fluid/shaders/utils/levelset_utils.wgsl",
             Shader::from_wgsl
-        )
+        );
+
+        load_internal_asset!(
+            app,
+            SAMPLE_FORCES_SHADER_HANDLE,
+            "euler_fluid/shaders/fluid_to_solid/sample_forces.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            ACCUMULATE_FORCES_SHADER_HANDLE,
+            "euler_fluid/shaders/fluid_to_solid/accumulate_forces.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            FIXED_POINT_CONVERSION_SHADER_HANDLE,
+            "euler_fluid/shaders/fluid_to_solid/fixed_point_conversion.wgsl",
+            Shader::from_wgsl
+        );
     }
 
     fn finish(&self, app: &mut App) {
-        app.init_resource::<Obstacles>();
+        // app.init_resource::<Obstacles>();
+        app.init_resource::<SolidObstaclesBuffer>();
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<FluidPipelines>();

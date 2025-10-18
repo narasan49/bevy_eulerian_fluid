@@ -29,7 +29,7 @@ fn apply_force_u(
     }
 
     let u_val = textureLoad(u1, x).r;
-    textureStore(u1, x, vec4<f32>(u_val + net_force * constants.dt, 0.0, 0.0, 0.0));
+    textureStore(u1, x, vec4<f32>(u_val + net_force * constants.dt / constants.dx, 0.0, 0.0, 0.0));
 }
 
 @compute @workgroup_size(64, 1, 1)
@@ -51,7 +51,7 @@ fn apply_force_v(
     }
 
     let v_val = textureLoad(v1, x).r;
-    textureStore(v1, x, vec4<f32>(v_val + net_force * constants.dt, 0.0, 0.0, 0.0));
+    textureStore(v1, x, vec4<f32>(v_val + net_force * constants.dt / constants.dx, 0.0, 0.0, 0.0));
 }
 
 fn gaussian_2d(x: vec2<f32>, x0: vec2<f32>, sigma: f32) -> f32 {

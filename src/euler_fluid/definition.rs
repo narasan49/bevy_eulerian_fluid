@@ -1,3 +1,4 @@
+use avian2d::{prelude::Physics, sync::SyncSet};
 use bevy::{
     prelude::*,
     render::{
@@ -8,12 +9,27 @@ use bevy::{
     },
 };
 
+pub const MAX_SOLIDS: usize = 256;
+
+pub struct FluidParametersPlugin;
+
+impl Plugin for FluidParametersPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            FixedPostUpdate,
+            update_simulation_uniform.after(SyncSet::First),
+        );
+    }
+
+    fn finish(&self, app: &mut App) {
+        app.init_resource::<FluidTimeStep>();
+    }
+}
+
 /// Setting for fluid simulation. By spawning fluid settings, components required to the simulation will be spawned and the simulation will start.
 /// Simulation result can be found on [`VelocityTextures`].
 /// # Arguments
 /// * `size`: The size of 2D simulation domain in pixels. The size is recommended to be same between each dimension and to be multiple of 64 pixels.
-/// * `dx`: The size of a pixel in unit of [m/pixel].
-/// * `dt`: The temporal resolution of the simulation in unit of [sec].
 /// * `rho`: The density of fluid in unit of [kg/m^3]. Currently, uniform density is supported only.
 /// * `initial_fluid_level`: Initialize fluid level with specified value. the value is valid between 0.0 - 1.0. 0.0 indicates empty and 1.0 indicates the simulation domain is filled with fluid.
 /// * `gravity`: Uniform force enforced uniformly to the simulation domain in unit of [m/s^2].
@@ -31,12 +47,10 @@ use bevy::{
 /// // On Startup
 /// fn setup_scene(mut commands: Commands) {
 ///     commands.spawn(FluidSettings {
-///         dx: 1.0f32,
-///         dt: 0.5f32,
 ///         rho: 1.293f32,
 ///         gravity: Vec2::ZERO,
 ///         size: (512, 512),
-///         initial_fluid_level: 1.0f32,
+///         initial_fluid_level: 1.0f32, // filled with fluid
 ///     });
 /// }
 ///
@@ -67,12 +81,32 @@ use bevy::{
 #[derive(Component, Clone, ExtractComponent)]
 #[require(Transform)]
 pub struct FluidSettings {
-    pub dx: f32,
-    pub dt: f32,
     pub rho: f32,
     pub gravity: Vec2,
     pub size: (u32, u32),
     pub initial_fluid_level: f32,
+}
+
+#[derive(Resource, Clone, Copy, ExtractResource)]
+pub struct FluidTimeStep(pub f32);
+
+impl FromWorld for FluidTimeStep {
+    fn from_world(world: &mut World) -> Self {
+        let physics_time = world.resource::<Time<Physics>>();
+        info!("physics_time: {physics_time:?}");
+        let time = world.resource::<Time>();
+        info!("time: {time:?}");
+        Self(physics_time.delta_secs())
+    }
+}
+
+#[derive(Resource, Clone, Copy)]
+pub struct FluidGridLength(pub f32);
+
+impl Default for FluidGridLength {
+    fn default() -> Self {
+        Self(1.0)
+    }
 }
 
 #[derive(Component, ExtractComponent, ShaderType, Clone, Copy, Default)]
@@ -84,6 +118,22 @@ pub struct SimulationUniform {
     pub initial_fluid_level: f32,
     pub fluid_transform: Mat4,
     pub size: Vec2,
+}
+
+fn update_simulation_uniform(
+    mut query: Query<(&mut SimulationUniform, &FluidSettings, &Transform)>,
+    time_step: Res<FluidTimeStep>,
+    grid_length: Res<FluidGridLength>,
+) {
+    for (mut uniform, settings, transform) in &mut query {
+        uniform.dx = grid_length.0;
+        uniform.dt = time_step.0;
+        uniform.rho = settings.rho;
+        uniform.gravity = settings.gravity;
+        uniform.initial_fluid_level = settings.initial_fluid_level;
+        uniform.fluid_transform = transform.compute_matrix();
+        uniform.size = Vec2::new(settings.size.0 as f32, settings.size.1 as f32);
+    }
 }
 
 /// Fluid velocity field.
@@ -145,6 +195,15 @@ pub struct SolidVelocityTextures {
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SolidCenterTextures {
+    // levelset between solid (<0) vs fluid or empty air (>=0).
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub levelset_solid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Sint, access = ReadWrite)]
+    pub solid_id: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct PressureTextures {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub p0: Handle<Image>,
@@ -179,39 +238,36 @@ pub struct LocalForces {
     pub positions: Handle<ShaderStorageBuffer>,
 }
 
-#[derive(Clone, ShaderType)]
-pub struct CircleObstacle {
-    pub radius: f32,
-    pub transform: Mat4,
-    pub velocity: Vec2,
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SolidForcesBins {
+    #[storage(0, visibility(compute))]
+    pub bins_x: Handle<ShaderStorageBuffer>,
+    #[storage(1, visibility(compute))]
+    pub bins_y: Handle<ShaderStorageBuffer>,
 }
 
-#[derive(Clone, ShaderType)]
-pub struct RectangleObstacle {
-    pub half_size: Vec2,
-    pub transform: Mat4,
-    pub inverse_transform: Mat4,
-    pub velocity: Vec2,
-    pub angular_velocity: f32,
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct ForcesToSolid {
+    #[storage(0, visibility(compute))]
+    pub forces: Handle<ShaderStorageBuffer>,
 }
 
 #[derive(Resource, Clone, ExtractResource, AsBindGroup)]
-pub struct Obstacles {
+pub struct SolidObstaclesBuffer {
     #[storage(0, read_only, visibility(compute))]
-    pub circles: Handle<ShaderStorageBuffer>,
-    #[storage(1, read_only, visibility(compute))]
-    pub rectangles: Handle<ShaderStorageBuffer>,
+    pub obstacles: Handle<ShaderStorageBuffer>,
 }
 
-impl FromWorld for Obstacles {
+#[derive(Component, Clone, ExtractComponent)]
+pub struct SolidEntities {
+    pub entities: Vec<Entity>,
+}
+
+impl FromWorld for SolidObstaclesBuffer {
     fn from_world(world: &mut World) -> Self {
         let mut buffers = world.resource_mut::<Assets<ShaderStorageBuffer>>();
-        let circles = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        let rectangles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
-        Self {
-            circles,
-            rectangles,
-        }
+        let obstacles = buffers.add(ShaderStorageBuffer::from(vec![0; 0]));
+        Self { obstacles }
     }
 }
 
@@ -247,4 +303,7 @@ pub(crate) struct FluidSimulationBundle {
     pub levelset_textures: LevelsetTextures,
     pub local_forces: LocalForces,
     pub jump_flooding_seeds_textures: JumpFloodingSeedsTextures,
+    pub solid_forces_bins: SolidForcesBins,
+    pub forces_to_solid: ForcesToSolid,
+    pub solid_center_textures: SolidCenterTextures,
 }
