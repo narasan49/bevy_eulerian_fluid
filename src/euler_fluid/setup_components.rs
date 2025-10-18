@@ -23,14 +23,12 @@ use crate::{
 
 pub(crate) fn watch_fluid_component(
     mut commands: Commands,
-    query: Query<
-        (Entity, &FluidSettings, &FluidGridLength, Option<&Transform>),
-        Added<FluidSettings>,
-    >,
+    query: Query<(Entity, &FluidSettings, Option<&Transform>), Added<FluidSettings>>,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    grid_length: Res<FluidGridLength>,
 ) {
-    for (entity, settings, grid_length, transform) in &query {
+    for (entity, settings, transform) in &query {
         let size = settings.size;
 
         if size.0 % 64 != 0 || size.1 % 64 != 0 {

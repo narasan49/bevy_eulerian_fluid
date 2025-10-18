@@ -19,10 +19,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{
-        FluidGridLength, FluidSettings, LevelsetTextures,
-        VelocityTextures,
-    },
+    definition::{FluidSettings, LevelsetTextures, VelocityTextures},
     material::VelocityMaterial,
     FluidPlugin,
 };
@@ -31,6 +28,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 const WIDTH: f32 = 640.0;
 const HEIGHT: f32 = 360.0;
 const SIZE: (u32, u32) = (256, 256);
+const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
     let mut app = App::new();
@@ -65,8 +63,8 @@ fn main() {
                 ..default()
             }),
     )
-    .add_plugins(FluidPlugin)
-    .add_plugins(PhysicsPlugins::default().with_length_unit(1.0))
+    .add_plugins(FluidPlugin::new(LENGTH_UNIT))
+    .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
     .add_plugins(FpsCounterPlugin)
     .add_plugins(Material2dPlugin::<CustomMaterial>::default())
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
@@ -89,7 +87,6 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             size: SIZE,
             initial_fluid_level: 0.7,
         },
-        FluidGridLength(1.0),
         Mesh2d(meshes.add(fluid_domain_rectangle)),
         Transform::default().with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0)),
     ));

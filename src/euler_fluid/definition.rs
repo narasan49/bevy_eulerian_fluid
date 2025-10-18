@@ -83,7 +83,7 @@ impl Plugin for FluidParametersPlugin {
 /// }
 /// ```
 #[derive(Component, Clone, ExtractComponent)]
-#[require(Transform, FluidGridLength)]
+#[require(Transform)]
 pub struct FluidSettings {
     pub rho: f32,
     pub gravity: Vec2,
@@ -104,7 +104,7 @@ impl FromWorld for FluidTimeStep {
     }
 }
 
-#[derive(Component, Clone, Copy, ExtractComponent)]
+#[derive(Resource, Clone, Copy)]
 pub struct FluidGridLength(pub f32);
 
 impl Default for FluidGridLength {
@@ -125,15 +125,11 @@ pub struct SimulationUniform {
 }
 
 fn update_simulation_uniform(
-    mut query: Query<(
-        &mut SimulationUniform,
-        &FluidGridLength,
-        &FluidSettings,
-        &Transform,
-    )>,
+    mut query: Query<(&mut SimulationUniform, &FluidSettings, &Transform)>,
     time_step: Res<FluidTimeStep>,
+    grid_length: Res<FluidGridLength>,
 ) {
-    for (mut uniform, grid_length, settings, transform) in &mut query {
+    for (mut uniform, settings, transform) in &mut query {
         uniform.dx = grid_length.0;
         uniform.dt = time_step.0;
         uniform.rho = settings.rho;

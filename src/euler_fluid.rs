@@ -6,7 +6,7 @@ pub mod physics_time;
 pub mod render_node;
 pub mod setup_components;
 
-use crate::definition::SolidObstaclesBuffer;
+use crate::definition::{FluidGridLength, SolidObstaclesBuffer};
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::material::FluidMaterialPlugin;
@@ -53,7 +53,18 @@ const ACCUMULATE_FORCES_SHADER_HANDLE: Handle<Shader> =
 const FIXED_POINT_CONVERSION_SHADER_HANDLE: Handle<Shader> =
     Handle::weak_from_u128(0xD734D82B93BF4EC4831C2A627F813304);
 
-pub struct FluidPlugin;
+pub struct FluidPlugin {
+    length_unit: f32,
+}
+
+impl FluidPlugin {
+    pub fn new(length_unit: f32) -> Self {
+        if length_unit <= 0.0 {
+            panic!("length_unit must be positive value.");
+        }
+        Self { length_unit }
+    }
+}
 
 impl Plugin for FluidPlugin {
     fn build(&self, app: &mut App) {
@@ -75,6 +86,7 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)
+            .insert_resource(FluidGridLength(1.0 / self.length_unit))
             .add_systems(Update, obstacle::construct_rigid_body_buffer_for_gpu)
             .add_systems(Update, fluid_to_solid::initialize_buffer)
             .add_systems(Update, watch_fluid_component);

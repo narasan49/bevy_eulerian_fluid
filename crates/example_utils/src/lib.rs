@@ -6,12 +6,16 @@ use bevy::{
     render::{camera::CameraProjection, storage::ShaderStorageBuffer},
     window::PrimaryWindow,
 };
-use bevy_eulerian_fluid::euler_fluid::definition::{FluidSettings, LocalForces};
+use bevy_eulerian_fluid::{
+    definition::FluidGridLength,
+    euler_fluid::definition::{FluidSettings, LocalForces},
+};
 
 pub fn mouse_motion(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut mouse_motion: EventReader<MouseMotion>,
     touches: Res<Touches>,
+    grid_length: Res<FluidGridLength>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<&OrthographicProjection, With<Camera2d>>,
     q_fluid: Query<(&LocalForces, &FluidSettings, &Transform)>,
@@ -22,7 +26,7 @@ pub fn mouse_motion(
         if let Some(cursor_position) = window.cursor_position() {
             let forces = mouse_motion
                 .read()
-                .map(|mouse| 5.0 * mouse.delta)
+                .map(|mouse| 5.0 / grid_length.0 * mouse.delta)
                 .collect::<Vec<_>>();
 
             for (local_forces, settings, transform) in &q_fluid {
