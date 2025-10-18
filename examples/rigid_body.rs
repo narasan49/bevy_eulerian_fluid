@@ -101,13 +101,33 @@ fn setup_rigid_bodies(
     let mesh = meshes.add(circle);
     let material = materials.add(Color::WHITE);
     commands.spawn((
-        Mesh2d(mesh),
-        MeshMaterial2d(material),
+        Mesh2d(mesh.clone()),
+        MeshMaterial2d(material.clone()),
         Transform::from_xyz(SIZE.0 as f32 * -0.5, SIZE.0 as f32 * 0.5, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
         ExternalForce::default(),
         ColliderDensity(1.0),
+    ));
+
+    commands.spawn((
+        Mesh2d(mesh.clone()),
+        MeshMaterial2d(material.clone()),
+        Transform::from_xyz(SIZE.0 as f32 * -0.7, SIZE.0 as f32 * 0.3, 1.0),
+        circle.collider(),
+        RigidBody::Dynamic,
+        ExternalForce::default(),
+        ColliderDensity(0.8),
+    ));
+
+    commands.spawn((
+        Mesh2d(mesh.clone()),
+        MeshMaterial2d(material.clone()),
+        Transform::from_xyz(SIZE.0 as f32 * -0.3, SIZE.0 as f32 * 0.1, 1.0),
+        circle.collider(),
+        RigidBody::Dynamic,
+        ExternalForce::default(),
+        ColliderDensity(0.9),
     ));
 }
 

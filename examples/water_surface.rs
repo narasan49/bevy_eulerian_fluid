@@ -22,7 +22,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 const WIDTH: f32 = 640.0;
 const HEIGHT: f32 = 360.0;
 const SIZE: (u32, u32) = (256, 256);
-const LENGTH_UNIT: f32 = 100.0;
+const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
     let mut app = App::new();
@@ -73,9 +73,9 @@ fn setup_scene(mut commands: Commands) {
 
     commands.spawn(FluidSettings {
         rho: 99.7f32, // water in 2D
-        gravity: Vec2::Y,
+        gravity: Vec2::Y * 9.8,
         size: SIZE,
-        initial_fluid_level: 0.9,
+        initial_fluid_level: 0.6,
     });
 }
 
