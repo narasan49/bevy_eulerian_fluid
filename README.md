@@ -2,17 +2,18 @@
 
 This project is a fluid simulation plugin for [Bevy](https://bevyengine.org/).
 
-![img](./docs/bevy-fluid-solid-body.gif)
+![img](./docs/bevy-fluid-rigid-body.gif)
 
 Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
 ## Basic Usage
-1. Add `FluidPlugin` to the app.
+1. Add `FluidPlugin` and `PhysicsPlugins` to the app with the same length unit.
 2. Spawn `FluidSettings`, then `FluidSimulationBundle` will be inserted automatically to the entity. By querying components bundled with `FluidSimulationBundle` such as `VelocityTextures`, the simulation results can be retreived.  
 
 Here is a short example. See [examples](./examples/) for the detailed implementation!  
 
 ```rust
+use avian2d::PhysicsPlugins;
 use bevy_eulerian_fluid::{
     definition::{FluidSettings, LevelsetTextures, VelocityTextures},
     FluidPlugin,
@@ -21,7 +22,8 @@ use bevy_eulerian_fluid::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(FluidPlugin)
+        .add_plugins(FluidPlugin::new(10.0))
+        .add_plugins(PhysicsPlugins::default().with_length_unit(10.0))
         .add_systems(Startup, setup_scene)
         .add_systems(Update, on_initialized)
         .run();
@@ -31,8 +33,6 @@ fn setup_scene(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
     commands.spawn(FluidSettings {
-        dx: 1.0f32,
-        dt: 0.5f32,
         rho: 997f32, // water
         gravity: Vec2::Y,
         size: (512, 512),
@@ -66,14 +66,21 @@ See also an [interaction example](./examples/interaction.rs) for the detailed im
   - [ ] Fluid source/drain
 - [ ] Solid body interaction
   - [x] One-way solid body to fluid interaction
-  - [ ] Two-way coupling with solid body and fluid
+  - [x] Two-way coupling with solid body and fluid
   - [ ] Various shapes support
     - [x] Circle
     - [x] Rectangle
 
 ## Examples
 There are some examples to demonstrate how to visualize and interact to the simulation results:  
-- **Solid-to-fluid feedback**
+- **Fluid-Solid two-way interaction**
+
+  ```ps1
+  cargo run --example rigid_body
+  ```
+  ![img](./docs/bevy-fluid-rigid-body.gif)
+
+- **Solid-to-fluid one-way interaction**
 
   ```ps1
   cargo run --example solid_body
