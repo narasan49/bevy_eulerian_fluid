@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use bevy::ecs::query::QueryData;
 use bevy::render::extract_component::ExtractComponent;
 use bevy::render::render_resource::UniformBuffer;
 use bevy::render::renderer::RenderQueue;
@@ -19,7 +20,9 @@ use bevy::{
     },
 };
 
-use crate::definition::{ForcesToSolid, SolidForcesBins, SolidObstaclesBuffer};
+use crate::definition::{
+    ForcesToSolid, SolidCenterTextures, SolidForcesBins, SolidObstaclesBuffer,
+};
 use crate::euler_fluid::{ACCUMULATE_FORCES_SHADER_HANDLE, SAMPLE_FORCES_SHADER_HANDLE};
 
 use super::definition::{
@@ -100,6 +103,7 @@ pub(crate) struct FluidPipelines {
     jump_flooding_uniform_bind_group_layout: BindGroupLayout,
     solid_forces_bins_bind_group_layout: BindGroupLayout,
     forces_to_solid_bind_group_layout: BindGroupLayout,
+    solid_center_textures_bind_group_layout: BindGroupLayout,
 }
 
 impl FromWorld for FluidPipelines {
@@ -121,6 +125,8 @@ impl FromWorld for FluidPipelines {
             VelocityTexturesIntermediate::bind_group_layout(render_device);
         let solid_velocity_bind_group_layout =
             SolidVelocityTextures::bind_group_layout(render_device);
+        let solid_center_textures_bind_group_layout =
+            SolidCenterTextures::bind_group_layout(render_device);
         let local_forces_bind_group_layout = LocalForces::bind_group_layout(render_device);
         let pressure_bind_group_layout = PressureTextures::bind_group_layout(render_device);
         let divergence_bind_group_layout = DivergenceTextures::bind_group_layout(render_device);
@@ -168,7 +174,7 @@ impl FromWorld for FluidPipelines {
                 label: Some(Cow::from("Queue UpdateSolidPipeline")),
                 layout: vec![
                     solid_velocity_bind_group_layout.clone(),
-                    levelset_bind_group_layout.clone(),
+                    solid_center_textures_bind_group_layout.clone(),
                     obstacles_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
                 ],
@@ -423,9 +429,8 @@ impl FromWorld for FluidPipelines {
                 label: Some(Cow::from("Queue SampleForcesPipeline")),
                 layout: vec![
                     solid_forces_bins_bind_group_layout.clone(),
-                    levelset_bind_group_layout.clone(),
+                    solid_center_textures_bind_group_layout.clone(),
                     pressure_bind_group_layout.clone(),
-                    solid_velocity_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
                 shader: SAMPLE_FORCES_SHADER_HANDLE,
@@ -485,6 +490,7 @@ impl FromWorld for FluidPipelines {
             jump_flooding_seeds_bind_group_layout,
             solid_forces_bins_bind_group_layout,
             forces_to_solid_bind_group_layout,
+            solid_center_textures_bind_group_layout,
         }
     }
 }
@@ -496,6 +502,7 @@ pub(crate) struct FluidBindGroups {
     pub velocity_v_bind_group: BindGroup,
     pub velocity_intermediate_bind_group: BindGroup,
     pub solid_velocity_bind_group: BindGroup,
+    pub solid_center_bind_group: BindGroup,
     pub pressure_bind_group: BindGroup,
     pub divergence_bind_group: BindGroup,
     pub local_forces_bind_group: BindGroup,
@@ -549,51 +556,38 @@ pub(super) fn prepare_resource_recompute_levelset(
     }
 }
 
+#[derive(QueryData)]
+pub(super) struct TextureQuery {
+    entity: Entity,
+    velocity_textures: Ref<'static, VelocityTextures>,
+    velocity_textures_u: Ref<'static, VelocityTexturesU>,
+    velocity_textures_v: Ref<'static, VelocityTexturesV>,
+    velocity_textures_intermediate: Ref<'static, VelocityTexturesIntermediate>,
+    solid_velocity_textures: Ref<'static, SolidVelocityTextures>,
+    solid_center_textures: Ref<'static, SolidCenterTextures>,
+    pressure_textures: Ref<'static, PressureTextures>,
+    divergence_textures: Ref<'static, DivergenceTextures>,
+    levelset_textures: Ref<'static, LevelsetTextures>,
+    local_forces: Ref<'static, LocalForces>,
+    simulation_uniform_index: Ref<'static, DynamicUniformIndex<SimulationUniform>>,
+    jump_flooding_seeds_textures: Ref<'static, JumpFloodingSeedsTextures>,
+    jump_flooding_uniform_buffer: Ref<'static, JumpFloodingUniformBuffer>,
+    solid_forces_bins: Ref<'static, SolidForcesBins>,
+    forces_to_solid: Ref<'static, ForcesToSolid>,
+}
+
 pub(super) fn prepare_fluid_bind_groups(
     mut commands: Commands,
     pipelines: Res<FluidPipelines>,
     simulation_uniform: Res<ComponentUniforms<SimulationUniform>>,
-    query: Query<(
-        Entity,
-        &VelocityTextures,
-        &VelocityTexturesU,
-        &VelocityTexturesV,
-        &VelocityTexturesIntermediate,
-        &SolidVelocityTextures,
-        &PressureTextures,
-        &DivergenceTextures,
-        &LevelsetTextures,
-        &LocalForces,
-        &DynamicUniformIndex<SimulationUniform>,
-        &JumpFloodingSeedsTextures,
-        &JumpFloodingUniformBuffer,
-        &SolidForcesBins,
-        &ForcesToSolid,
-    )>,
+    query: Query<TextureQuery>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
 ) {
     let mut param = (gpu_images, fallback_image, buffers);
-    for (
-        entity,
-        velocity_textures,
-        velocity_textures_u,
-        velocity_textures_v,
-        velocity_textures_intermediate,
-        solid_velocity_textures,
-        pressure_textures,
-        divergence_textures,
-        levelset_textures,
-        local_forces,
-        simulation_uniform_index,
-        jump_flooding_seeds_textures,
-        jump_flooding_uniform_buffer,
-        solid_forces_bins,
-        forces_to_solid,
-    ) in &query
-    {
+    for t in &query {
         let simulation_uniform = simulation_uniform.uniforms();
         let uniform_bind_group = render_device.create_bind_group(
             "Simulation Uniform BindGroup",
@@ -601,7 +595,8 @@ pub(super) fn prepare_fluid_bind_groups(
             &BindGroupEntries::single(simulation_uniform),
         );
 
-        let velocity_bind_group = velocity_textures
+        let velocity_bind_group = t
+            .velocity_textures
             .as_bind_group(
                 &pipelines.velocity_bind_group_layout,
                 &render_device,
@@ -610,7 +605,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let velocity_u_bind_group = velocity_textures_u
+        let velocity_u_bind_group = t
+            .velocity_textures_u
             .as_bind_group(
                 &pipelines.velocity_u_bind_group_layout,
                 &render_device,
@@ -619,7 +615,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let velocity_v_bind_group = velocity_textures_v
+        let velocity_v_bind_group = t
+            .velocity_textures_v
             .as_bind_group(
                 &pipelines.velocity_v_bind_group_layout,
                 &render_device,
@@ -628,7 +625,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let velocity_intermediate_bind_group = velocity_textures_intermediate
+        let velocity_intermediate_bind_group = t
+            .velocity_textures_intermediate
             .as_bind_group(
                 &pipelines.velocity_intermediate_bind_group_layout,
                 &render_device,
@@ -637,7 +635,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let solid_velocity_bind_group = solid_velocity_textures
+        let solid_velocity_bind_group = t
+            .solid_velocity_textures
             .as_bind_group(
                 &pipelines.solid_velocity_bind_group_layout,
                 &render_device,
@@ -646,7 +645,18 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let pressure_bind_group = pressure_textures
+        let solid_center_bind_group = t
+            .solid_center_textures
+            .as_bind_group(
+                &pipelines.solid_center_textures_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        let pressure_bind_group = t
+            .pressure_textures
             .as_bind_group(
                 &pipelines.pressure_bind_group_layout,
                 &render_device,
@@ -655,7 +665,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let divergence_bind_group = divergence_textures
+        let divergence_bind_group = t
+            .divergence_textures
             .as_bind_group(
                 &pipelines.divergence_bind_group_layout,
                 &render_device,
@@ -664,7 +675,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let local_forces_bind_group = local_forces
+        let local_forces_bind_group = t
+            .local_forces
             .as_bind_group(
                 &pipelines.local_forces_bind_group_layout,
                 &render_device,
@@ -674,8 +686,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .bind_group;
 
         let mut jump_flooding_step_bind_groups =
-            Vec::with_capacity(jump_flooding_uniform_buffer.buffer.len());
-        for buffer in &jump_flooding_uniform_buffer.buffer {
+            Vec::with_capacity(t.jump_flooding_uniform_buffer.buffer.len());
+        for buffer in &t.jump_flooding_uniform_buffer.buffer {
             jump_flooding_step_bind_groups.push(render_device.create_bind_group(
                 Some("Create JumpFloodingStepBindGroup"),
                 &pipelines.jump_flooding_uniform_bind_group_layout,
@@ -683,7 +695,8 @@ pub(super) fn prepare_fluid_bind_groups(
             ));
         }
 
-        let levelset_bind_group = levelset_textures
+        let levelset_bind_group = t
+            .levelset_textures
             .as_bind_group(
                 &pipelines.levelset_bind_group_layout,
                 &render_device,
@@ -692,7 +705,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let jump_flooding_seeds_bind_group = jump_flooding_seeds_textures
+        let jump_flooding_seeds_bind_group = t
+            .jump_flooding_seeds_textures
             .as_bind_group(
                 &pipelines.jump_flooding_seeds_bind_group_layout,
                 &render_device,
@@ -701,7 +715,8 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        let solid_forces_bins_bind_group = solid_forces_bins
+        let solid_forces_bins_bind_group = t
+            .solid_forces_bins
             .as_bind_group(
                 &pipelines.solid_forces_bins_bind_group_layout,
                 &render_device,
@@ -709,7 +724,8 @@ pub(super) fn prepare_fluid_bind_groups(
             )
             .unwrap()
             .bind_group;
-        let forces_to_solid_bind_group = forces_to_solid
+        let forces_to_solid_bind_group = t
+            .forces_to_solid
             .as_bind_group(
                 &pipelines.forces_to_solid_bind_group_layout,
                 &render_device,
@@ -718,13 +734,14 @@ pub(super) fn prepare_fluid_bind_groups(
             .unwrap()
             .bind_group;
 
-        commands.entity(entity).insert((
+        commands.entity(t.entity).insert((
             FluidBindGroups {
                 velocity_bind_group,
                 velocity_u_bind_group,
                 velocity_v_bind_group,
                 velocity_intermediate_bind_group,
                 solid_velocity_bind_group,
+                solid_center_bind_group,
                 pressure_bind_group,
                 divergence_bind_group,
                 local_forces_bind_group,
@@ -733,7 +750,7 @@ pub(super) fn prepare_fluid_bind_groups(
                 solid_forces_bins_bind_group,
                 forces_to_solid_bind_group,
                 uniform_bind_group,
-                uniform_index: simulation_uniform_index.index(),
+                uniform_index: t.simulation_uniform_index.index(),
             },
             JumpFloodingUniformBindGroups {
                 jump_flooding_step_bind_groups: jump_flooding_step_bind_groups.into_boxed_slice(),

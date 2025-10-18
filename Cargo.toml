@@ -18,6 +18,9 @@ members = [
 bevy = {version = "0.15.1"}
 avian2d = "0.2.0"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
 [dev-dependencies]
 bevy = {version = "0.15.1", features = ["webgpu"]}
 rand = "0.8.5"

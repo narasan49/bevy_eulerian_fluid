@@ -6,7 +6,7 @@ pub mod physics_time;
 pub mod render_node;
 pub mod setup_components;
 
-use crate::definition::{FluidGridLength, SolidObstaclesBuffer};
+use crate::definition::{FluidGridLength, SolidCenterTextures, SolidObstaclesBuffer};
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::material::FluidMaterialPlugin;
@@ -76,6 +76,7 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<VelocityTexturesV>::default())
             .add_plugins(ExtractComponentPlugin::<VelocityTexturesIntermediate>::default())
             .add_plugins(ExtractComponentPlugin::<SolidVelocityTextures>::default())
+            .add_plugins(ExtractComponentPlugin::<SolidCenterTextures>::default())
             .add_plugins(ExtractComponentPlugin::<PressureTextures>::default())
             .add_plugins(ExtractComponentPlugin::<DivergenceTextures>::default())
             .add_plugins(ExtractComponentPlugin::<LevelsetTextures>::default())

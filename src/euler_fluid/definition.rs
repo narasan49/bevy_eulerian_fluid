@@ -196,7 +196,14 @@ pub struct SolidVelocityTextures {
     pub u_solid: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
     pub v_solid: Handle<Image>,
-    #[storage_texture(2, image_format = R32Sint, access = ReadWrite)]
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SolidCenterTextures {
+    // levelset between solid (<0) vs fluid or empty air (>=0).
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub levelset_solid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Sint, access = ReadWrite)]
     pub solid_id: Handle<Image>,
 }
 
@@ -302,4 +309,5 @@ pub(crate) struct FluidSimulationBundle {
     pub jump_flooding_seeds_textures: JumpFloodingSeedsTextures,
     pub solid_forces_bins: SolidForcesBins,
     pub forces_to_solid: ForcesToSolid,
+    pub solid_center_textures: SolidCenterTextures,
 }

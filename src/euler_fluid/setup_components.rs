@@ -11,7 +11,10 @@ use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
     SolidVelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
 };
-use crate::{definition::FluidGridLength, obstacle::SolidObstacle};
+use crate::{
+    definition::{FluidGridLength, SolidCenterTextures},
+    obstacle::SolidObstacle,
+};
 use crate::{
     definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
     euler_fluid::definition::{
@@ -94,9 +97,10 @@ pub(crate) fn watch_fluid_component(
             u1: u1.clone(),
         };
 
-        let solid_velocity_textures = SolidVelocityTextures {
-            u_solid,
-            v_solid,
+        let solid_velocity_textures = SolidVelocityTextures { u_solid, v_solid };
+
+        let solid_center_textures = SolidCenterTextures {
+            levelset_solid: levelset_solid.clone(),
             solid_id,
         };
 
@@ -160,6 +164,7 @@ pub(crate) fn watch_fluid_component(
                 jump_flooding_seeds_textures,
                 solid_forces_bins,
                 forces_to_solid,
+                solid_center_textures,
             })
             .insert(uniform)
             .insert(solid_entites)

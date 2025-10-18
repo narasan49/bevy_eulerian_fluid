@@ -38,9 +38,9 @@ struct SolidObstacle {
 
 @group(0) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(2) var solid_id: texture_storage_2d<r32sint, read_write>;
 
-@group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(1) @binding(0) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(1) @binding(1) var solid_id: texture_storage_2d<r32sint, read_write>;
 
 @group(2) @binding(0) var<storage, read> obstacles: array<SolidObstacle>;
 
