@@ -1,5 +1,6 @@
 extern crate bevy_eulerian_fluid;
 
+use avian2d::PhysicsPlugins;
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
@@ -18,6 +19,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: f32 = 640.0;
 const HEIGHT: f32 = 360.0;
+const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
     let mut app = App::new();
@@ -52,7 +54,8 @@ fn main() {
                 ..default()
             }),
     )
-    .add_plugins(FluidPlugin)
+    .add_plugins(FluidPlugin::new(LENGTH_UNIT))
+    .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
     .add_plugins(FpsCounterPlugin)
     .add_systems(Startup, setup_scene)
     .add_systems(Update, on_fluid_setup)
@@ -66,8 +69,6 @@ fn setup_scene(mut commands: Commands) {
 
     commands.spawn((
         FluidSettings {
-            dx: 1.0f32,
-            dt: 0.1f32,
             rho: 1.293f32, // air
             gravity: Vec2::ZERO,
             size: (256, 256),

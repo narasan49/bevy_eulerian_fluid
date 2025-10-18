@@ -1,5 +1,9 @@
 extern crate bevy_eulerian_fluid;
 
+use avian2d::{
+    prelude::{AngularVelocity, IntoCollider, RigidBody},
+    PhysicsPlugins,
+};
 use bevy::{
     asset::AssetMetaCheck,
     math::vec3,
@@ -13,18 +17,16 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, LevelsetTextures, SimulationUniform, VelocityTextures},
+    definition::{FluidSettings, LevelsetTextures, VelocityTextures},
     material::VelocityMaterial,
-    obstacle, FluidPlugin,
+    FluidPlugin,
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: f32 = 640.0;
 const HEIGHT: f32 = 360.0;
 const SIZE: (u32, u32) = (256, 256);
-
-#[derive(Component)]
-struct MovableSolid;
+const LENGTH_UNIT: f32 = 1.0;
 
 fn main() {
     let mut app = App::new();
@@ -59,13 +61,13 @@ fn main() {
                 ..default()
             }),
     )
-    .add_plugins(FluidPlugin)
+    .add_plugins(FluidPlugin::new(LENGTH_UNIT))
+    .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
     .add_plugins(FpsCounterPlugin)
     .add_plugins(Material2dPlugin::<CustomMaterial>::default())
     .add_systems(Startup, setup_scene)
     .add_systems(Update, on_fluid_setup)
-    .add_systems(Update, mouse_motion)
-    .add_systems(Update, rotate_rectangles);
+    .add_systems(Update, mouse_motion);
 
     app.run();
 }
@@ -80,10 +82,8 @@ fn setup_scene(
     let fluid_domain_rectangle = Rectangle::from_size(Vec2::new(SIZE.0 as f32, SIZE.1 as f32));
     commands.spawn((
         FluidSettings {
-            dx: 1.0f32,
-            dt: 0.1f32,
-            rho: 997f32, // water
-            gravity: Vec2::Y,
+            rho: 99.7f32, // water in 2D
+            gravity: Vec2::Y * 9.8,
             size: SIZE,
             initial_fluid_level: 0.9,
         },
@@ -96,24 +96,23 @@ fn setup_scene(
     let material = materials.add(Color::srgb(1.0, 0.0, 0.0));
 
     commands.spawn((
-        obstacle::SolidCircle::from_circle(circle),
         Transform::from_translation(vec3(-192.0, 0.0, 1.0)),
-        obstacle::Velocity(Vec2::ZERO),
         Mesh2d(circle_mesh),
         MeshMaterial2d(material.clone()),
+        circle.collider(),
+        RigidBody::Static,
     ));
 
     let rectangle = Rectangle::from_size(Vec2::new(25.0, 128.0));
     let mesh = meshes.add(rectangle);
 
     commands.spawn((
-        obstacle::SolidRectangle::from_rectangle(rectangle),
+        rectangle.collider(),
         Transform::from_translation(vec3(-128.0, 30.0, 1.0)),
-        obstacle::Velocity(Vec2::ZERO),
-        obstacle::AngularVelocity(0.1),
         Mesh2d(mesh),
         MeshMaterial2d(material.clone()),
-        MovableSolid,
+        AngularVelocity(0.5),
+        RigidBody::Kinematic,
     ));
 }
 
@@ -159,21 +158,6 @@ fn on_fluid_setup(
             },
             TextColor::WHITE,
         ));
-    }
-}
-
-fn rotate_rectangles(
-    mut query: Query<
-        (&mut Transform, &obstacle::AngularVelocity),
-        (With<obstacle::SolidRectangle>, With<MovableSolid>),
-    >,
-    query_fluid: Query<&SimulationUniform>,
-) {
-    let uniform = query_fluid.get_single();
-    if let Ok(uniform) = uniform {
-        for (mut transform, angular_velocity) in &mut query {
-            transform.rotate(Quat::from_rotation_z(angular_velocity.0 * uniform.dt));
-        }
     }
 }
 
