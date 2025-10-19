@@ -67,6 +67,7 @@ See also an [interaction example](./examples/interaction.rs) for the detailed im
 - [ ] Solid body interaction
   - [x] One-way solid body to fluid interaction
   - [x] Two-way coupling with solid body and fluid
+    - As of v0.2.0, only a circle shape is supported.
   - [ ] Various shapes support
     - [x] Circle
     - [x] Rectangle
