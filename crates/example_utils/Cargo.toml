@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = {version = "0.15.1"}
+bevy = {version = "0.17"}
 bevy_eulerian_fluid = { path = "../.." }

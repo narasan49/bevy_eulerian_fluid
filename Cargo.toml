@@ -15,15 +15,14 @@ members = [
 ]
 
 [dependencies]
-bevy = {version = "0.15.1"}
-avian2d = "0.2.0"
+bevy = {version = "0.17"}
+avian2d = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [dev-dependencies]
-bevy = {version = "0.15.1", features = ["webgpu"]}
-rand = "0.8.5"
+bevy = {version = "0.17", features = ["webgpu"]}
 example_utils = { path = "crates/example_utils" }
 
 [profile.dev.package."*"]

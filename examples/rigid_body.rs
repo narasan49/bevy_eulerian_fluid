@@ -1,10 +1,9 @@
 extern crate bevy_eulerian_fluid;
 
-use std::ops::Deref;
-
 use avian2d::{
+    dynamics::integrator::VelocityIntegrationData,
     math::Vector,
-    prelude::{ColliderDensity, ExternalForce, Gravity, IntoCollider, RigidBody},
+    prelude::{ColliderDensity, Gravity, IntoCollider, RigidBody},
     PhysicsPlugins,
 };
 use bevy::{
@@ -15,7 +14,8 @@ use bevy::{
         settings::{Backends, WgpuSettings},
         RenderPlugin,
     },
-    sprite::{Material2d, Material2dPlugin},
+    shader::ShaderRef,
+    sprite_render::{Material2d, Material2dPlugin},
 };
 
 use bevy_eulerian_fluid::{
@@ -25,8 +25,8 @@ use bevy_eulerian_fluid::{
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
-const WIDTH: f32 = 640.0;
-const HEIGHT: f32 = 360.0;
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 360;
 const SIZE: (u32, u32) = (256, 256);
 const LENGTH_UNIT: f32 = 10.0;
 
@@ -106,7 +106,6 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * -0.5, SIZE.0 as f32 * 0.5, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
-        ExternalForce::default(),
         ColliderDensity(1.0),
     ));
 
@@ -116,7 +115,6 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * -0.7, SIZE.0 as f32 * 0.3, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
-        ExternalForce::default(),
         ColliderDensity(0.8),
     ));
 
@@ -126,7 +124,6 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * -0.3, SIZE.0 as f32 * 0.1, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
-        ExternalForce::default(),
         ColliderDensity(0.9),
     ));
 }
@@ -176,10 +173,13 @@ fn on_fluid_setup(
     }
 }
 
-fn update_gizmos(mut gizmos: Gizmos, query: Query<(&Transform, &ExternalForce), With<RigidBody>>) {
-    for (transform, external_force) in &query {
+fn update_gizmos(
+    mut gizmos: Gizmos,
+    query: Query<(&Transform, &VelocityIntegrationData), With<RigidBody>>,
+) {
+    for (transform, velocity) in &query {
         let start = transform.translation.xy();
-        let end = start + external_force.deref() * 0.001;
+        let end = start + velocity.linear_increment * 0.001;
         let color = LinearRgba::RED;
         gizmos.arrow_2d(start, end, color);
     }
@@ -199,7 +199,7 @@ struct CustomMaterial {
 }
 
 impl Material2d for CustomMaterial {
-    fn fragment_shader() -> bevy::render::render_resource::ShaderRef {
+    fn fragment_shader() -> ShaderRef {
         "shaders/visualize/scalar.wgsl".into()
     }
 }

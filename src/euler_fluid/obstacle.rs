@@ -100,7 +100,7 @@ pub(crate) fn construct_rigid_body_buffer_for_gpu(
 
                 match shape {
                     Some(shape) => {
-                        let transform = transform.compute_matrix();
+                        let transform = transform.to_matrix();
                         Some(SolidObstacle {
                             entity_id: idx as u32,
                             shape,

@@ -16,8 +16,8 @@ use bevy_eulerian_fluid::{
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
-const WIDTH: f32 = 640.0;
-const HEIGHT: f32 = 360.0;
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 360;
 const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
