@@ -1,9 +1,9 @@
 extern crate bevy_eulerian_fluid;
 
 use avian2d::{
-    dynamics::integrator::VelocityIntegrationData,
+    dynamics::integrator::{IntegrationSystems, VelocityIntegrationData},
     math::Vector,
-    prelude::{ColliderDensity, Gravity, IntoCollider, RigidBody},
+    prelude::{ColliderDensity, Gravity, IntoCollider, PhysicsSchedule, RigidBody},
     PhysicsPlugins,
 };
 use bevy::{
@@ -71,7 +71,7 @@ fn main() {
     .add_systems(Startup, (setup_scene, setup_rigid_bodies))
     .add_systems(Update, on_fluid_setup)
     .add_systems(Update, mouse_motion)
-    .add_systems(Update, update_gizmos);
+    .add_systems(PhysicsSchedule, update_gizmos.before(IntegrationSystems::ClearVelocityIncrements));
 
     app.run();
 }
@@ -179,7 +179,7 @@ fn update_gizmos(
 ) {
     for (transform, velocity) in &query {
         let start = transform.translation.xy();
-        let end = start + velocity.linear_increment * 0.001;
+        let end = start + velocity.linear_increment * 0.5;
         let color = LinearRgba::RED;
         gizmos.arrow_2d(start, end, color);
     }
