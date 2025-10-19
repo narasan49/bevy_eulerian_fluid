@@ -71,7 +71,10 @@ fn main() {
     .add_systems(Startup, (setup_scene, setup_rigid_bodies))
     .add_systems(Update, on_fluid_setup)
     .add_systems(Update, mouse_motion)
-    .add_systems(PhysicsSchedule, update_gizmos.before(IntegrationSystems::ClearVelocityIncrements));
+    .add_systems(
+        PhysicsSchedule,
+        update_gizmos.before(IntegrationSystems::ClearVelocityIncrements),
+    );
 
     app.run();
 }
