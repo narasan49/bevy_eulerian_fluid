@@ -101,12 +101,6 @@ There are some examples to demonstrate how to visualize and interact to the simu
   ```
   ![img](./docs/bevy-fluid-interaction.gif)
 
-- **Spawn multiple fluids**
-  ```ps1
-  cargo run --example multiple
-  ```
-  ![img](./docs/bevy-fluid-multiple-fluids.gif)
-
 ## Versions
 | Bevy | Bevy Eularian Fluid |
 | --- | --- |
