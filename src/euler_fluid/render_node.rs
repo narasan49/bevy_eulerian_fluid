@@ -27,6 +27,7 @@ fn dispatch_center(pass: &mut ComputePass, size: (u32, u32)) {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
 pub(crate) struct FluidLabel;
 
+#[derive(Debug)]
 enum State {
     Loading,
     Init,
@@ -63,11 +64,11 @@ impl render_graph::Node for EulerFluidNode {
         match self.state {
             State::Loading => {
                 if let (
-                    CachedPipelineState::Ok(_initialize_velocity_pipeline),
+                    // CachedPipelineState::Ok(_initialize_velocity_pipeline),
                     CachedPipelineState::Ok(_initialize_grid_center_pipeline),
                 ) = (
-                    pipeline_cache
-                        .get_compute_pipeline_state(pipelines.initialize_velocity_pipeline),
+                    // pipeline_cache
+                    //     .get_compute_pipeline_state(pipelines.initialize_velocity_pipeline),
                     pipeline_cache
                         .get_compute_pipeline_state(pipelines.initialize_grid_center_pipeline),
                 ) {

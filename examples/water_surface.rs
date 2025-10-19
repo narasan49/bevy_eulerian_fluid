@@ -9,7 +9,8 @@ use bevy::{
         settings::{Backends, WgpuSettings},
         RenderPlugin,
     },
-    sprite::{Material2d, Material2dPlugin},
+    shader::ShaderRef,
+    sprite_render::{Material2d, Material2dPlugin},
 };
 
 use bevy_eulerian_fluid::{
@@ -19,8 +20,8 @@ use bevy_eulerian_fluid::{
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
-const WIDTH: f32 = 640.0;
-const HEIGHT: f32 = 360.0;
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 360;
 const SIZE: (u32, u32) = (256, 256);
 const LENGTH_UNIT: f32 = 10.0;
 
@@ -144,7 +145,7 @@ struct CustomMaterial {
 }
 
 impl Material2d for CustomMaterial {
-    fn fragment_shader() -> bevy::render::render_resource::ShaderRef {
+    fn fragment_shader() -> ShaderRef {
         "shaders/visualize/scalar.wgsl".into()
     }
 }

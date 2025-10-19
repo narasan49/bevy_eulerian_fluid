@@ -2,16 +2,15 @@ use crate::{
     definition::{FluidGridLength, ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
     physics_time::PhysicsFrameInfo,
 };
-use avian2d::prelude::{ExternalForce, RigidBody};
+use avian2d::prelude::{Forces, RigidBody, RigidBodyForces};
 use bevy::{
-    gizmos::grid,
     prelude::*,
     render::{gpu_readback::ReadbackComplete, storage::ShaderStorageBuffer},
 };
 
 pub(crate) fn forces_to_solid_readback(
-    trigger: Trigger<ReadbackComplete>,
-    mut query: Query<(&mut ExternalForce, &RigidBody)>,
+    trigger: On<ReadbackComplete>,
+    mut query: Query<(Forces, &RigidBody)>,
     query_solidentities: Query<&SolidEntities>,
     grid_length: Res<FluidGridLength>,
     physics_frame_info: Res<PhysicsFrameInfo>,
@@ -27,11 +26,11 @@ pub(crate) fn forces_to_solid_readback(
     for fluids in &query_solidentities {
         for (idx, entity) in fluids.entities.iter().enumerate() {
             let rigid_body = query.get_mut(*entity);
-            if let Ok((mut external_force, rigid_body)) = rigid_body {
+            if let Ok((mut forces, rigid_body)) = rigid_body {
                 if *rigid_body == RigidBody::Dynamic {
                     let mut force = data[idx] * physics_frame_info.delta_secs / grid_length.0;
                     force.y *= -1.0;
-                    external_force.set_force(force);
+                    forces.apply_force(force);
                 }
             }
         }

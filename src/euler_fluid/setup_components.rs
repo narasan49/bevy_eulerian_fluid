@@ -115,7 +115,7 @@ pub(crate) fn watch_fluid_component(
         };
 
         let fluid_transform = match transform {
-            Some(t) => t.compute_matrix(),
+            Some(t) => t.to_matrix(),
             None => Mat4::IDENTITY,
         };
 
@@ -168,7 +168,7 @@ pub(crate) fn watch_fluid_component(
             })
             .insert(uniform)
             .insert(solid_entites)
-            .insert(Readback::Buffer(forces_to_solid_buffer.clone()))
+            .insert(Readback::buffer(forces_to_solid_buffer.clone()))
             .observe(forces_to_solid_readback);
     }
 }
