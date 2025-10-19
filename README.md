@@ -67,6 +67,7 @@ See also an [interaction example](./examples/interaction.rs) for the detailed im
 - [ ] Solid body interaction
   - [x] One-way solid body to fluid interaction
   - [x] Two-way coupling with solid body and fluid
+    - As of v0.2.0, only a circle shape is supported.
   - [ ] Various shapes support
     - [x] Circle
     - [x] Rectangle
@@ -105,6 +106,12 @@ There are some examples to demonstrate how to visualize and interact to the simu
   cargo run --example multiple
   ```
   ![img](./docs/bevy-fluid-multiple-fluids.gif)
+
+## Versions
+| Bevy | Bevy Eularian Fluid |
+| --- | --- |
+| 0.17 | 0.2 |
+| 0.15 | 0.1 |
 
 ## Acknowledgments
 The simulation is inspired by and based on the algorithms described in these books:

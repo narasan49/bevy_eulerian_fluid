@@ -1,4 +1,4 @@
-use avian2d::prelude::{Physics, PhysicsSchedule, PhysicsStepSet};
+use avian2d::prelude::{Physics, PhysicsSchedule, PhysicsStepSystems};
 use bevy::{
     prelude::*,
     render::{
@@ -17,7 +17,7 @@ impl Plugin for PhysicsFramePlugin {
             .add_plugins(ExtractResourcePlugin::<PhysicsFrameInfo>::default())
             .add_systems(
                 PhysicsSchedule,
-                update_physics_frame_info.after(PhysicsStepSet::Last),
+                update_physics_frame_info.after(PhysicsStepSystems::Last),
             );
 
         let render_app = app.sub_app_mut(RenderApp);

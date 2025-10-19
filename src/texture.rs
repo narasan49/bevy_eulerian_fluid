@@ -1,10 +1,8 @@
 use bevy::{
+    asset::RenderAssetUsages,
     image::TextureFormatPixelInfo,
     prelude::*,
-    render::{
-        render_asset::RenderAssetUsages,
-        render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
-    },
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 
 pub trait ImageForCS {
@@ -13,7 +11,7 @@ pub trait ImageForCS {
 
 impl ImageForCS for Image {
     fn new_texture_storage(size: (u32, u32), format: TextureFormat) -> Self {
-        let pixel_size = format.pixel_size();
+        let pixel_size = format.pixel_size().unwrap();
         let mut zeros = Vec::new();
         zeros.resize(pixel_size, 0u8);
 

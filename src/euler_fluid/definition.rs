@@ -1,4 +1,4 @@
-use avian2d::{prelude::Physics, sync::SyncSet};
+use avian2d::{physics_transform::PhysicsTransformSystems, prelude::Physics};
 use bevy::{
     prelude::*,
     render::{
@@ -17,7 +17,7 @@ impl Plugin for FluidParametersPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedPostUpdate,
-            update_simulation_uniform.after(SyncSet::First),
+            update_simulation_uniform.after(PhysicsTransformSystems::Propagate),
         );
     }
 
@@ -131,7 +131,7 @@ fn update_simulation_uniform(
         uniform.rho = settings.rho;
         uniform.gravity = settings.gravity;
         uniform.initial_fluid_level = settings.initial_fluid_level;
-        uniform.fluid_transform = transform.compute_matrix();
+        uniform.fluid_transform = transform.to_matrix();
         uniform.size = Vec2::new(settings.size.0 as f32, settings.size.1 as f32);
     }
 }

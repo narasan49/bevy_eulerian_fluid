@@ -1,35 +1,33 @@
 pub mod fps_counter;
 
 use bevy::{
-    input::mouse::MouseMotion,
-    prelude::*,
-    render::{camera::CameraProjection, storage::ShaderStorageBuffer},
-    window::PrimaryWindow,
+    camera::Projection, input::mouse::MouseMotion, prelude::*,
+    render::storage::ShaderStorageBuffer, window::PrimaryWindow,
 };
 use bevy_eulerian_fluid::euler_fluid::definition::{FluidSettings, LocalForces};
 
 pub fn mouse_motion(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    mut mouse_motion: EventReader<MouseMotion>,
+    mut mouse_motion: MessageReader<MouseMotion>,
     touches: Res<Touches>,
     q_window: Query<&Window, With<PrimaryWindow>>,
-    q_camera: Query<&OrthographicProjection, With<Camera2d>>,
+    q_camera: Query<&Projection, With<Camera2d>>,
     q_fluid: Query<(&LocalForces, &FluidSettings, &Transform)>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
     if mouse_button_input.pressed(MouseButton::Left) {
-        let window = q_window.single();
+        let window = q_window.single().unwrap();
         if let Some(cursor_position) = window.cursor_position() {
             let forces = mouse_motion
                 .read()
                 .map(|mouse| 5.0 * mouse.delta)
                 .collect::<Vec<_>>();
 
-            for (local_forces, settings, transform) in &q_fluid {
+            for (local_forces, settings, transform) in q_fluid {
                 let position = screen_to_mesh_coordinate(
                     cursor_position - transform.translation.xy() * Vec2::new(1.0, -1.0),
                     window,
-                    q_camera.single(),
+                    q_camera.single().unwrap(),
                     Vec2::new(settings.size.0 as f32, settings.size.1 as f32),
                 );
                 let positions = vec![position; forces.len()];
@@ -53,8 +51,8 @@ pub fn mouse_motion(
             .map(|touch| {
                 screen_to_mesh_coordinate(
                     touch.position() - transform.translation.xy() * Vec2::new(1.0, -1.0),
-                    q_window.single(),
-                    q_camera.single(),
+                    q_window.single().unwrap(),
+                    q_camera.single().unwrap(),
                     Vec2::new(settings.size.0 as f32, settings.size.1 as f32),
                 )
             })
@@ -70,7 +68,7 @@ pub fn mouse_motion(
 fn screen_to_mesh_coordinate(
     position: Vec2,
     window: &Window,
-    projection: &OrthographicProjection,
+    projection: &Projection,
     scale: Vec2,
 ) -> Vec2 {
     let window_size = window.size();

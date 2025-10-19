@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use bevy::asset::{embedded_asset, load_embedded_asset};
 use bevy::ecs::query::QueryData;
 use bevy::render::extract_component::ExtractComponent;
 use bevy::render::render_resource::UniformBuffer;
@@ -23,7 +24,6 @@ use bevy::{
 use crate::definition::{
     ForcesToSolid, SolidCenterTextures, SolidForcesBins, SolidObstaclesBuffer,
 };
-use crate::euler_fluid::{ACCUMULATE_FORCES_SHADER_HANDLE, SAMPLE_FORCES_SHADER_HANDLE};
 
 use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, JumpFloodingUniform,
@@ -32,38 +32,29 @@ use super::definition::{
     VelocityTexturesV,
 };
 
-pub(super) const INITIALIZE_GRID_CENTER_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xD9C0123A6DC94D01AA0D8BEF9784EC16);
-pub(super) const INITIALIZE_VELOCITY_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xE517B3F694A9446B970368B971BF631E);
+pub(crate) struct FluidShaderResourcePlugin;
 
-pub(super) const UPDATE_SOLID_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x3B7E226FADA549C1A6662BCED3B83535);
-pub(super) const UPDATE_SOLID_PRESSURE_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xD9A3A8F98001448A946FD0AE976F9B96);
-pub(super) const ADVECT_VELOCITY_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x4C394851214E47D3879CA7E1837A2D07);
-pub(super) const APPLY_FORCE_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x446049599EE84040B9FFE7C00783F856);
-pub(super) const DIVERGENCE_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xD31C2EF5DE254DC097F20C813A5A0C6D);
-pub(super) const JACOBI_ITERATION_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x8BB3FAA20BC24FB4B790C11A8A2F8E63);
-pub(super) const SOLVE_VELOCITY_U_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x1B95362358B242BCA68804444013F99E);
-pub(super) const SOLVE_VELOCITY_V_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xbfae85ad7e30440aad02c9ad2870ea51);
-pub(super) const EXTRAPOLATE_VELOCITY_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x90978F4EBD3942E78B116D156801D737);
-
-pub(super) const RECOMPUTE_LEVELSET_INITIALIZE_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xAFC6EC29854A413CB0E4113506AE2254);
-pub(super) const RECOMPUTE_LEVELSET_ITERATE_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x5BD03953327243328E2D0F3373934E39);
-pub(super) const RECOMPUTE_LEVELSET_SDF_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x45710E52048449A5A59D382284974B38);
-pub(super) const ADVECT_LEVELSET_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x4165F4894F76420E8D67FC83E3466ACA);
+impl Plugin for FluidShaderResourcePlugin {
+    fn build(&self, app: &mut App) {
+        embedded_asset!(app, "shaders/initialize_velocity.wgsl");
+        embedded_asset!(app, "shaders/initialize_grid_center.wgsl");
+        embedded_asset!(app, "shaders/update_solid.wgsl");
+        embedded_asset!(app, "shaders/update_solid_pressure.wgsl");
+        embedded_asset!(app, "shaders/advect_velocity.wgsl");
+        embedded_asset!(app, "shaders/apply_force.wgsl");
+        embedded_asset!(app, "shaders/divergence.wgsl");
+        embedded_asset!(app, "shaders/jacobi_iteration.wgsl");
+        embedded_asset!(app, "shaders/solve_velocity_u.wgsl");
+        embedded_asset!(app, "shaders/solve_velocity_v.wgsl");
+        embedded_asset!(app, "shaders/extrapolate_velocity.wgsl");
+        embedded_asset!(app, "shaders/recompute_levelset/initialize.wgsl");
+        embedded_asset!(app, "shaders/recompute_levelset/iterate.wgsl");
+        embedded_asset!(app, "shaders/recompute_levelset/calculate_sdf.wgsl");
+        embedded_asset!(app, "shaders/advect_levelset.wgsl");
+        embedded_asset!(app, "shaders/fluid_to_solid/sample_forces.wgsl");
+        embedded_asset!(app, "shaders/fluid_to_solid/accumulate_forces.wgsl");
+    }
+}
 
 #[derive(Resource)]
 pub(crate) struct FluidPipelines {
@@ -110,6 +101,8 @@ impl FromWorld for FluidPipelines {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
         let pipeline_cache = world.resource::<PipelineCache>();
+        let asset_server = world.resource::<AssetServer>();
+        info!("Creating FluidPipelines...");
 
         let uniform_bind_group_layout = render_device.create_bind_group_layout(
             Some("Create uniform bind group layout"),
@@ -148,25 +141,21 @@ impl FromWorld for FluidPipelines {
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some(Cow::from("Queue InitializeVelocityPipeline")),
                 layout: vec![velocity_bind_group_layout.clone()],
-                push_constant_ranges: vec![],
-                shader: INITIALIZE_VELOCITY_SHADER_HANDLE,
-                shader_defs: vec![],
-                entry_point: Cow::from("initialize_velocity"),
-                zero_initialize_workgroup_memory: false,
+                shader: load_embedded_asset!(asset_server, "shaders/initialize_velocity.wgsl"),
+                entry_point: Some(("initialize_velocity").into()),
+                ..default()
             });
 
         let initialize_grid_center_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some(Cow::from("Queue InitializeGridCenterPipeline")),
+                label: Some(("Queue InitializeGridCenterPipeline").into()),
                 layout: vec![
                     levelset_bind_group_layout.clone(),
                     uniform_bind_group_layout.clone(),
                 ],
-                push_constant_ranges: vec![],
-                shader: INITIALIZE_GRID_CENTER_SHADER_HANDLE,
-                shader_defs: vec![],
-                entry_point: Cow::from("initialize_grid_center"),
-                zero_initialize_workgroup_memory: false,
+                shader: load_embedded_asset!(asset_server, "shaders/initialize_grid_center.wgsl"),
+                entry_point: Some(("initialize_grid_center").into()),
+                ..default()
             });
 
         let update_solid_pipeline =
@@ -179,9 +168,9 @@ impl FromWorld for FluidPipelines {
                     uniform_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: UPDATE_SOLID_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/update_solid.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("update_solid"),
+                entry_point: Some(("update_solid").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -193,9 +182,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: UPDATE_SOLID_PRESSURE_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/update_solid_pressure.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("update_solid_pressure"),
+                entry_point: Some(("update_solid_pressure").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -207,9 +196,9 @@ impl FromWorld for FluidPipelines {
                 uniform_bind_group_layout.clone(),
             ],
             push_constant_ranges: vec![],
-            shader: ADVECT_VELOCITY_SHADER_HANDLE,
+            shader: load_embedded_asset!(asset_server, "shaders/advect_velocity.wgsl"),
             shader_defs: vec![],
-            entry_point: Cow::from("advect_u"),
+            entry_point: Some(("advect_u").into()),
             zero_initialize_workgroup_memory: false,
         });
 
@@ -221,9 +210,9 @@ impl FromWorld for FluidPipelines {
                 uniform_bind_group_layout.clone(),
             ],
             push_constant_ranges: vec![],
-            shader: ADVECT_VELOCITY_SHADER_HANDLE,
+            shader: load_embedded_asset!(asset_server, "shaders/advect_velocity.wgsl"),
             shader_defs: vec![],
-            entry_point: Cow::from("advect_v"),
+            entry_point: Some(("advect_v").into()),
             zero_initialize_workgroup_memory: false,
         });
 
@@ -237,9 +226,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: APPLY_FORCE_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/apply_force.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("apply_force_u"),
+                entry_point: Some(("apply_force_u").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -253,9 +242,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: APPLY_FORCE_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/apply_force.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("apply_force_v"),
+                entry_point: Some(("apply_force_v").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -269,9 +258,9 @@ impl FromWorld for FluidPipelines {
                     solid_velocity_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: DIVERGENCE_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/divergence.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("divergence"),
+                entry_point: Some(("divergence").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -285,9 +274,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: JACOBI_ITERATION_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/jacobi_iteration.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("jacobi_iteration"),
+                entry_point: Some(("jacobi_iteration").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -301,9 +290,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: JACOBI_ITERATION_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/jacobi_iteration.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("jacobi_iteration_reverse"),
+                entry_point: Some(("jacobi_iteration_reverse").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -317,9 +306,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: SOLVE_VELOCITY_U_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/solve_velocity_u.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("solve_velocity_u"),
+                entry_point: Some(("solve_velocity_u").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -333,9 +322,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: SOLVE_VELOCITY_V_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/solve_velocity_v.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("solve_velocity_v"),
+                entry_point: Some(("solve_velocity_v").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -347,9 +336,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: EXTRAPOLATE_VELOCITY_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/extrapolate_velocity.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("extrapolate_u"),
+                entry_point: Some(("extrapolate_u").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -361,9 +350,9 @@ impl FromWorld for FluidPipelines {
                     levelset_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: EXTRAPOLATE_VELOCITY_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/extrapolate_velocity.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("extrapolate_v"),
+                entry_point: Some(("extrapolate_v").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -375,9 +364,12 @@ impl FromWorld for FluidPipelines {
                     jump_flooding_seeds_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: RECOMPUTE_LEVELSET_INITIALIZE_SHADER_HANDLE,
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/recompute_levelset/initialize.wgsl"
+                ),
                 shader_defs: vec![],
-                entry_point: Cow::from("initialize"),
+                entry_point: Some(("initialize").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -389,9 +381,12 @@ impl FromWorld for FluidPipelines {
                     jump_flooding_uniform_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: RECOMPUTE_LEVELSET_ITERATE_SHADER_HANDLE,
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/recompute_levelset/iterate.wgsl"
+                ),
                 shader_defs: vec![],
-                entry_point: Cow::from("iterate"),
+                entry_point: Some(("iterate").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -403,9 +398,12 @@ impl FromWorld for FluidPipelines {
                     jump_flooding_seeds_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: RECOMPUTE_LEVELSET_SDF_SHADER_HANDLE,
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/recompute_levelset/calculate_sdf.wgsl"
+                ),
                 shader_defs: vec![],
-                entry_point: Cow::from("calculate_sdf"),
+                entry_point: Some(("calculate_sdf").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -418,9 +416,9 @@ impl FromWorld for FluidPipelines {
                     uniform_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: ADVECT_LEVELSET_SHADER_HANDLE,
+                shader: load_embedded_asset!(asset_server, "shaders/advect_levelset.wgsl"),
                 shader_defs: vec![],
-                entry_point: Cow::from("advect_levelset"),
+                entry_point: Some(("advect_levelset").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -433,9 +431,12 @@ impl FromWorld for FluidPipelines {
                     pressure_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: SAMPLE_FORCES_SHADER_HANDLE,
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/fluid_to_solid/sample_forces.wgsl"
+                ),
                 shader_defs: vec![],
-                entry_point: Cow::from("sample_forces_to_solid"),
+                entry_point: Some(("sample_forces_to_solid").into()),
                 zero_initialize_workgroup_memory: false,
             });
 
@@ -447,9 +448,12 @@ impl FromWorld for FluidPipelines {
                     forces_to_solid_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
-                shader: ACCUMULATE_FORCES_SHADER_HANDLE,
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/fluid_to_solid/accumulate_forces.wgsl"
+                ),
                 shader_defs: vec![],
-                entry_point: Cow::from("accumulate_forces"),
+                entry_point: Some(("accumulate_forces").into()),
                 zero_initialize_workgroup_memory: false,
             });
 

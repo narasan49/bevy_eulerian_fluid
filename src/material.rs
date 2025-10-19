@@ -1,15 +1,16 @@
 use bevy::{
-    asset::load_internal_asset,
+    asset::{load_internal_asset, uuid_handle},
     prelude::*,
-    render::render_resource::{AsBindGroup, ShaderRef},
-    sprite::{Material2d, Material2dPlugin},
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
+    sprite_render::{Material2d, Material2dPlugin},
 };
 
 const RENDER_VELOCITY_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0x473523D890EA4717AC81C543D7D98CB6);
+    uuid_handle!("1b76721b-57c8-4cc6-a777-81d87a544fcf");
 
 const RENDER_VELOCITY_2D_SHADER_HANDLE: Handle<Shader> =
-    Handle::weak_from_u128(0xC979D52C691249DE87FC93D4820BD57B);
+    uuid_handle!("cd089033-7def-4b5b-95db-3084756cc270");
 
 pub struct FluidMaterialPlugin;
 
