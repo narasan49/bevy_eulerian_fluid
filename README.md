@@ -106,6 +106,12 @@ There are some examples to demonstrate how to visualize and interact to the simu
   ```
   ![img](./docs/bevy-fluid-multiple-fluids.gif)
 
+## Versions
+| Bevy | Bevy Eularian Fluid |
+| --- | --- |
+| 0.17 | 0.2 |
+| 0.15 | 0.1 |
+
 ## Acknowledgments
 The simulation is inspired by and based on the algorithms described in these books:
 
