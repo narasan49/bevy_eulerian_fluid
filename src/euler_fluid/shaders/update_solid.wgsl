@@ -55,7 +55,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let xy_edge_y = to_world(vec2<f32>(x) - vec2<f32>(0.0, 0.5), dim_grid);
 
     // ToDo: User defined boundary conditions
-    if (any(x == 0) || any(x == i32(dim_grid) - 1)) {
+    if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(dim_grid) - 1)) {
         textureStore(levelset_solid, x, vec4<f32>(0));
         textureStore(u_solid, x, vec4<f32>(0, 0, 0, 0));
         textureStore(v_solid, x, vec4<f32>(0, 0, 0, 0));
