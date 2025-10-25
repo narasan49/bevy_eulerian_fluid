@@ -765,7 +765,7 @@ pub(super) fn prepare_fluid_bind_groups(
 
 pub(super) fn prepare_fluid_bind_group_for_resources(
     mut commands: Commands,
-    pilelines: Res<FluidPipelines>,
+    pipelines: Res<FluidPipelines>,
     obstacles: Res<SolidObstaclesBuffer>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<GpuImage>>,
@@ -775,7 +775,7 @@ pub(super) fn prepare_fluid_bind_group_for_resources(
     let mut param = (gpu_images, fallback_image, buffers);
     let obstacles_bind_group = obstacles
         .as_bind_group(
-            &pilelines.obstacles_bind_group_layout,
+            &pipelines.obstacles_bind_group_layout,
             &render_device,
             &mut param,
         )
