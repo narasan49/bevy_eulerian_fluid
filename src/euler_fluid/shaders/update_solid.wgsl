@@ -55,7 +55,7 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let xy_edge_y = to_world(vec2<f32>(x) - vec2<f32>(0.0, 0.5), dim_grid);
 
     // ToDo: User defined boundary conditions
-    if (x.x == 0 || x.x == i32(dim_grid.x) - 1 || x.y == 0 || x.y == i32(dim_grid.y) - 1) {
+    if (any(x == 0) || any(x == i32(dim_grid) - 1)) {
         textureStore(levelset_solid, x, vec4<f32>(0));
         textureStore(u_solid, x, vec4<f32>(0, 0, 0, 0));
         textureStore(v_solid, x, vec4<f32>(0, 0, 0, 0));
@@ -63,7 +63,9 @@ fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    var level = LARGE_FLOAT;
+    // Initialize solid level set to the domain boundary in uv space
+    let tmp = min(x, abs(vec2<i32>(dim_grid) - 1 - x));
+    var level = f32(min(tmp.x, tmp.y));
 
     let num_obstacles = arrayLength(&obstacles);
     var i = 0u;
