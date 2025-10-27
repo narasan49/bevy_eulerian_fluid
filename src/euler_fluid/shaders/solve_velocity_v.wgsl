@@ -17,7 +17,11 @@
 @compute @workgroup_size(64, 1, 1)
 fn solve_velocity_v(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
-    let x = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
+    let x = vec2<i32>(invocation_id.xy);
+    if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(levelset_solid)) - 1)) {
+        textureStore(v0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+        return;
+    }
 
     let level_solid_centers = array<f32, 6>(
         textureLoad(levelset_solid, x + vec2<i32>(-1, -1)).r,
