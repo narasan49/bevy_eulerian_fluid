@@ -111,6 +111,7 @@ impl Plugin for FluidPlugin {
             app,
             "euler_fluid/shaders/fluid_to_solid/fixed_point_conversion.wgsl"
         );
+        load_shader_library!(app, "euler_fluid/shaders/solid_obstacle.wgsl");
     }
 
     fn finish(&self, app: &mut App) {
