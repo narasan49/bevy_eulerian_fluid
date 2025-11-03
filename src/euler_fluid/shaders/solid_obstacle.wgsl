@@ -17,6 +17,15 @@ struct ShapeVariant {
     values: array<f32, 6>,
 }
 
+struct SolidObstacle {
+    entity_id: u32,
+    shape: ShapeVariant,
+    transform: mat4x4<f32>,
+    inverse_transform: mat4x4<f32>,
+    linear_velocity: vec2<f32>,
+    angular_velocity: f32,
+}
+
 fn get_circle(variant: ShapeVariant) -> Circle {
     return Circle(variant.values[0]);
 }
@@ -25,11 +34,15 @@ fn get_rectangle(variant: ShapeVariant) -> Rectangle {
     return Rectangle(vec2<f32>(variant.values[0], variant.values[1]));
 }
 
-struct SolidObstacle {
-    entity_id: u32,
-    shape: ShapeVariant,
-    transform: mat4x4<f32>,
-    inverse_transform: mat4x4<f32>,
-    linear_velocity: vec2<f32>,
-    angular_velocity: f32,
+fn center_of_mass(solid_obstacle: SolidObstacle) -> vec2<f32> {
+    switch (solid_obstacle.shape.shape) {
+        case SHAPE_CIRCLE, SHAPE_RECTANGLE:
+        {
+            return solid_obstacle.transform[3].xy;
+        }
+        default:
+        {
+            return vec2<f32>(0.0);
+        }
+    }
 }

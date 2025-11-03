@@ -22,7 +22,7 @@ avian2d = "0.4"
 getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [dev-dependencies]
-bevy = {version = "0.17", features = ["webgpu"]}
+bevy = {version = "0.17", features = ["webgpu", "https"]}
 example_utils = { path = "crates/example_utils" }
 
 [profile.dev.package."*"]

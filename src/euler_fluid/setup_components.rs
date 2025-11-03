@@ -11,10 +11,7 @@ use super::definition::{
     DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
     SolidVelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
 };
-use crate::{
-    definition::{FluidGridLength, SolidCenterTextures},
-    obstacle::SolidObstacle,
-};
+use crate::definition::{FluidGridLength, Force, SampleForcesResource, SolidCenterTextures};
 use crate::{
     definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
     euler_fluid::definition::{
@@ -65,11 +62,12 @@ pub(crate) fn watch_fluid_component(
         let force = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
         let position = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
 
-        let bins_x = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
-        let bins_y = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
+        let bins_force_x = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
+        let bins_force_y = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
+        let bins_torque = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
 
         let mut forces_to_solid_buffer =
-            ShaderStorageBuffer::from(vec![SolidObstacle::default(); 0]);
+            ShaderStorageBuffer::from(vec![Force::default(); MAX_SOLIDS]);
         forces_to_solid_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
         let forces_to_solid_buffer = buffers.add(forces_to_solid_buffer);
 
@@ -101,17 +99,20 @@ pub(crate) fn watch_fluid_component(
 
         let solid_center_textures = SolidCenterTextures {
             levelset_solid: levelset_solid.clone(),
-            solid_id,
+            solid_id: solid_id.clone(),
         };
 
-        let pressure_textures = PressureTextures { p0, p1 };
+        let pressure_textures = PressureTextures {
+            p0: p0.clone(),
+            p1: p1.clone(),
+        };
 
         let divergence_textures = DivergenceTextures { div };
 
         let levelset_textures = LevelsetTextures {
             levelset_air0,
             levelset_air1,
-            levelset_solid,
+            levelset_solid: levelset_solid.clone(),
         };
 
         let fluid_transform = match transform {
@@ -139,7 +140,20 @@ pub(crate) fn watch_fluid_component(
             jump_flooding_seeds_y,
         };
 
-        let solid_forces_bins = SolidForcesBins { bins_x, bins_y };
+        let solid_forces_bins = SolidForcesBins {
+            bins_force_x: bins_force_x.clone(),
+            bins_force_y: bins_force_y.clone(),
+            bins_torque: bins_torque.clone(),
+        };
+
+        let sample_forces_resource = SampleForcesResource {
+            bins_force_x: bins_force_x.clone(),
+            bins_force_y: bins_force_y.clone(),
+            bins_torque: bins_torque.clone(),
+            levelset_solid: levelset_solid.clone(),
+            solid_id: solid_id.clone(),
+            p1: p1.clone(),
+        };
 
         let forces_to_solid = ForcesToSolid {
             forces: forces_to_solid_buffer.clone(),
@@ -165,6 +179,7 @@ pub(crate) fn watch_fluid_component(
                 solid_forces_bins,
                 forces_to_solid,
                 solid_center_textures,
+                sample_forces_resource,
             })
             .insert(uniform)
             .insert(solid_entites)

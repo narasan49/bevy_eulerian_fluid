@@ -6,7 +6,9 @@ pub mod physics_time;
 pub mod render_node;
 pub mod setup_components;
 
-use crate::definition::{FluidGridLength, SolidCenterTextures, SolidObstaclesBuffer};
+use crate::definition::{
+    FluidGridLength, SampleForcesResource, SolidCenterTextures, SolidObstaclesBuffer,
+};
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::fluid_bind_group::FluidShaderResourcePlugin;
@@ -65,6 +67,7 @@ impl Plugin for FluidPlugin {
             .add_plugins(ExtractComponentPlugin::<LocalForces>::default())
             .add_plugins(ExtractComponentPlugin::<ForcesToSolid>::default())
             .add_plugins(ExtractComponentPlugin::<SolidForcesBins>::default())
+            .add_plugins(ExtractComponentPlugin::<SampleForcesResource>::default())
             .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)

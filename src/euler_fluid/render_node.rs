@@ -404,9 +404,13 @@ impl render_graph::Node for EulerFluidNode {
 
                     // forces to solid
                     pass.set_pipeline(&sample_forces_pipeline);
-                    pass.set_bind_group(0, &bind_groups.solid_forces_bins_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.solid_center_bind_group, &[]);
-                    pass.set_bind_group(2, &bind_groups.pressure_bind_group, &[]);
+                    pass.set_bind_group(0, &bind_groups.sample_forces_bind_group, &[]);
+                    pass.set_bind_group(1, &bind_group_resources.obstacles_bind_group, &[]);
+                    pass.set_bind_group(
+                        2,
+                        &bind_groups.uniform_bind_group,
+                        &[bind_groups.uniform_index],
+                    );
                     dispatch_center(&mut pass, size);
 
                     pass.set_pipeline(&accumulate_forces_pipeline);
