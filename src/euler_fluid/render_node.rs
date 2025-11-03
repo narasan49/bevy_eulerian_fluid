@@ -64,11 +64,11 @@ impl render_graph::Node for EulerFluidNode {
         match self.state {
             State::Loading => {
                 if let (
-                    // CachedPipelineState::Ok(_initialize_velocity_pipeline),
+                    CachedPipelineState::Ok(_initialize_velocity_pipeline),
                     CachedPipelineState::Ok(_initialize_grid_center_pipeline),
                 ) = (
-                    // pipeline_cache
-                    //     .get_compute_pipeline_state(pipelines.initialize_velocity_pipeline),
+                    pipeline_cache
+                        .get_compute_pipeline_state(pipelines.initialize_velocity_pipeline),
                     pipeline_cache
                         .get_compute_pipeline_state(pipelines.initialize_grid_center_pipeline),
                 ) {
