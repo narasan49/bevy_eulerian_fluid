@@ -1,5 +1,5 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
-#import bevy_fluid::solid_obstacle::{SolidObstacle, get_circle, get_rectangle, Rectangle, SHAPE_CIRCLE, SHAPE_RECTANGLE};
+#import bevy_fluid::solid_obstacle::{SolidObstacle, get_circle, get_rectangle, get_triangle, Rectangle, SHAPE_CIRCLE, SHAPE_RECTANGLE, SHAPE_TRIANGLE};
 
 const LARGE_FLOAT: f32 = 1.0e6;
 
@@ -130,8 +130,41 @@ fn level_obstacle(obstacle: SolidObstacle, x: vec2<f32>) -> f32 {
             let rectangle = get_rectangle(obstacle.shape);
             return level_rectangle(rectangle, obstacle.transform, obstacle.inverse_transform, x);
         }
+        case SHAPE_TRIANGLE: {
+            let triangle = get_triangle(obstacle.shape);
+            let p0 = obstacle.transform * vec4<f32>(triangle.a, 0.0, 1.0);
+            let p1 = obstacle.transform * vec4<f32>(triangle.b, 0.0, 1.0);
+            let p2 = obstacle.transform * vec4<f32>(triangle.c, 0.0, 1.0);
+
+            let dist0 = distance_to_line_segment(x, p0.xy, p1.xy);
+            let dist1 = distance_to_line_segment(x, p1.xy, p2.xy);
+            let dist2 = distance_to_line_segment(x, p2.xy, p0.xy);
+            let sign0 = distance_of_sign(x, p0.xy, p1.xy);
+            let sign1 = distance_of_sign(x, p1.xy, p2.xy);
+            let sign2 = distance_of_sign(x, p2.xy, p0.xy);
+
+            if (sign0 > 0.0 && sign1 > 0.0 && sign2 > 0.0) {
+                return -min(min(dist0, dist1), dist2);
+            } else {
+                return min(min(dist0, dist1), dist2);
+            }
+            // return min(min(dist0, dist1), dist2);
+        }
         default: {
             return LARGE_FLOAT;
         }
     }
+}
+
+fn distance_to_line_segment(x: vec2<f32>, a: vec2<f32>, b: vec2<f32>) -> f32 {
+    let ab = b - a;
+    let t = clamp(dot(x - a, ab) / dot(ab, ab), 0.0, 1.0);
+    let projection = a + t * ab;
+    return length(x - projection);
+}
+
+fn distance_of_sign(x: vec2<f32>, a: vec2<f32>, b: vec2<f32>) -> f32 {
+    let x1 = x - a;
+    let ab = b - a;
+    return sign(x1.y * ab.x - x1.x * ab.y);
 }

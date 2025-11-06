@@ -195,6 +195,32 @@ fn setup_rigid_bodies(
         RigidBody::Dynamic,
         ColliderDensity(0.9),
     ));
+
+    let sqrt3 = 3f32.sqrt();
+    let triangle = Triangle2d::new(
+        Vec2::new(0.0, sqrt3 * 0.25) * 50.0,
+        Vec2::new(-0.5, -sqrt3 * 0.125) * 50.0,
+        Vec2::new(0.5, -sqrt3 * 0.125) * 50.0,
+    );
+    let triangle_mesh = meshes.add(triangle);
+    let triangle_material = materials.add(Color::srgb(1.0, 0.0, 0.0));
+    commands.spawn((
+        Mesh2d(triangle_mesh.clone()),
+        MeshMaterial2d(triangle_material.clone()),
+        Transform::from_xyz(SIZE.0 as f32 * 0.4, SIZE.0 as f32 * 0.3, 1.0),
+        triangle.collider(),
+        RigidBody::Dynamic,
+        ColliderDensity(15.0),
+    ));
+
+    commands.spawn((
+        Mesh2d(triangle_mesh.clone()),
+        MeshMaterial2d(triangle_material.clone()),
+        Transform::from_xyz(SIZE.0 as f32 * 0.2, SIZE.0 as f32 * 0.1, 1.0),
+        triangle.collider(),
+        RigidBody::Dynamic,
+        ColliderDensity(1.9),
+    ));
 }
 
 fn on_fluid_setup(

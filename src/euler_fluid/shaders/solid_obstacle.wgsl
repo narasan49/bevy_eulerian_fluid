@@ -12,6 +12,12 @@ struct Rectangle {
     half_size: vec2<f32>,
 }
 
+struct Triangle {
+    a: vec2<f32>,
+    b: vec2<f32>,
+    c: vec2<f32>,
+}
+
 struct ShapeVariant {
     shape: u32,
     values: array<f32, 6>,
@@ -34,11 +40,30 @@ fn get_rectangle(variant: ShapeVariant) -> Rectangle {
     return Rectangle(vec2<f32>(variant.values[0], variant.values[1]));
 }
 
+fn get_triangle(variant: ShapeVariant) -> Triangle {
+    return Triangle(
+        vec2<f32>(variant.values[0], variant.values[1]),
+        vec2<f32>(variant.values[2], variant.values[3]),
+        vec2<f32>(variant.values[4], variant.values[5]),
+    );
+}
+
 fn center_of_mass(solid_obstacle: SolidObstacle) -> vec2<f32> {
     switch (solid_obstacle.shape.shape) {
         case SHAPE_CIRCLE, SHAPE_RECTANGLE:
         {
             return solid_obstacle.transform[3].xy;
+        }
+        case SHAPE_TRIANGLE:
+        {
+            let triangle = get_triangle(solid_obstacle.shape);
+            let triangle_center_local = vec4<f32>(
+                (triangle.a.x + triangle.b.x + triangle.c.x) / 3.0,
+                (triangle.a.y + triangle.b.y + triangle.c.y) / 3.0,
+                0.0,
+                1.0,
+            );
+            return (solid_obstacle.transform * triangle_center_local).xy;
         }
         default:
         {
