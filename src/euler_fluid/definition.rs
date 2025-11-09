@@ -241,9 +241,33 @@ pub struct LocalForces {
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct SolidForcesBins {
     #[storage(0, visibility(compute))]
-    pub bins_x: Handle<ShaderStorageBuffer>,
+    pub bins_force_x: Handle<ShaderStorageBuffer>,
     #[storage(1, visibility(compute))]
-    pub bins_y: Handle<ShaderStorageBuffer>,
+    pub bins_force_y: Handle<ShaderStorageBuffer>,
+    #[storage(2, visibility(compute))]
+    pub bins_torque: Handle<ShaderStorageBuffer>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct SampleForcesResource {
+    #[storage(0, visibility(compute))]
+    pub bins_force_x: Handle<ShaderStorageBuffer>,
+    #[storage(1, visibility(compute))]
+    pub bins_force_y: Handle<ShaderStorageBuffer>,
+    #[storage(2, visibility(compute))]
+    pub bins_torque: Handle<ShaderStorageBuffer>,
+    #[storage_texture(3, image_format = R32Float, access = ReadWrite)]
+    pub levelset_solid: Handle<Image>,
+    #[storage_texture(4, image_format = R32Sint, access = ReadOnly)]
+    pub solid_id: Handle<Image>,
+    #[storage_texture(5, image_format = R32Float, access = ReadOnly)]
+    pub p1: Handle<Image>,
+}
+
+#[derive(Clone, Copy, Default, ShaderType)]
+pub struct Force {
+    pub force: Vec2,
+    pub torque: f32,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -306,4 +330,5 @@ pub(crate) struct FluidSimulationBundle {
     pub solid_forces_bins: SolidForcesBins,
     pub forces_to_solid: ForcesToSolid,
     pub solid_center_textures: SolidCenterTextures,
+    pub sample_forces_resource: SampleForcesResource,
 }

@@ -22,7 +22,7 @@ use bevy::{
 };
 
 use crate::definition::{
-    ForcesToSolid, SolidCenterTextures, SolidForcesBins, SolidObstaclesBuffer,
+    ForcesToSolid, SampleForcesResource, SolidCenterTextures, SolidForcesBins, SolidObstaclesBuffer,
 };
 
 use super::definition::{
@@ -95,6 +95,7 @@ pub(crate) struct FluidPipelines {
     solid_forces_bins_bind_group_layout: BindGroupLayout,
     forces_to_solid_bind_group_layout: BindGroupLayout,
     solid_center_textures_bind_group_layout: BindGroupLayout,
+    sample_forces_bind_group_layout: BindGroupLayout,
 }
 
 impl FromWorld for FluidPipelines {
@@ -136,6 +137,8 @@ impl FromWorld for FluidPipelines {
         );
         let solid_forces_bins_bind_group_layout = SolidForcesBins::bind_group_layout(render_device);
         let forces_to_solid_bind_group_layout = ForcesToSolid::bind_group_layout(render_device);
+        let sample_forces_bind_group_layout =
+            SampleForcesResource::bind_group_layout(render_device);
 
         let initialize_velocity_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -426,9 +429,9 @@ impl FromWorld for FluidPipelines {
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some(Cow::from("Queue SampleForcesPipeline")),
                 layout: vec![
-                    solid_forces_bins_bind_group_layout.clone(),
-                    solid_center_textures_bind_group_layout.clone(),
-                    pressure_bind_group_layout.clone(),
+                    sample_forces_bind_group_layout.clone(),
+                    obstacles_bind_group_layout.clone(),
+                    uniform_bind_group_layout.clone(),
                 ],
                 push_constant_ranges: vec![],
                 shader: load_embedded_asset!(
@@ -495,6 +498,7 @@ impl FromWorld for FluidPipelines {
             solid_forces_bins_bind_group_layout,
             forces_to_solid_bind_group_layout,
             solid_center_textures_bind_group_layout,
+            sample_forces_bind_group_layout,
         }
     }
 }
@@ -514,6 +518,7 @@ pub(crate) struct FluidBindGroups {
     pub jump_flooding_seeds_bind_group: BindGroup,
     pub solid_forces_bins_bind_group: BindGroup,
     pub forces_to_solid_bind_group: BindGroup,
+    pub sample_forces_bind_group: BindGroup,
     pub uniform_bind_group: BindGroup,
     pub uniform_index: u32,
 }
@@ -577,6 +582,7 @@ pub(super) struct TextureQuery {
     jump_flooding_seeds_textures: Ref<'static, JumpFloodingSeedsTextures>,
     jump_flooding_uniform_buffer: Ref<'static, JumpFloodingUniformBuffer>,
     solid_forces_bins: Ref<'static, SolidForcesBins>,
+    sample_forces: Ref<'static, SampleForcesResource>,
     forces_to_solid: Ref<'static, ForcesToSolid>,
 }
 
@@ -728,6 +734,17 @@ pub(super) fn prepare_fluid_bind_groups(
             )
             .unwrap()
             .bind_group;
+
+        let sample_forces_bind_group = t
+            .sample_forces
+            .as_bind_group(
+                &pipelines.sample_forces_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
         let forces_to_solid_bind_group = t
             .forces_to_solid
             .as_bind_group(
@@ -752,6 +769,7 @@ pub(super) fn prepare_fluid_bind_groups(
                 levelset_bind_group,
                 jump_flooding_seeds_bind_group,
                 solid_forces_bins_bind_group,
+                sample_forces_bind_group,
                 forces_to_solid_bind_group,
                 uniform_bind_group,
                 uniform_index: t.simulation_uniform_index.index(),

@@ -1,5 +1,7 @@
 use crate::{
-    definition::{FluidGridLength, ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
+    definition::{
+        FluidGridLength, Force, ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS,
+    },
     physics_time::PhysicsFrameInfo,
 };
 use avian2d::prelude::{Forces, RigidBody, RigidBodyForces};
@@ -22,15 +24,17 @@ pub(crate) fn forces_to_solid_readback(
     }
     *last_physics_step = physics_frame_info.step_number;
 
-    let data: Vec<Vec2> = trigger.event().to_shader_type();
+    let data: Vec<Force> = trigger.event().to_shader_type();
     for fluids in &query_solidentities {
         for (idx, entity) in fluids.entities.iter().enumerate() {
             let rigid_body = query.get_mut(*entity);
             if let Ok((mut forces, rigid_body)) = rigid_body {
                 if *rigid_body == RigidBody::Dynamic {
-                    let mut force = data[idx] * physics_frame_info.delta_secs / grid_length.0;
+                    let mut force = data[idx].force * physics_frame_info.delta_secs / grid_length.0;
                     force.y *= -1.0;
+                    let torque = data[idx].torque * physics_frame_info.delta_secs / grid_length.0;
                     forces.apply_force(force);
+                    forces.apply_torque(-torque);
                 }
             }
         }
@@ -43,13 +47,16 @@ pub(crate) fn initialize_buffer(
 ) {
     // info!("Initializing forces to solid buffers");
     for (forces_to_solid, bins) in query.iter() {
-        let bins_x = buffers.get_mut(&bins.bins_x).unwrap();
-        bins_x.set_data(vec![0.0; MAX_SOLIDS]);
+        let bins_force_x = buffers.get_mut(&bins.bins_force_x).unwrap();
+        bins_force_x.set_data(vec![0.0; MAX_SOLIDS]);
 
-        let bins_y = buffers.get_mut(&bins.bins_y).unwrap();
-        bins_y.set_data(vec![0.0; MAX_SOLIDS]);
+        let bins_force_y = buffers.get_mut(&bins.bins_force_y).unwrap();
+        bins_force_y.set_data(vec![0.0; MAX_SOLIDS]);
+
+        let bins_torque = buffers.get_mut(&bins.bins_torque).unwrap();
+        bins_torque.set_data(vec![0.0; MAX_SOLIDS]);
 
         let forces_buffer = buffers.get_mut(&forces_to_solid.forces).unwrap();
-        forces_buffer.set_data(vec![Vec2::ZERO; MAX_SOLIDS]);
+        forces_buffer.set_data(vec![Force::default(); MAX_SOLIDS]);
     }
 }

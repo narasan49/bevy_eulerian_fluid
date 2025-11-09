@@ -1,40 +1,7 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
+#import bevy_fluid::solid_obstacle::{SolidObstacle, get_circle, get_rectangle, get_capsule, get_triangle, Rectangle, SHAPE_CIRCLE, SHAPE_RECTANGLE, SHAPE_CAPSULE, SHAPE_TRIANGLE};
 
 const LARGE_FLOAT: f32 = 1.0e6;
-
-const SHAPE_CIRCLE: u32 = 0;
-const SHAPE_RECTANGLE: u32 = 1;
-const SHAPE_TRIANGLE: u32 = 4;
-
-struct Circle {
-    radius: f32,
-}
-
-struct Rectangle {
-    half_size: vec2<f32>,
-}
-
-struct ShapeVariant {
-    shape: u32,
-    values: array<f32, 6>,
-}
-
-fn get_circle(variant: ShapeVariant) -> Circle {
-    return Circle(variant.values[0]);
-}
-
-fn get_rectangle(variant: ShapeVariant) -> Rectangle {
-    return Rectangle(vec2<f32>(variant.values[0], variant.values[1]));
-}
-
-struct SolidObstacle {
-    entity_id: u32,
-    shape: ShapeVariant,
-    transform: mat4x4<f32>,
-    inverse_transform: mat4x4<f32>,
-    linear_velocity: vec2<f32>,
-    angular_velocity: f32,
-}
 
 @group(0) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
@@ -163,8 +130,47 @@ fn level_obstacle(obstacle: SolidObstacle, x: vec2<f32>) -> f32 {
             let rectangle = get_rectangle(obstacle.shape);
             return level_rectangle(rectangle, obstacle.transform, obstacle.inverse_transform, x);
         }
+        case SHAPE_CAPSULE: {
+            let capsule = get_capsule(obstacle.shape);
+            let a = obstacle.transform * vec4<f32>(capsule.a, 0.0, 1.0);
+            let b = obstacle.transform * vec4<f32>(capsule.b, 0.0, 1.0);
+            let level = distance_to_line_segment(x, a.xy, b.xy) - capsule.radius;
+            return level;
+        }
+        case SHAPE_TRIANGLE: {
+            let triangle = get_triangle(obstacle.shape);
+            let p0 = obstacle.transform * vec4<f32>(triangle.a, 0.0, 1.0);
+            let p1 = obstacle.transform * vec4<f32>(triangle.b, 0.0, 1.0);
+            let p2 = obstacle.transform * vec4<f32>(triangle.c, 0.0, 1.0);
+
+            let dist0 = distance_to_line_segment(x, p0.xy, p1.xy);
+            let dist1 = distance_to_line_segment(x, p1.xy, p2.xy);
+            let dist2 = distance_to_line_segment(x, p2.xy, p0.xy);
+            let sign0 = distance_of_sign(x, p0.xy, p1.xy);
+            let sign1 = distance_of_sign(x, p1.xy, p2.xy);
+            let sign2 = distance_of_sign(x, p2.xy, p0.xy);
+
+            if (sign0 > 0.0 && sign1 > 0.0 && sign2 > 0.0) {
+                return -min(min(dist0, dist1), dist2);
+            } else {
+                return min(min(dist0, dist1), dist2);
+            }
+        }
         default: {
             return LARGE_FLOAT;
         }
     }
+}
+
+fn distance_to_line_segment(x: vec2<f32>, a: vec2<f32>, b: vec2<f32>) -> f32 {
+    let ab = b - a;
+    let t = clamp(dot(x - a, ab) / dot(ab, ab), 0.0, 1.0);
+    let projection = a + t * ab;
+    return length(x - projection);
+}
+
+fn distance_of_sign(x: vec2<f32>, a: vec2<f32>, b: vec2<f32>) -> f32 {
+    let x1 = x - a;
+    let ab = b - a;
+    return sign(x1.y * ab.x - x1.x * ab.y);
 }
