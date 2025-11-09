@@ -221,6 +221,18 @@ fn setup_rigid_bodies(
         RigidBody::Dynamic,
         ColliderDensity(1.9),
     ));
+
+    let capsule = Capsule2d::new(10.0, 30.0);
+    let capsule_mesh = meshes.add(capsule);
+    let capsule_material = materials.add(Color::srgb(1.0, 1.0, 0.0));
+    commands.spawn((
+        Mesh2d(capsule_mesh.clone()),
+        MeshMaterial2d(capsule_material.clone()),
+        Transform::from_xyz(SIZE.0 as f32 * -0.2, SIZE.0 as f32 * 0.1, 1.0),
+        capsule.collider(),
+        RigidBody::Dynamic,
+        ColliderDensity(8.0),
+    ));
 }
 
 fn on_fluid_setup(
