@@ -1,7 +1,9 @@
 #define_import_path bevy_fluid::solid_obstacle
 
+// Corresponds to parry2d::shape::shape::ShapeType.
 const SHAPE_CIRCLE: u32 = 0;
 const SHAPE_RECTANGLE: u32 = 1;
+const SHAPE_CAPSULE: u32 = 2;
 const SHAPE_TRIANGLE: u32 = 4;
 
 struct Circle {
@@ -10,6 +12,12 @@ struct Circle {
 
 struct Rectangle {
     half_size: vec2<f32>,
+}
+
+struct Capsule {
+    a: vec2<f32>,
+    b: vec2<f32>,
+    radius: f32,
 }
 
 struct Triangle {
@@ -40,6 +48,14 @@ fn get_rectangle(variant: ShapeVariant) -> Rectangle {
     return Rectangle(vec2<f32>(variant.values[0], variant.values[1]));
 }
 
+fn get_capsule(variant: ShapeVariant) -> Capsule {
+    return Capsule(
+        vec2<f32>(variant.values[0], variant.values[1]),
+        vec2<f32>(variant.values[2], variant.values[3]),
+        variant.values[4],
+    );
+}
+
 fn get_triangle(variant: ShapeVariant) -> Triangle {
     return Triangle(
         vec2<f32>(variant.values[0], variant.values[1]),
@@ -50,7 +66,7 @@ fn get_triangle(variant: ShapeVariant) -> Triangle {
 
 fn center_of_mass(solid_obstacle: SolidObstacle) -> vec2<f32> {
     switch (solid_obstacle.shape.shape) {
-        case SHAPE_CIRCLE, SHAPE_RECTANGLE:
+        case SHAPE_CIRCLE, SHAPE_RECTANGLE, SHAPE_CAPSULE:
         {
             return solid_obstacle.transform[3].xy;
         }

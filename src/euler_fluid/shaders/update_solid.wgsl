@@ -1,5 +1,5 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
-#import bevy_fluid::solid_obstacle::{SolidObstacle, get_circle, get_rectangle, get_triangle, Rectangle, SHAPE_CIRCLE, SHAPE_RECTANGLE, SHAPE_TRIANGLE};
+#import bevy_fluid::solid_obstacle::{SolidObstacle, get_circle, get_rectangle, get_capsule, get_triangle, Rectangle, SHAPE_CIRCLE, SHAPE_RECTANGLE, SHAPE_CAPSULE, SHAPE_TRIANGLE};
 
 const LARGE_FLOAT: f32 = 1.0e6;
 
@@ -130,6 +130,13 @@ fn level_obstacle(obstacle: SolidObstacle, x: vec2<f32>) -> f32 {
             let rectangle = get_rectangle(obstacle.shape);
             return level_rectangle(rectangle, obstacle.transform, obstacle.inverse_transform, x);
         }
+        case SHAPE_CAPSULE: {
+            let capsule = get_capsule(obstacle.shape);
+            let a = obstacle.transform * vec4<f32>(capsule.a, 0.0, 1.0);
+            let b = obstacle.transform * vec4<f32>(capsule.b, 0.0, 1.0);
+            let level = distance_to_line_segment(x, a.xy, b.xy) - capsule.radius;
+            return level;
+        }
         case SHAPE_TRIANGLE: {
             let triangle = get_triangle(obstacle.shape);
             let p0 = obstacle.transform * vec4<f32>(triangle.a, 0.0, 1.0);
@@ -148,7 +155,6 @@ fn level_obstacle(obstacle: SolidObstacle, x: vec2<f32>) -> f32 {
             } else {
                 return min(min(dist0, dist1), dist2);
             }
-            // return min(min(dist0, dist1), dist2);
         }
         default: {
             return LARGE_FLOAT;
