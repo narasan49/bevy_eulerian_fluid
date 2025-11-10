@@ -6,19 +6,21 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly main: (a: number, b: number) => number;
-  readonly __externref_table_alloc: () => number;
-  readonly __wbindgen_export_1: WebAssembly.Table;
-  readonly __wbindgen_exn_store: (a: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h04da1a941b61fa75: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__h069515cf1da1aef3: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__haa042f17fba0a09d: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h9fa514c4a33507b4: (a: number, b: number, c: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h2402c4d1f5effacf: (a: number, b: number, c: any, d: any) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__hb6093a228a526adf: (a: number, b: number) => void;
+  readonly wasm_bindgen__closure__destroy__h2c53c8b113884d0b: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h539eb28742531e51: (a: number, b: number, c: any) => void;
+  readonly wasm_bindgen__closure__destroy__ha40dc2305e13d987: (a: number, b: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+  readonly __externref_table_alloc: () => number;
+  readonly __wbindgen_externrefs: WebAssembly.Table;
+  readonly __wbindgen_exn_store: (a: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_export_6: WebAssembly.Table;
-  readonly closure30972_externref_shim: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__ha56202f6006e09a7: (a: number, b: number) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h3a7ab28440a8eb21: (a: number, b: number, c: number) => void;
-  readonly closure183180_externref_shim: (a: number, b: number, c: any) => void;
-  readonly closure30984_externref_shim: (a: number, b: number, c: any, d: any) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h7e53c30a0b63fb08: (a: number, b: number) => void;
   readonly __wbindgen_start: () => void;
 }
 

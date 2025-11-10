@@ -1,5 +1,5 @@
 use avian2d::{
-    parry::shape::{Ball, Cuboid, ShapeType, Triangle},
+    parry::shape::{Ball, Capsule, Cuboid, ShapeType, Triangle},
     prelude::*,
 };
 use bevy::{
@@ -56,6 +56,20 @@ impl ShapeVariant {
             ],
         }
     }
+
+    pub fn from_capsule(capsule: &Capsule) -> Self {
+        Self {
+            shape: ShapeType::Capsule as u32,
+            values: [
+                capsule.segment.a.x,
+                capsule.segment.a.y,
+                capsule.segment.b.x,
+                capsule.segment.b.y,
+                capsule.radius,
+                0.0,
+            ],
+        }
+    }
 }
 
 pub(crate) fn construct_rigid_body_buffer_for_gpu(
@@ -91,6 +105,9 @@ pub(crate) fn construct_rigid_body_buffer_for_gpu(
                     )),
                     ShapeType::Triangle => Some(ShapeVariant::from_triangle(
                         collider.shape().as_triangle().unwrap(),
+                    )),
+                    ShapeType::Capsule => Some(ShapeVariant::from_capsule(
+                        collider.shape().as_capsule().unwrap(),
                     )),
                     _ => {
                         warn!("Unsupported shape type for solid: {:?}", shape_type);
