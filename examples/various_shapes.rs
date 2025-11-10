@@ -159,7 +159,7 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * -0.2, SIZE.0 as f32 * 0.3, 1.0),
         circle.collider(),
         RigidBody::Dynamic,
-        ColliderDensity(0.8),
+        ColliderDensity(0.2),
     ));
 
     let rectangle = Rectangle::new(100.0, 30.0);
@@ -171,7 +171,7 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * 0.2, SIZE.0 as f32 * 0.1, 1.0),
         rectangle.collider(),
         RigidBody::Dynamic,
-        ColliderDensity(0.9),
+        ColliderDensity(0.5),
     ));
 
     let rectangle = Rectangle::new(10.0, 10.0);
@@ -185,7 +185,7 @@ fn setup_rigid_bodies(
         ColliderDensity(0.9),
     ));
 
-    let rectangle = Rectangle::new(10.0, 20.0);
+    let rectangle = Rectangle::new(5.0, 20.0);
     let rectangle_mesh = meshes.add(rectangle);
     commands.spawn((
         Mesh2d(rectangle_mesh.clone()),
@@ -193,7 +193,7 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * -0.4, SIZE.0 as f32 * 0.1, 1.0),
         rectangle.collider(),
         RigidBody::Dynamic,
-        ColliderDensity(0.9),
+        ColliderDensity(2.0),
     ));
 
     let sqrt3 = 3f32.sqrt();
@@ -210,7 +210,7 @@ fn setup_rigid_bodies(
         Transform::from_xyz(SIZE.0 as f32 * 0.4, SIZE.0 as f32 * 0.3, 1.0),
         triangle.collider(),
         RigidBody::Dynamic,
-        ColliderDensity(15.0),
+        ColliderDensity(1.0),
     ));
 
     commands.spawn((
