@@ -35,7 +35,7 @@ fn sample_forces_to_solid(
     }
 
     let p = textureLoad(p1, idx).r;
-    let force = -vec2<f32>(f.iplusj - f.iminusj, f.ijplus - f.ijminus) * p;
+    let force = -vec2<f32>(f.iplusj - f.iminusj, f.ijplus - f.ijminus) * p * simulation_uniform.dx;
 
     let obstacle = obstacles[solid_id];
     let center = center_of_mass(obstacle);
