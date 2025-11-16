@@ -26,7 +26,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const SIZE: (u32, u32) = (256, 256);
+const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 1.0;
 
 fn main() {
@@ -80,7 +80,7 @@ fn setup_scene(
 ) {
     commands.spawn(Camera2d);
 
-    let fluid_domain_rectangle = Rectangle::from_size(Vec2::new(SIZE.0 as f32, SIZE.1 as f32));
+    let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands.spawn((
         FluidSettings {
             rho: 99.7f32, // water in 2D
@@ -89,7 +89,7 @@ fn setup_scene(
             initial_fluid_level: 0.9,
         },
         Mesh2d(meshes.add(fluid_domain_rectangle)),
-        Transform::default().with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0)),
+        Transform::default().with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
     ));
 
     let circle = Circle::new(10.0);
@@ -146,8 +146,8 @@ fn on_fluid_setup(
             Mesh2d(mesh),
             MeshMaterial2d(material_velocity),
             Transform::default()
-                .with_translation(Vec3::new(SIZE.0 as f32 * 0.5, 0.0, 0.0))
-                .with_scale(Vec3::new(SIZE.0 as f32, SIZE.1 as f32, 0.0)),
+                .with_translation((SIZE.as_vec2() * Vec2::new(0.5, 0.0)).extend(0.0))
+                .with_scale(SIZE.as_vec2().extend(0.0)),
         ));
 
         // Draw labels for each panel

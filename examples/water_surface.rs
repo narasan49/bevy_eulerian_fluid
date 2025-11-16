@@ -22,7 +22,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const SIZE: (u32, u32) = (256, 256);
+const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
@@ -100,8 +100,8 @@ fn on_fluid_setup(
             Mesh2d(mesh.clone()),
             MeshMaterial2d(material),
             Transform::default()
-                .with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0))
-                .with_scale(Vec3::new(SIZE.0 as f32, SIZE.1 as f32, 0.0)),
+                .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0))
+                .with_scale(SIZE.as_vec2().extend(0.0)),
         ));
 
         let material_velocity = velocity_materials.add(VelocityMaterial {
@@ -115,8 +115,8 @@ fn on_fluid_setup(
             Mesh2d(mesh),
             MeshMaterial2d(material_velocity),
             Transform::default()
-                .with_translation(Vec3::new(SIZE.0 as f32 * 0.5, 0.0, 0.0))
-                .with_scale(Vec3::new(SIZE.0 as f32, SIZE.1 as f32, 0.0)),
+                .with_translation((SIZE.as_vec2() * Vec2::new(0.5, 0.0)).extend(0.0))
+                .with_scale(SIZE.as_vec2().extend(0.0)),
         ));
 
         // Draw labels for each panel

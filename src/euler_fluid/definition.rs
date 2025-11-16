@@ -49,7 +49,7 @@ impl Plugin for FluidParametersPlugin {
 ///     commands.spawn(FluidSettings {
 ///         rho: 1.293f32,
 ///         gravity: Vec2::ZERO,
-///         size: (512, 512),
+///         size: UVec2::splat(512),
 ///         initial_fluid_level: 1.0f32, // filled with fluid
 ///     });
 /// }
@@ -83,7 +83,7 @@ impl Plugin for FluidParametersPlugin {
 pub struct FluidSettings {
     pub rho: f32,
     pub gravity: Vec2,
-    pub size: (u32, u32),
+    pub size: UVec2,
     pub initial_fluid_level: f32,
 }
 
@@ -132,7 +132,7 @@ fn update_simulation_uniform(
         uniform.gravity = settings.gravity;
         uniform.initial_fluid_level = settings.initial_fluid_level;
         uniform.fluid_transform = transform.to_matrix();
-        uniform.size = Vec2::new(settings.size.0 as f32, settings.size.1 as f32);
+        uniform.size = settings.size.as_vec2();
     }
 }
 
