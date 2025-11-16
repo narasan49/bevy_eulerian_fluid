@@ -35,7 +35,7 @@ fn setup_scene(mut commands: Commands) {
     commands.spawn(FluidSettings {
         rho: 997f32, // water
         gravity: Vec2::Y,
-        size: (512, 512),
+        size: UVec2::new(512),
         initial_fluid_level: 0.9,
     });
 }
