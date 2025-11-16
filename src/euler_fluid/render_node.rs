@@ -20,8 +20,8 @@ use super::{
 
 const WORKGROUP_SIZE: u32 = 8;
 
-fn dispatch_center(pass: &mut ComputePass, size: (u32, u32)) {
-    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+fn dispatch_center(pass: &mut ComputePass, size: UVec2) {
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
@@ -168,8 +168,8 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_pipeline(&initialize_velocity_pipeline);
                     pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
                     pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.x + 1,
+                        size.y / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
 
@@ -268,7 +268,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_pipeline(&update_solid_pressure_pipeline);
                     pass.set_bind_group(0, &bind_groups.pressure_bind_group, &[]);
                     pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
-                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+                    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
 
                     pass.set_pipeline(&advect_u_pipeline);
                     pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
@@ -279,15 +279,15 @@ impl render_graph::Node for EulerFluidNode {
                         &[bind_groups.uniform_index],
                     );
                     pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.x + 1,
+                        size.y / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
 
                     pass.set_pipeline(&advect_v_pipeline);
                     pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
+                        size.x / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.y + 1,
                         1,
                     );
 
@@ -300,15 +300,15 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(2, &bind_groups.local_forces_bind_group, &[]);
                     pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
                     pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.x + 1,
+                        size.y / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
 
                     pass.set_pipeline(&apply_force_v_pipeline);
                     pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
+                        size.x / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.y + 1,
                         1,
                     );
 
@@ -317,7 +317,7 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(1, &bind_groups.divergence_bind_group, &[]);
                     pass.set_bind_group(2, &bind_groups.levelset_bind_group, &[]);
                     pass.set_bind_group(3, &bind_groups.solid_velocity_bind_group, &[]);
-                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+                    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
 
                     pass.set_bind_group(
                         0,
@@ -344,16 +344,16 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(2, &bind_groups.pressure_bind_group, &[]);
                     pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
                     pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.x + 1,
+                        size.y / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
 
                     pass.set_pipeline(&solve_velocity_v_pipeline);
                     pass.set_bind_group(0, &bind_groups.velocity_v_bind_group, &[]);
                     pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
+                        size.x / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.y + 1,
                         1,
                     );
 
@@ -361,14 +361,14 @@ impl render_graph::Node for EulerFluidNode {
                     pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
                     pass.set_pipeline(&extrapolate_u_pipeline);
                     pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.x + 1,
+                        size.y / WORKGROUP_SIZE / WORKGROUP_SIZE,
                         1,
                     );
                     pass.set_pipeline(&extrapolate_v_pipeline);
                     pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
+                        size.x / WORKGROUP_SIZE / WORKGROUP_SIZE,
+                        size.y + 1,
                         1,
                     );
 

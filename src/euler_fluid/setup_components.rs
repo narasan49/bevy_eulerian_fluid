@@ -31,11 +31,11 @@ pub(crate) fn watch_fluid_component(
     for (entity, settings, transform) in &query {
         let size = settings.size;
 
-        if size.0 % 64 != 0 || size.1 % 64 != 0 {
+        if size.x % 64 != 0 || size.y % 64 != 0 {
             warn!("the size is recommended to be multiple of 64. {size:?}");
         }
-        let size_u = (size.0 + 1, size.1);
-        let size_v = (size.0, size.1 + 1);
+        let size_u = size + UVec2::new(1, 0);
+        let size_v = size + UVec2::new(0, 1);
 
         let u0 = images.new_texture_storage(size_u, TextureFormat::R32Float);
         let u1 = images.new_texture_storage(size_u, TextureFormat::R32Float);
@@ -127,7 +127,7 @@ pub(crate) fn watch_fluid_component(
             gravity: settings.gravity,
             initial_fluid_level: settings.initial_fluid_level,
             fluid_transform,
-            size: Vec2::new(size.0 as f32, size.1 as f32),
+            size: size.as_vec2(),
         };
 
         let local_forces = LocalForces {
