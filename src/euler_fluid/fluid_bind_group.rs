@@ -546,8 +546,7 @@ pub(super) fn prepare_resource_recompute_levelset(
 ) {
     for (entity, settings) in &query {
         // steps for jump flooding algorithm: 1, 2, ..., 2^k, where: 2^k < max(size.0, size.1) <= 2^(k+1)
-        let max_power =
-            ((settings.size.0.max(settings.size.1) as f32).log2() - 1.0).floor() as usize;
+        let max_power = ((settings.size.max_element() as f32).log2() - 1.0).floor() as usize;
         let mut step = 2_u32.pow((max_power + 1) as u32);
         let mut jump_flooding_buffer =
             Vec::<UniformBuffer<JumpFloodingUniform>>::with_capacity(max_power + 1);

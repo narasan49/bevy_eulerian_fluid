@@ -26,7 +26,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const SIZE: (u32, u32) = (512, 256);
+const SIZE: UVec2 = UVec2::new(512, 256);
 const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
@@ -88,7 +88,7 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         }),
     ));
 
-    let fluid_domain_rectangle = Rectangle::from_size(Vec2::new(SIZE.0 as f32, SIZE.1 as f32));
+    let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands.spawn((
         FluidSettings {
             rho: 99.70, // water in 2D
@@ -107,17 +107,17 @@ fn setup_walls(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let wall_thickness = 10.0;
-    let wall_rect = Rectangle::new(wall_thickness, SIZE.1 as f32);
+    let wall_rect = Rectangle::new(wall_thickness, SIZE.y as f32);
     let wall_mesh = meshes.add(wall_rect);
     let wall_material = materials.add(Color::srgb(0.5, 0.5, 0.5));
 
-    let floor_rect = Rectangle::new(SIZE.0 as f32 + 2.0 * wall_thickness, wall_thickness);
+    let floor_rect = Rectangle::new(SIZE.x as f32 + 2.0 * wall_thickness, wall_thickness);
     let floor_mesh = meshes.add(floor_rect);
 
     commands.spawn((
         Mesh2d(wall_mesh.clone()),
         MeshMaterial2d(wall_material.clone()),
-        Transform::from_xyz((SIZE.0 as f32 + wall_thickness) * 0.5, 0.0, 0.0),
+        Transform::from_xyz((SIZE.x as f32 + wall_thickness) * 0.5, 0.0, 0.0),
         RigidBody::Static,
         wall_rect.collider(),
     ));
@@ -125,7 +125,7 @@ fn setup_walls(
     commands.spawn((
         Mesh2d(wall_mesh.clone()),
         MeshMaterial2d(wall_material.clone()),
-        Transform::from_xyz((SIZE.0 as f32 + wall_thickness) * -0.5, 0.0, 0.0),
+        Transform::from_xyz((SIZE.x as f32 + wall_thickness) * -0.5, 0.0, 0.0),
         RigidBody::Static,
         wall_rect.collider(),
     ));
@@ -133,7 +133,7 @@ fn setup_walls(
     commands.spawn((
         Mesh2d(floor_mesh.clone()),
         MeshMaterial2d(wall_material.clone()),
-        Transform::from_xyz(0.0, (SIZE.1 as f32 + wall_thickness) * -0.5, 0.0),
+        Transform::from_xyz(0.0, (SIZE.y as f32 + wall_thickness) * -0.5, 0.0),
         RigidBody::Static,
         floor_rect.collider(),
     ));
@@ -156,7 +156,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * -0.2, SIZE.0 as f32 * 0.3, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.2, 0.3)).extend(1.0)),
         circle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(0.2),
@@ -168,7 +168,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(rectangle_mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * 0.2, SIZE.0 as f32 * 0.1, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(0.2, 0.1)).extend(1.0)),
         rectangle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(0.5),
@@ -179,7 +179,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(rectangle_mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * 0.0, SIZE.0 as f32 * 0.1, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(0.0, 0.1)).extend(1.0)),
         rectangle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(0.9),
@@ -190,7 +190,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(rectangle_mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * -0.4, SIZE.0 as f32 * 0.1, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.4, 0.1)).extend(1.0)),
         rectangle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(2.0),
@@ -207,7 +207,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(triangle_mesh.clone()),
         MeshMaterial2d(triangle_material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * 0.4, SIZE.0 as f32 * 0.3, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(0.4, 0.3)).extend(1.0)),
         triangle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(1.0),
@@ -216,7 +216,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(triangle_mesh.clone()),
         MeshMaterial2d(triangle_material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * 0.2, SIZE.0 as f32 * 0.1, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(0.2, 0.1)).extend(1.0)),
         triangle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(1.9),
@@ -228,7 +228,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(capsule_mesh.clone()),
         MeshMaterial2d(capsule_material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * -0.2, SIZE.0 as f32 * 0.1, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.2, 0.1)).extend(1.0)),
         capsule.collider(),
         RigidBody::Dynamic,
         ColliderDensity(8.0),
