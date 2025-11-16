@@ -1,3 +1,4 @@
+pub mod advection;
 pub mod definition;
 pub mod fluid_bind_group;
 pub mod fluid_to_solid;
