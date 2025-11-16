@@ -49,7 +49,7 @@ impl Plugin for FluidParametersPlugin {
 ///     commands.spawn(FluidSettings {
 ///         rho: 1.293f32,
 ///         gravity: Vec2::ZERO,
-///         size: (512, 512),
+///         size: UVec2::splat(512),
 ///         initial_fluid_level: 1.0f32, // filled with fluid
 ///     });
 /// }
