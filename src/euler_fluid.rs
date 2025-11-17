@@ -1,5 +1,6 @@
 pub mod definition;
 pub mod fluid_bind_group;
+pub mod fluid_status;
 pub mod fluid_to_solid;
 pub mod obstacle;
 pub mod physics_time;
@@ -12,6 +13,7 @@ use crate::definition::{
 use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
 use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
 use crate::fluid_bind_group::FluidShaderResourcePlugin;
+use crate::fluid_status::FluidStatusPlugin;
 use crate::material::FluidMaterialPlugin;
 use bevy::render::RenderSystems;
 use bevy::shader::load_shader_library;
@@ -72,6 +74,7 @@ impl Plugin for FluidPlugin {
             .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
             .add_plugins(FluidMaterialPlugin)
             .add_plugins(FluidShaderResourcePlugin)
+            .add_plugins(FluidStatusPlugin)
             .insert_resource(FluidGridLength(1.0 / self.length_unit))
             .add_systems(Update, obstacle::construct_rigid_body_buffer_for_gpu)
             .add_systems(Update, fluid_to_solid::initialize_buffer)
