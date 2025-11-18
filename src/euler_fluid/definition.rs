@@ -9,6 +9,8 @@ use bevy::{
     },
 };
 
+use crate::fluid_status::FluidStatus;
+
 pub const MAX_SOLIDS: usize = 256;
 
 pub struct FluidParametersPlugin;
@@ -79,7 +81,7 @@ impl Plugin for FluidParametersPlugin {
 /// }
 /// ```
 #[derive(Component, Clone, ExtractComponent)]
-#[require(Transform)]
+#[require(Transform, FluidStatus)]
 pub struct FluidSettings {
     pub rho: f32,
     pub gravity: Vec2,

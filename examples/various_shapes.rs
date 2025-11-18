@@ -8,6 +8,7 @@ use avian2d::{
 use bevy::{
     asset::{io::web::WebAssetPlugin, AssetMetaCheck},
     camera::ScalingMode,
+    input::common_conditions::input_just_pressed,
     prelude::*,
     render::{
         render_resource::AsBindGroup,
@@ -70,14 +71,21 @@ fn main() {
     .add_plugins(FpsCounterPlugin)
     .add_plugins(Material2dPlugin::<CustomMaterial>::default())
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
-    .add_systems(Startup, (setup_scene, setup_walls, setup_rigid_bodies))
+    .add_systems(
+        Startup,
+        (setup_scene, setup_fluid, setup_walls, setup_rigid_bodies),
+    )
     .add_systems(Update, on_fluid_setup)
-    .add_systems(Update, mouse_motion);
+    .add_systems(Update, mouse_motion)
+    .add_systems(
+        Update,
+        reset_scene.run_if(input_just_pressed(KeyCode::KeyR)),
+    );
 
     app.run();
 }
 
-fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup_scene(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
@@ -88,6 +96,21 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         }),
     ));
 
+    commands.spawn((
+        Text::new("R: Reset Scene"),
+        TextFont {
+            font_size: 20.0,
+            ..default()
+        },
+        TextColor::WHITE,
+    ));
+}
+
+fn setup_fluid(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+    spawn_fluid(&mut commands, &mut meshes);
+}
+
+fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands.spawn((
         FluidSettings {
@@ -143,6 +166,15 @@ fn setup_rigid_bodies(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    asset_server: Res<AssetServer>,
+) {
+    spawn_rigid_bodies(&mut commands, &mut materials, &mut meshes, asset_server);
+}
+
+fn spawn_rigid_bodies(
+    commands: &mut Commands,
+    materials: &mut ResMut<Assets<ColorMaterial>>,
+    meshes: &mut ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
 ) {
     let circle = Circle::new(50.0);
@@ -233,6 +265,27 @@ fn setup_rigid_bodies(
         RigidBody::Dynamic,
         ColliderDensity(8.0),
     ));
+}
+
+fn reset_scene(
+    mut commands: Commands,
+    q_rigid_bodies: Query<(Entity, &RigidBody), With<RigidBody>>,
+    q_fluids: Query<Entity, With<FluidSettings>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
+    for (entity, rigid_body) in &q_rigid_bodies {
+        if *rigid_body == RigidBody::Dynamic {
+            commands.entity(entity).despawn();
+        }
+    }
+    for entity in &q_fluids {
+        commands.entity(entity).despawn();
+    }
+
+    spawn_fluid(&mut commands, &mut meshes);
+    spawn_rigid_bodies(&mut commands, &mut materials, &mut meshes, asset_server);
 }
 
 fn on_fluid_setup(

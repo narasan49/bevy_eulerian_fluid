@@ -15,14 +15,31 @@ members = [
 ]
 
 [dependencies]
-bevy = {version = "0.17"}
+bevy = {version = "0.17", default-features = false, features = [
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_sprite_render"
+]}
 avian2d = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [dev-dependencies]
-bevy = {version = "0.17", features = ["webgpu", "https"]}
+bevy = {version = "0.17", default-features = false, features = [
+    "bevy_sprite",
+    "bevy_sprite_render",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_ui_render",
+    "bevy_winit",
+    "bevy_window",
+    "default_font",
+    "https",
+    "png",
+    "x11",
+    "webgpu",
+]}
 example_utils = { path = "crates/example_utils" }
 
 [profile.dev.package."*"]
