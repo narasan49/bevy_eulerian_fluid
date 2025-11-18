@@ -1,6 +1,6 @@
 [package]
 name = "bevy_eulerian_fluid"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "An eularian fluid simulation plugin for Bevy."
 categories = ["game-development", "science", "simulation"]
