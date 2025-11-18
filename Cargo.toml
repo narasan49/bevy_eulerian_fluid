@@ -37,6 +37,7 @@ bevy = {version = "0.17", default-features = false, features = [
     "default_font",
     "https",
     "png",
+    "x11",
     "webgpu",
 ]}
 example_utils = { path = "crates/example_utils" }
