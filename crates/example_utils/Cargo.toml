@@ -1,8 +1,8 @@
 [package]
 name = "example_utils"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]
-bevy = {version = "0.17"}
+bevy = {version = "0.17", default-features = false, features = ["bevy_text", "bevy_ui"]}
 bevy_eulerian_fluid = { path = "../.." }

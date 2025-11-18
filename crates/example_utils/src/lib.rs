@@ -28,7 +28,7 @@ pub fn mouse_motion(
                     cursor_position - transform.translation.xy() * Vec2::new(1.0, -1.0),
                     window,
                     q_camera.single().unwrap(),
-                    Vec2::new(settings.size.0 as f32, settings.size.1 as f32),
+                    settings.size.as_vec2(),
                 );
                 let positions = vec![position; forces.len()];
 
@@ -53,7 +53,7 @@ pub fn mouse_motion(
                     touch.position() - transform.translation.xy() * Vec2::new(1.0, -1.0),
                     q_window.single().unwrap(),
                     q_camera.single().unwrap(),
-                    Vec2::new(settings.size.0 as f32, settings.size.1 as f32),
+                    settings.size.as_vec2(),
                 )
             })
             .collect::<Vec<_>>();

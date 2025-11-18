@@ -71,7 +71,7 @@ fn setup_scene(mut commands: Commands) {
         FluidSettings {
             rho: 1.293f32, // air
             gravity: Vec2::ZERO,
-            size: (256, 256),
+            size: UVec2::splat(256),
             initial_fluid_level: 1.0f32,
         },
         Transform::default().with_scale(Vec3::splat(256.0)),

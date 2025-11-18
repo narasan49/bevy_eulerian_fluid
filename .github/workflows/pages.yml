@@ -19,8 +19,8 @@ jobs:
             cargo install wasm-bindgen-cli
         - name: build
           run: |
-            cargo build --release --target wasm32-unknown-unknown --example rigid_body
-            wasm-bindgen --target web --out-dir ./out/ --out-name rigid_body ./target/wasm32-unknown-unknown/release/examples/rigid_body.wasm
+            cargo build --release --target wasm32-unknown-unknown --example various_shapes
+            wasm-bindgen --target web --out-dir ./out/ --out-name various_shapes ./target/wasm32-unknown-unknown/release/examples/various_shapes.wasm
         - uses: peaceiris/actions-gh-pages@v4
           with:
             github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,7 @@
 
 This project is a fluid simulation plugin for [Bevy](https://bevyengine.org/).
 
-![img](./docs/bevy-fluid-rigid-body.gif)
+![img](./docs/bevy-fluid-various-shape-rigid-bodies.gif)
 
 Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
@@ -35,7 +35,7 @@ fn setup_scene(mut commands: Commands) {
     commands.spawn(FluidSettings {
         rho: 997f32, // water
         gravity: Vec2::Y,
-        size: (512, 512),
+        size: UVec2::new(512),
         initial_fluid_level: 0.9,
     });
 }
@@ -61,38 +61,21 @@ See also an [interaction example](./examples/interaction.rs) for the detailed im
 ## Features
 - [x] Incompressible 2D fluid simulation
 - [ ] Viscosity
-- [ ] Fluid surface
-  - [x] Basic implementation
-  - [ ] Fluid source/drain
-- [ ] Solid body interaction
+- [x] Fluid surface
+- [ ] Fluid source/drain
+- [x] Solid body interaction
   - [x] One-way solid body to fluid interaction
   - [x] Two-way coupling with solid body and fluid
-    - As of v0.2.0, only a circle shape is supported.
-  - [ ] Various shapes support
-    - [x] Circle
-    - [x] Rectangle
+  - [x] Various shape support: Circle, Rectangle, Capsule, Triangle
 
 ## Examples
 There are some examples to demonstrate how to visualize and interact to the simulation results:  
 - **Fluid-Solid two-way interaction**
 
   ```ps1
-  cargo run --example rigid_body
+  cargo run --example various_shapes
   ```
-  ![img](./docs/bevy-fluid-rigid-body.gif)
-
-- **Solid-to-fluid one-way interaction**
-
-  ```ps1
-  cargo run --example solid_body
-  ```
-  ![img](./docs/bevy-fluid-solid-body.gif)
-
-- **Fluid surface**
-  ```ps1
-  cargo run --example water_surface
-  ```
-  ![img](./docs/bevy-fluid-surface.gif)
+  ![img](./docs/bevy-fluid-various-shape-rigid-bodies.gif)
 
 - **Imposing forces with mouse and touch input**
   (Also available [here](https://narasan49.github.io/bevy_eulerian_fluid/))
@@ -104,7 +87,7 @@ There are some examples to demonstrate how to visualize and interact to the simu
 ## Versions
 | Bevy | Bevy Eularian Fluid |
 | --- | --- |
-| 0.17 | 0.2 |
+| 0.17 | 0.2, 0.3 |
 | 0.15 | 0.1 |
 
 ## Acknowledgments

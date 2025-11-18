@@ -26,7 +26,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const SIZE: (u32, u32) = (256, 256);
+const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
@@ -77,7 +77,7 @@ fn main() {
 fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.spawn(Camera2d);
 
-    let fluid_domain_rectangle = Rectangle::from_size(Vec2::new(SIZE.0 as f32, SIZE.1 as f32));
+    let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands.spawn((
         FluidSettings {
             rho: 99.70, // water in 2D
@@ -86,7 +86,7 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             initial_fluid_level: 0.7,
         },
         Mesh2d(meshes.add(fluid_domain_rectangle)),
-        Transform::default().with_translation(Vec3::new(SIZE.0 as f32 * -0.5, 0.0, 0.0)),
+        Transform::default().with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
     ));
 }
 
@@ -101,7 +101,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * -0.5, SIZE.0 as f32 * 0.5, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.5)).extend(1.0)),
         circle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(1.0),
@@ -110,7 +110,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * -0.7, SIZE.0 as f32 * 0.3, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.7, 0.3)).extend(1.0)),
         circle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(0.8),
@@ -119,7 +119,7 @@ fn setup_rigid_bodies(
     commands.spawn((
         Mesh2d(mesh.clone()),
         MeshMaterial2d(material.clone()),
-        Transform::from_xyz(SIZE.0 as f32 * -0.3, SIZE.0 as f32 * 0.1, 1.0),
+        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.3, 0.1)).extend(1.0)),
         circle.collider(),
         RigidBody::Dynamic,
         ColliderDensity(0.9),
@@ -155,8 +155,8 @@ fn on_fluid_setup(
             Mesh2d(mesh),
             MeshMaterial2d(material),
             Transform::default()
-                .with_translation(Vec3::new(SIZE.0 as f32 * 0.5, 0.0, 0.0))
-                .with_scale(Vec3::new(SIZE.0 as f32, SIZE.1 as f32, 0.0)),
+                .with_translation((SIZE.as_vec2() * Vec2::new(0.5, 0.0)).extend(0.0))
+                .with_scale(SIZE.as_vec2().extend(0.0)),
         ));
 
         // Draw labels for each panel

@@ -8,6 +8,7 @@ use bevy::{
 
 use crate::{
     definition::MAX_SOLIDS,
+    fluid_status::FluidStatus,
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
 };
 
@@ -20,8 +21,8 @@ use super::{
 
 const WORKGROUP_SIZE: u32 = 8;
 
-fn dispatch_center(pass: &mut ComputePass, size: (u32, u32)) {
-    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
+fn dispatch_center(pass: &mut ComputePass, size: UVec2) {
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
@@ -44,7 +45,12 @@ pub(crate) struct EulerFluidNode {
         &'static FluidSettings,
         &'static FluidBindGroups,
         &'static JumpFloodingUniformBindGroups,
+        &'static FluidStatus,
     )>,
+    query_fluid_status: QueryState<
+        (Entity, Option<&'static mut FluidStatus>),
+        (With<FluidSettings>, With<FluidBindGroups>),
+    >,
 }
 
 impl EulerFluidNode {
@@ -52,6 +58,7 @@ impl EulerFluidNode {
         Self {
             state: State::Loading,
             query: world.query_filtered(),
+            query_fluid_status: world.query_filtered(),
         }
     }
 }
@@ -66,17 +73,6 @@ impl render_graph::Node for EulerFluidNode {
                 if let (
                     CachedPipelineState::Ok(_initialize_velocity_pipeline),
                     CachedPipelineState::Ok(_initialize_grid_center_pipeline),
-                ) = (
-                    pipeline_cache
-                        .get_compute_pipeline_state(pipelines.initialize_velocity_pipeline),
-                    pipeline_cache
-                        .get_compute_pipeline_state(pipelines.initialize_grid_center_pipeline),
-                ) {
-                    self.state = State::Init;
-                }
-            }
-            State::Init => {
-                if let (
                     CachedPipelineState::Ok(_update_solid_pipeline),
                     CachedPipelineState::Ok(_update_solid_pressure_pipeline),
                     CachedPipelineState::Ok(_advect_u_pipeline),
@@ -97,6 +93,10 @@ impl render_graph::Node for EulerFluidNode {
                     CachedPipelineState::Ok(_sample_forces_pipeline),
                     CachedPipelineState::Ok(_accumulate_forces_pipeline),
                 ) = (
+                    pipeline_cache
+                        .get_compute_pipeline_state(pipelines.initialize_velocity_pipeline),
+                    pipeline_cache
+                        .get_compute_pipeline_state(pipelines.initialize_grid_center_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.update_solid_pipeline),
                     pipeline_cache
                         .get_compute_pipeline_state(pipelines.update_solid_pressure_pipeline),
@@ -124,8 +124,11 @@ impl render_graph::Node for EulerFluidNode {
                     pipeline_cache.get_compute_pipeline_state(pipelines.sample_forces_pipeline),
                     pipeline_cache.get_compute_pipeline_state(pipelines.accumulate_forces_pipeline),
                 ) {
-                    self.state = State::Update;
+                    self.state = State::Init;
                 }
+            }
+            State::Init => {
+                self.state = State::Update;
             }
             State::Update | State::Idle => {
                 let current_step = world.resource::<CurrentPhysicsStepNumberRenderWorld>();
@@ -137,6 +140,22 @@ impl render_graph::Node for EulerFluidNode {
                         world.resource_mut::<CurrentPhysicsStepNumberRenderWorld>();
                     current_step.0 = physics_step_numper;
                     self.state = State::Update;
+                }
+
+                for (_entity, fluid_status) in self.query_fluid_status.iter_mut(world) {
+                    if let Some(mut fluid_status) = fluid_status {
+                        match *fluid_status {
+                            FluidStatus::Uninitialized => {
+                                // info!("FluidStatus changed: {:?} to {:?}", FluidStatus::Uninitialized, FluidStatus::Initialized);
+                                *fluid_status = FluidStatus::Initialized;
+                            }
+                            FluidStatus::Initialized => {}
+                            FluidStatus::Reset => {
+                                // info!("FluidStatus changed: {:?} to {:?}", FluidStatus::Reset, FluidStatus::Uninitialized);
+                                *fluid_status = FluidStatus::Uninitialized;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -152,271 +171,41 @@ impl render_graph::Node for EulerFluidNode {
 
         match self.state {
             State::Loading => {}
-            State::Init => {
-                let initialize_velocity_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.initialize_velocity_pipeline)
-                    .unwrap();
-                let initialize_grid_center_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.initialize_grid_center_pipeline)
-                    .unwrap();
-                for (_entity, settings, bind_groups, _) in self.query.iter_manual(world) {
-                    let mut pass = render_context
-                        .command_encoder()
-                        .begin_compute_pass(&ComputePassDescriptor::default());
-                    let size = settings.size;
-
-                    pass.set_pipeline(&initialize_velocity_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
-                    pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        1,
-                    );
-
-                    pass.set_pipeline(&initialize_grid_center_pipeline);
-                    pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(
-                        1,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    dispatch_center(&mut pass, size);
-                }
-            }
+            State::Init => {}
             State::Update => {
-                let update_solid_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.update_solid_pipeline)
-                    .unwrap();
-                let update_solid_pressure_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.update_solid_pressure_pipeline)
-                    .unwrap();
-                let advect_u_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.advect_u_pipeline)
-                    .unwrap();
-                let advect_v_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.advect_v_pipeline)
-                    .unwrap();
-                let apply_force_u_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.apply_force_u_pipeline)
-                    .unwrap();
-                let apply_force_v_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.apply_force_v_pipeline)
-                    .unwrap();
-                let divergence_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.divergence_pipeline)
-                    .unwrap();
-                let jacobi_iteration_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.jacobi_iteration_pipeline)
-                    .unwrap();
-                let jacobi_iteration_reverse_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.jacobi_iteration_reverse_pipeline)
-                    .unwrap();
-                let solve_velocity_u_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.solve_velocity_u_pipeline)
-                    .unwrap();
-                let solve_velocity_v_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.solve_velocity_v_pipeline)
-                    .unwrap();
-                let extrapolate_u_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.extrapolate_u_pipeline)
-                    .unwrap();
-                let extrapolate_v_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.extrapolate_v_pipeline)
-                    .unwrap();
-                let recompute_levelset_initialization_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.recompute_levelset_initialization_pipeline)
-                    .unwrap();
-                let recompute_levelset_itertation_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.recompute_levelset_iteration_pipeline)
-                    .unwrap();
-                let recompute_levelset_solve_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.recompute_levelset_solve_pipeline)
-                    .unwrap();
-                let advect_levelset_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.advect_levelset_pipeline)
-                    .unwrap();
-                let sample_forces_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.sample_forces_pipeline)
-                    .unwrap();
-                let accumulate_forces_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipelines.accumulate_forces_pipeline)
-                    .unwrap();
-
                 let bind_group_resources = world.resource::<FluidBindGroupResources>();
-                for (_entity, settings, bind_groups, jump_flooding_uniform_bind_groups) in
-                    self.query.iter_manual(world)
+                for (
+                    _entity,
+                    settings,
+                    bind_groups,
+                    jump_flooding_uniform_bind_groups,
+                    fluid_status,
+                ) in self.query.iter_manual(world)
                 {
-                    let mut pass = render_context.command_encoder().begin_compute_pass(
-                        &ComputePassDescriptor {
-                            label: Some("Eulerian fluid"),
-                            ..default()
-                        },
-                    );
-                    let size = settings.size;
-
-                    pass.set_pipeline(&update_solid_pipeline);
-                    pass.set_bind_group(0, &bind_groups.solid_velocity_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.solid_center_bind_group, &[]);
-                    pass.set_bind_group(2, &bind_group_resources.obstacles_bind_group, &[]);
-                    pass.set_bind_group(
-                        3,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    dispatch_center(&mut pass, size);
-
-                    pass.set_pipeline(&update_solid_pressure_pipeline);
-                    pass.set_bind_group(0, &bind_groups.pressure_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
-                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
-
-                    pass.set_pipeline(&advect_u_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(
-                        2,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        1,
-                    );
-
-                    pass.set_pipeline(&advect_v_pipeline);
-                    pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
-                        1,
-                    );
-
-                    pass.set_pipeline(&apply_force_u_pipeline);
-                    pass.set_bind_group(
-                        1,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    pass.set_bind_group(2, &bind_groups.local_forces_bind_group, &[]);
-                    pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
-                    pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        1,
-                    );
-
-                    pass.set_pipeline(&apply_force_v_pipeline);
-                    pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
-                        1,
-                    );
-
-                    pass.set_pipeline(&divergence_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_intermediate_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.divergence_bind_group, &[]);
-                    pass.set_bind_group(2, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(3, &bind_groups.solid_velocity_bind_group, &[]);
-                    pass.dispatch_workgroups(size.0 / WORKGROUP_SIZE, size.1 / WORKGROUP_SIZE, 1);
-
-                    pass.set_bind_group(
-                        0,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    pass.set_bind_group(1, &bind_groups.pressure_bind_group, &[]);
-                    pass.set_bind_group(2, &bind_groups.divergence_bind_group, &[]);
-                    pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
-                    for _ in 0..50 {
-                        pass.set_pipeline(&jacobi_iteration_pipeline);
-                        dispatch_center(&mut pass, size);
-                        pass.set_pipeline(&jacobi_iteration_reverse_pipeline);
-                        dispatch_center(&mut pass, size);
+                    // info!("Fluid render node running. Fluid status: {:?}", fluid_status);
+                    match fluid_status {
+                        FluidStatus::Uninitialized => {
+                            initialize_fluid(
+                                render_context,
+                                pipeline_cache,
+                                pipelines,
+                                bind_groups,
+                                settings,
+                            );
+                        }
+                        FluidStatus::Initialized => {
+                            update_fluid(
+                                render_context,
+                                pipeline_cache,
+                                pipelines,
+                                bind_groups,
+                                jump_flooding_uniform_bind_groups,
+                                bind_group_resources,
+                                settings,
+                            );
+                        }
+                        FluidStatus::Reset => {}
                     }
-
-                    pass.set_pipeline(&solve_velocity_u_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_u_bind_group, &[]);
-                    pass.set_bind_group(
-                        1,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    pass.set_bind_group(2, &bind_groups.pressure_bind_group, &[]);
-                    pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
-                    pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        1,
-                    );
-
-                    pass.set_pipeline(&solve_velocity_v_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_v_bind_group, &[]);
-                    pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
-                        1,
-                    );
-
-                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_pipeline(&extrapolate_u_pipeline);
-                    pass.dispatch_workgroups(
-                        size.0 + 1,
-                        size.1 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        1,
-                    );
-                    pass.set_pipeline(&extrapolate_v_pipeline);
-                    pass.dispatch_workgroups(
-                        size.0 / WORKGROUP_SIZE / WORKGROUP_SIZE,
-                        size.1 + 1,
-                        1,
-                    );
-
-                    pass.set_pipeline(&advect_levelset_pipeline);
-                    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(
-                        2,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    dispatch_center(&mut pass, size);
-
-                    // recompute levelset
-                    pass.set_pipeline(&recompute_levelset_initialization_pipeline);
-                    pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
-                    dispatch_center(&mut pass, size);
-
-                    pass.set_pipeline(&recompute_levelset_itertation_pipeline);
-                    pass.set_bind_group(0, &bind_groups.jump_flooding_seeds_bind_group, &[]);
-                    for bind_group in
-                        &jump_flooding_uniform_bind_groups.jump_flooding_step_bind_groups
-                    {
-                        pass.set_bind_group(1, bind_group, &[]);
-                        dispatch_center(&mut pass, size);
-                    }
-
-                    pass.set_pipeline(&recompute_levelset_solve_pipeline);
-                    pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
-                    dispatch_center(&mut pass, size);
-
-                    // forces to solid
-                    pass.set_pipeline(&sample_forces_pipeline);
-                    pass.set_bind_group(0, &bind_groups.sample_forces_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_group_resources.obstacles_bind_group, &[]);
-                    pass.set_bind_group(
-                        2,
-                        &bind_groups.uniform_bind_group,
-                        &[bind_groups.uniform_index],
-                    );
-                    dispatch_center(&mut pass, size);
-
-                    pass.set_pipeline(&accumulate_forces_pipeline);
-                    pass.set_bind_group(0, &bind_groups.solid_forces_bins_bind_group, &[]);
-                    pass.set_bind_group(1, &bind_groups.forces_to_solid_bind_group, &[]);
-                    pass.dispatch_workgroups(MAX_SOLIDS as u32, 1, 1);
                 }
             }
             State::Idle => {}
@@ -424,4 +213,242 @@ impl render_graph::Node for EulerFluidNode {
 
         Ok(())
     }
+}
+
+fn initialize_fluid(
+    render_context: &mut bevy::render::renderer::RenderContext,
+    pipeline_cache: &PipelineCache,
+    pipelines: &FluidPipelines,
+    bind_groups: &FluidBindGroups,
+    settings: &FluidSettings,
+) {
+    info!("Initializing fluid");
+    let initialize_velocity_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.initialize_velocity_pipeline)
+        .unwrap();
+    let initialize_grid_center_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.initialize_grid_center_pipeline)
+        .unwrap();
+    let mut pass = render_context
+        .command_encoder()
+        .begin_compute_pass(&ComputePassDescriptor::default());
+    let size = settings.size;
+
+    pass.set_pipeline(&initialize_velocity_pipeline);
+    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+    pass.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
+
+    pass.set_pipeline(&initialize_grid_center_pipeline);
+    pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
+    pass.set_bind_group(
+        1,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    dispatch_center(&mut pass, size);
+}
+
+fn update_fluid(
+    render_context: &mut bevy::render::renderer::RenderContext,
+    pipeline_cache: &PipelineCache,
+    pipelines: &FluidPipelines,
+    bind_groups: &FluidBindGroups,
+    jump_flooding_uniform_bind_groups: &JumpFloodingUniformBindGroups,
+    bind_group_resources: &FluidBindGroupResources,
+    settings: &FluidSettings,
+) {
+    let update_solid_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.update_solid_pipeline)
+        .unwrap();
+    let update_solid_pressure_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.update_solid_pressure_pipeline)
+        .unwrap();
+    let advect_u_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.advect_u_pipeline)
+        .unwrap();
+    let advect_v_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.advect_v_pipeline)
+        .unwrap();
+    let apply_force_u_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.apply_force_u_pipeline)
+        .unwrap();
+    let apply_force_v_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.apply_force_v_pipeline)
+        .unwrap();
+    let divergence_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.divergence_pipeline)
+        .unwrap();
+    let jacobi_iteration_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.jacobi_iteration_pipeline)
+        .unwrap();
+    let jacobi_iteration_reverse_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.jacobi_iteration_reverse_pipeline)
+        .unwrap();
+    let solve_velocity_u_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.solve_velocity_u_pipeline)
+        .unwrap();
+    let solve_velocity_v_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.solve_velocity_v_pipeline)
+        .unwrap();
+    let extrapolate_u_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.extrapolate_u_pipeline)
+        .unwrap();
+    let extrapolate_v_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.extrapolate_v_pipeline)
+        .unwrap();
+    let recompute_levelset_initialization_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.recompute_levelset_initialization_pipeline)
+        .unwrap();
+    let recompute_levelset_itertation_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.recompute_levelset_iteration_pipeline)
+        .unwrap();
+    let recompute_levelset_solve_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.recompute_levelset_solve_pipeline)
+        .unwrap();
+    let advect_levelset_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.advect_levelset_pipeline)
+        .unwrap();
+    let sample_forces_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.sample_forces_pipeline)
+        .unwrap();
+    let accumulate_forces_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.accumulate_forces_pipeline)
+        .unwrap();
+    let mut pass = render_context
+        .command_encoder()
+        .begin_compute_pass(&ComputePassDescriptor {
+            label: Some("Eulerian fluid"),
+            ..default()
+        });
+    let size = settings.size;
+
+    pass.set_pipeline(&update_solid_pipeline);
+    pass.set_bind_group(0, &bind_groups.solid_velocity_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.solid_center_bind_group, &[]);
+    pass.set_bind_group(2, &bind_group_resources.obstacles_bind_group, &[]);
+    pass.set_bind_group(
+        3,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    dispatch_center(&mut pass, size);
+
+    pass.set_pipeline(&update_solid_pressure_pipeline);
+    pass.set_bind_group(0, &bind_groups.pressure_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
+
+    pass.set_pipeline(&advect_u_pipeline);
+    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+    pass.set_bind_group(
+        2,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    pass.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
+
+    pass.set_pipeline(&advect_v_pipeline);
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
+
+    pass.set_pipeline(&apply_force_u_pipeline);
+    pass.set_bind_group(
+        1,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    pass.set_bind_group(2, &bind_groups.local_forces_bind_group, &[]);
+    pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
+    pass.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
+
+    pass.set_pipeline(&apply_force_v_pipeline);
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
+
+    pass.set_pipeline(&divergence_pipeline);
+    pass.set_bind_group(0, &bind_groups.velocity_intermediate_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.divergence_bind_group, &[]);
+    pass.set_bind_group(2, &bind_groups.levelset_bind_group, &[]);
+    pass.set_bind_group(3, &bind_groups.solid_velocity_bind_group, &[]);
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
+
+    pass.set_bind_group(
+        0,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    pass.set_bind_group(1, &bind_groups.pressure_bind_group, &[]);
+    pass.set_bind_group(2, &bind_groups.divergence_bind_group, &[]);
+    pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
+    for _ in 0..50 {
+        pass.set_pipeline(&jacobi_iteration_pipeline);
+        dispatch_center(&mut pass, size);
+        pass.set_pipeline(&jacobi_iteration_reverse_pipeline);
+        dispatch_center(&mut pass, size);
+    }
+
+    pass.set_pipeline(&solve_velocity_u_pipeline);
+    pass.set_bind_group(0, &bind_groups.velocity_u_bind_group, &[]);
+    pass.set_bind_group(
+        1,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    pass.set_bind_group(2, &bind_groups.pressure_bind_group, &[]);
+    pass.set_bind_group(3, &bind_groups.levelset_bind_group, &[]);
+    pass.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
+
+    pass.set_pipeline(&solve_velocity_v_pipeline);
+    pass.set_bind_group(0, &bind_groups.velocity_v_bind_group, &[]);
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
+
+    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+    pass.set_pipeline(&extrapolate_u_pipeline);
+    pass.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
+    pass.set_pipeline(&extrapolate_v_pipeline);
+    pass.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
+
+    pass.set_pipeline(&advect_levelset_pipeline);
+    pass.set_bind_group(0, &bind_groups.velocity_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.levelset_bind_group, &[]);
+    pass.set_bind_group(
+        2,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    dispatch_center(&mut pass, size);
+
+    // recompute levelset
+    pass.set_pipeline(&recompute_levelset_initialization_pipeline);
+    pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
+    dispatch_center(&mut pass, size);
+
+    pass.set_pipeline(&recompute_levelset_itertation_pipeline);
+    pass.set_bind_group(0, &bind_groups.jump_flooding_seeds_bind_group, &[]);
+    for bind_group in &jump_flooding_uniform_bind_groups.jump_flooding_step_bind_groups {
+        pass.set_bind_group(1, bind_group, &[]);
+        dispatch_center(&mut pass, size);
+    }
+
+    pass.set_pipeline(&recompute_levelset_solve_pipeline);
+    pass.set_bind_group(0, &bind_groups.levelset_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.jump_flooding_seeds_bind_group, &[]);
+    dispatch_center(&mut pass, size);
+
+    // forces to solid
+    pass.set_pipeline(&sample_forces_pipeline);
+    pass.set_bind_group(0, &bind_groups.sample_forces_bind_group, &[]);
+    pass.set_bind_group(1, &bind_group_resources.obstacles_bind_group, &[]);
+    pass.set_bind_group(
+        2,
+        &bind_groups.uniform_bind_group,
+        &[bind_groups.uniform_index],
+    );
+    dispatch_center(&mut pass, size);
+
+    pass.set_pipeline(&accumulate_forces_pipeline);
+    pass.set_bind_group(0, &bind_groups.solid_forces_bins_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.forces_to_solid_bind_group, &[]);
+    pass.dispatch_workgroups(MAX_SOLIDS as u32, 1, 1);
 }
