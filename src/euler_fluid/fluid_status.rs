@@ -20,9 +20,6 @@ pub enum FluidStatus {
     Initialized,
 }
 
-#[derive(Component)]
-pub struct ResetFluid(bool);
-
 fn extract_fluid_status(mut commands: Commands, mut main_world: ResMut<MainWorld>) {
     let mut fluid_status_query = main_world.query::<(RenderEntity, Option<&mut FluidStatus>)>();
 
