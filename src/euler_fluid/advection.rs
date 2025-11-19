@@ -2,15 +2,23 @@ use bevy::{
     asset::{embedded_asset, load_embedded_asset},
     prelude::*,
     render::{
-        Render, RenderApp, RenderSystems, extract_component::{ExtractComponent, ExtractComponentPlugin}, render_asset::RenderAssets, render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages, binding_types::uniform_buffer
-        }, renderer::RenderDevice, storage::GpuShaderStorageBuffer, texture::{FallbackImage, GpuImage}
+        extract_component::{ExtractComponent, ExtractComponentPlugin},
+        render_asset::RenderAssets,
+        render_resource::{
+            binding_types::uniform_buffer, AsBindGroup, BindGroup, BindGroupLayout,
+            BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor,
+            PipelineCache, ShaderStages,
+        },
+        renderer::RenderDevice,
+        storage::GpuShaderStorageBuffer,
+        texture::{FallbackImage, GpuImage},
+        Render, RenderApp, RenderSystems,
     },
 };
 
-use crate::definition::SimulationUniform;
+use crate::{definition::SimulationUniform, pipeline::Pipeline};
 
-pub struct AdvectionPlugin;
+pub(crate) struct AdvectionPlugin;
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct AdvectionResource {
@@ -33,8 +41,7 @@ pub(crate) struct AdvectionPipeline {
 
 #[derive(Component)]
 pub(crate) struct AdvectionBindGroups {
-    advect_u_bind_group: BindGroup,
-    advect_v_bind_group: BindGroup,
+    pub advection_bind_group: BindGroup,
 }
 
 impl Plugin for AdvectionPlugin {
@@ -53,6 +60,13 @@ impl Plugin for AdvectionPlugin {
     fn finish(&self, app: &mut App) {
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<AdvectionPipeline>();
+    }
+}
+
+impl Pipeline for AdvectionPipeline {
+    fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
+        Self::is_pipeline_loaded(pipeline_cache, self.advect_u_pipeline)
+            && Self::is_pipeline_loaded(pipeline_cache, self.advect_v_pipeline)
     }
 }
 
@@ -112,17 +126,8 @@ fn prepare_bind_group(
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
 ) {
     let mut param = (gpu_images, fallback_image, buffers);
-    for (entity, advect_u_resource) in &query {
-        let advect_u_bind_group = advect_u_resource
-            .as_bind_group(
-                &pipeline.advection_bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        let advect_v_bind_group = advect_u_resource
+    for (entity, advection_resource) in &query {
+        let advection_bind_group = advection_resource
             .as_bind_group(
                 &pipeline.advection_bind_group_layout,
                 &render_device,
@@ -132,8 +137,7 @@ fn prepare_bind_group(
             .bind_group;
 
         commands.entity(entity).insert(AdvectionBindGroups {
-            advect_u_bind_group,
-            advect_v_bind_group,
+            advection_bind_group,
         });
     }
 }
