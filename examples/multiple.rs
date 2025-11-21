@@ -10,7 +10,7 @@ use bevy::{
     },
 };
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, VelocityTextures},
+    definition::{FluidSettings, FluidTextures},
     material::VelocityMaterial,
     FluidPlugin,
 };
@@ -91,18 +91,18 @@ fn setup_scene(mut commands: Commands) {
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<(&VelocityTextures, &Transform), Added<VelocityTextures>>,
+    query: Query<(&FluidTextures, &Transform), Added<FluidTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (velocity_texture, transform) in &query {
+    for (fluid_texture, transform) in &query {
         // spwan plane to visualize advection
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(VelocityMaterial {
             u_range: Vec2::new(-10.0, 10.0),
             v_range: Vec2::new(-10.0, 10.0),
-            u: velocity_texture.u0.clone(),
-            v: velocity_texture.v0.clone(),
+            u: fluid_texture.u.clone(),
+            v: fluid_texture.v.clone(),
         });
 
         commands.spawn((Mesh2d(mesh), MeshMaterial2d(material), *transform));

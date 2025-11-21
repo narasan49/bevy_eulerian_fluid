@@ -1,10 +1,10 @@
 pub mod fps_counter;
 
-use bevy::{
-    camera::Projection, input::mouse::MouseMotion, prelude::*,
-    render::storage::ShaderStorageBuffer, window::PrimaryWindow,
+use bevy::{camera::Projection, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
+use bevy_eulerian_fluid::{
+    apply_forces::{ForceToFluid, ForcesToFluid},
+    euler_fluid::definition::FluidSettings,
 };
-use bevy_eulerian_fluid::euler_fluid::definition::{FluidSettings, LocalForces};
 
 pub fn mouse_motion(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
@@ -12,8 +12,7 @@ pub fn mouse_motion(
     touches: Res<Touches>,
     q_window: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<&Projection, With<Camera2d>>,
-    q_fluid: Query<(&LocalForces, &FluidSettings, &Transform)>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut q_fluid: Query<(&mut ForcesToFluid, &FluidSettings, &Transform)>,
 ) {
     if mouse_button_input.pressed(MouseButton::Left) {
         let window = q_window.single().unwrap();
@@ -23,7 +22,7 @@ pub fn mouse_motion(
                 .map(|mouse| 5.0 * mouse.delta)
                 .collect::<Vec<_>>();
 
-            for (local_forces, settings, transform) in q_fluid {
+            for (mut forces_to_fluid, settings, transform) in &mut q_fluid {
                 let position = screen_to_mesh_coordinate(
                     cursor_position - transform.translation.xy() * Vec2::new(1.0, -1.0),
                     window,
@@ -32,36 +31,38 @@ pub fn mouse_motion(
                 );
                 let positions = vec![position; forces.len()];
 
-                let forces_buffer = buffers.get_mut(&local_forces.forces).unwrap();
-                forces_buffer.set_data(forces.clone());
-                let positions_buffer = buffers.get_mut(&local_forces.positions).unwrap();
-                positions_buffer.set_data(positions);
+                forces_to_fluid.forces = forces
+                    .iter()
+                    .zip(positions.iter())
+                    .map(|(&force, &position)| ForceToFluid { force, position })
+                    .collect();
             }
             return;
         }
-    }
-
-    let touch_forces = touches
-        .iter()
-        .map(|touch| 5.0 * touch.delta())
-        .collect::<Vec<_>>();
-    for (local_forces, settings, transform) in &q_fluid {
-        let touch_positions = touches
+    } else {
+        let touch_forces = touches
             .iter()
-            .map(|touch| {
-                screen_to_mesh_coordinate(
-                    touch.position() - transform.translation.xy() * Vec2::new(1.0, -1.0),
-                    q_window.single().unwrap(),
-                    q_camera.single().unwrap(),
-                    settings.size.as_vec2(),
-                )
-            })
+            .map(|touch| 5.0 * touch.delta())
             .collect::<Vec<_>>();
+        for (mut forces_to_fluid, settings, transform) in &mut q_fluid {
+            let touch_positions = touches
+                .iter()
+                .map(|touch| {
+                    screen_to_mesh_coordinate(
+                        touch.position() - transform.translation.xy() * Vec2::new(1.0, -1.0),
+                        q_window.single().unwrap(),
+                        q_camera.single().unwrap(),
+                        settings.size.as_vec2(),
+                    )
+                })
+                .collect::<Vec<_>>();
 
-        let forces_buffer = buffers.get_mut(&local_forces.forces).unwrap();
-        forces_buffer.set_data(touch_forces.clone());
-        let positions_buffer = buffers.get_mut(&local_forces.positions).unwrap();
-        positions_buffer.set_data(touch_positions);
+            forces_to_fluid.forces = touch_forces
+                .iter()
+                .zip(touch_positions.iter())
+                .map(|(&force, &position)| ForceToFluid { force, position })
+                .collect();
+        }
     }
 }
 

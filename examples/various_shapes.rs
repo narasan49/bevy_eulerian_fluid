@@ -20,7 +20,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, LevelsetTextures},
+    definition::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
@@ -290,12 +290,12 @@ fn reset_scene(
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<(Entity, &LevelsetTextures), Added<LevelsetTextures>>,
+    query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
 ) {
     for (entity, levelset_textures) in &query {
         let material = materials.add(CustomMaterial {
-            levelset: levelset_textures.levelset_air0.clone(),
+            levelset: levelset_textures.levelset_air.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
             offset: 0.0,
             scale: -100.0,

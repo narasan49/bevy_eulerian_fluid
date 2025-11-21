@@ -1,42 +1,36 @@
+pub mod advecct_scalar;
 pub mod advection;
+pub mod apply_forces;
 pub mod definition;
-pub mod fluid_bind_group;
+pub mod divergence;
+pub mod extrapolate_velocity;
 pub mod fluid_status;
 pub mod fluid_to_solid;
+pub mod fluid_uniform;
+pub mod initialize;
 pub mod obstacle;
 pub mod physics_time;
+pub mod pipeline;
+pub mod reinitialize_levelset;
 pub mod render_node;
 pub mod setup_components;
+pub mod solve_pressure;
+pub mod solve_velocity;
+pub mod update_solid;
 
-use crate::definition::{
-    FluidGridLength, SampleForcesResource, SolidCenterTextures, SolidObstaclesBuffer,
-};
-use crate::euler_fluid::definition::{FluidSettings, LevelsetTextures};
-use crate::euler_fluid::fluid_bind_group::FluidBindGroups;
-use crate::fluid_bind_group::FluidShaderResourcePlugin;
-use crate::fluid_status::FluidStatusPlugin;
-use crate::material::FluidMaterialPlugin;
-use bevy::render::RenderSystems;
-use bevy::shader::load_shader_library;
 use bevy::{
     prelude::*,
     render::{
-        extract_component::{ExtractComponentPlugin, UniformComponentPlugin},
-        extract_resource::ExtractResourcePlugin,
-        graph::CameraDriverLabel,
-        render_graph::RenderGraph,
-        Render, RenderApp,
+        extract_component::ExtractComponentPlugin, graph::CameraDriverLabel,
+        render_graph::RenderGraph, RenderApp,
     },
+    shader::load_shader_library,
 };
-use definition::{
-    DivergenceTextures, ForcesToSolid, JumpFloodingSeedsTextures, LocalForces, PressureTextures,
-    SimulationUniform, SolidForcesBins, SolidVelocityTextures, VelocityTextures,
-    VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
-};
-use fluid_bind_group::FluidPipelines;
 
+use crate::material::FluidMaterialPlugin;
+use definition::FluidGridLength;
+use definition::FluidSettings;
 use render_node::{EulerFluidNode, FluidLabel};
-
 use setup_components::watch_fluid_component;
 
 pub struct FluidPlugin {
@@ -54,55 +48,31 @@ impl FluidPlugin {
 
 impl Plugin for FluidPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(ExtractResourcePlugin::<SolidObstaclesBuffer>::default())
-            .add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
-            .add_plugins(ExtractComponentPlugin::<FluidBindGroups>::default())
-            .add_plugins(ExtractComponentPlugin::<VelocityTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<VelocityTexturesU>::default())
-            .add_plugins(ExtractComponentPlugin::<VelocityTexturesV>::default())
-            .add_plugins(ExtractComponentPlugin::<VelocityTexturesIntermediate>::default())
-            .add_plugins(ExtractComponentPlugin::<SolidVelocityTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<SolidCenterTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<PressureTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<DivergenceTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<LevelsetTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<JumpFloodingSeedsTextures>::default())
-            .add_plugins(ExtractComponentPlugin::<LocalForces>::default())
-            .add_plugins(ExtractComponentPlugin::<ForcesToSolid>::default())
-            .add_plugins(ExtractComponentPlugin::<SolidForcesBins>::default())
-            .add_plugins(ExtractComponentPlugin::<SampleForcesResource>::default())
-            .add_plugins(ExtractComponentPlugin::<SimulationUniform>::default())
-            .add_plugins(UniformComponentPlugin::<SimulationUniform>::default())
+        app.add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
+            .add_plugins((
+                initialize::InitializePlugin,
+                update_solid::UpdateSolidPlugin,
+                advection::AdvectionPlugin,
+                apply_forces::ApplyForcesPlugin,
+                divergence::DivergencePlugin,
+                fluid_uniform::SimulationUniformPlugin,
+                solve_pressure::SolvePressurePlugin,
+                solve_velocity::SolveVelocityPlugin,
+                extrapolate_velocity::ExtrapolateVelocityPlugin,
+                advecct_scalar::AdvectScalarPlugin,
+                reinitialize_levelset::ReinitializeLevelsetPlugin,
+                fluid_to_solid::FluidToSolidForcesPlugin,
+            ))
             .add_plugins(FluidMaterialPlugin)
-            .add_plugins(FluidShaderResourcePlugin)
-            .add_plugins(FluidStatusPlugin)
+            .add_plugins((
+                fluid_status::FluidStatusPlugin,
+                physics_time::PhysicsFramePlugin,
+            ))
             .insert_resource(FluidGridLength(1.0 / self.length_unit))
             .add_systems(Update, obstacle::construct_rigid_body_buffer_for_gpu)
-            .add_systems(Update, fluid_to_solid::initialize_buffer)
             .add_systems(Update, watch_fluid_component);
 
-        app.add_plugins((
-            physics_time::PhysicsFramePlugin,
-            definition::FluidParametersPlugin,
-        ));
-
         let render_app = app.sub_app_mut(RenderApp);
-        render_app
-            .add_systems(
-                Render,
-                fluid_bind_group::prepare_resource_recompute_levelset
-                    .in_set(RenderSystems::PrepareResources),
-            )
-            .add_systems(
-                Render,
-                fluid_bind_group::prepare_fluid_bind_groups
-                    .in_set(RenderSystems::PrepareBindGroups),
-            )
-            .add_systems(
-                Render,
-                fluid_bind_group::prepare_fluid_bind_group_for_resources
-                    .in_set(RenderSystems::PrepareBindGroups),
-            );
 
         let mut world = render_app.world_mut();
         let euler_fluid_node = EulerFluidNode::new(&mut world);
@@ -119,13 +89,5 @@ impl Plugin for FluidPlugin {
             "euler_fluid/shaders/fluid_to_solid/fixed_point_conversion.wgsl"
         );
         load_shader_library!(app, "euler_fluid/shaders/solid_obstacle.wgsl");
-    }
-
-    fn finish(&self, app: &mut App) {
-        // app.init_resource::<Obstacles>();
-        app.init_resource::<SolidObstaclesBuffer>();
-
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<FluidPipelines>();
     }
 }

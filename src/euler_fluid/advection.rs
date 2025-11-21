@@ -16,12 +16,12 @@ use bevy::{
     },
 };
 
-use crate::{definition::SimulationUniform, pipeline::Pipeline};
+use crate::{fluid_uniform::SimulationUniform, pipeline::Pipeline};
 
 pub(crate) struct AdvectionPlugin;
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub struct AdvectionResource {
+pub(crate) struct AdvectionResource {
     #[storage_texture(0, image_format = R32Float, access = ReadOnly)]
     pub u0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadOnly)]

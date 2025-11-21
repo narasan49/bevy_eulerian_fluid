@@ -12,7 +12,7 @@ fn area_fraction(level0: f32, level1: f32) -> f32 {
 }
 
 fn area_fractions(
-    levelset_solid: texture_storage_2d<r32float, read_write>,
+    levelset_solid: texture_storage_2d<r32float, read>,
     idx: vec2<i32>,
 ) -> AreaFractions {
     let offsets = array<vec2<i32>, 9>(
@@ -46,7 +46,7 @@ fn area_fractions(
     let level_vertex_iminusjplus = 0.25 * (level_centers[3] + level_centers[4] + level_centers[6] + level_centers[7]);
     // levelset[i+0.5, j+0.5]
     let level_vertex_iplusjplus = 0.25 * (level_centers[4] + level_centers[5] + level_centers[7] + level_centers[8]);
-    
+
     return AreaFractions(
         area_fraction(level_vertex_iminusjminus, level_vertex_iminusjplus),
         area_fraction(level_vertex_iplusjminus, level_vertex_iplusjplus),

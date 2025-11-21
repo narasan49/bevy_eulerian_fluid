@@ -4,12 +4,15 @@ use avian2d::{
 };
 use bevy::{
     prelude::*,
-    render::{render_resource::ShaderType, storage::ShaderStorageBuffer},
+    render::{
+        extract_component::ExtractComponent,
+        extract_resource::ExtractResource,
+        render_resource::{AsBindGroup, ShaderType},
+        storage::ShaderStorageBuffer,
+    },
 };
 
-use crate::definition::{FluidSettings, SolidEntities};
-
-use super::definition::SolidObstaclesBuffer;
+use crate::definition::FluidSettings;
 
 #[derive(ShaderType, Default, Copy, Clone)]
 pub struct ShapeVariant {
@@ -26,6 +29,17 @@ pub struct SolidObstacle {
     pub inverse_transform: Mat4,
     pub linear_velocity: Vec2,
     pub angular_velocity: f32,
+}
+
+#[derive(Resource, Clone, ExtractResource, AsBindGroup)]
+pub(crate) struct SolidObstaclesBuffer {
+    #[storage(0, read_only, visibility(compute))]
+    pub obstacles: Handle<ShaderStorageBuffer>,
+}
+
+#[derive(Component, Clone, ExtractComponent)]
+pub struct SolidEntities {
+    pub entities: Vec<Entity>,
 }
 
 impl ShapeVariant {

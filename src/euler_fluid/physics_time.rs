@@ -7,9 +7,17 @@ use bevy::{
     },
 };
 
-use crate::definition::FluidTimeStep;
-
 pub struct PhysicsFramePlugin;
+
+#[derive(Resource, Clone, Copy, ExtractResource)]
+pub struct FluidTimeStep(pub f32);
+
+impl FromWorld for FluidTimeStep {
+    fn from_world(world: &mut World) -> Self {
+        let physics_time = world.resource::<Time<Physics>>();
+        Self(physics_time.delta_secs())
+    }
+}
 
 impl Plugin for PhysicsFramePlugin {
     fn build(&self, app: &mut App) {
@@ -22,6 +30,10 @@ impl Plugin for PhysicsFramePlugin {
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.init_resource::<CurrentPhysicsStepNumberRenderWorld>();
+    }
+
+    fn finish(&self, app: &mut App) {
+        app.init_resource::<FluidTimeStep>();
     }
 }
 

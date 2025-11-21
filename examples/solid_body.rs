@@ -18,7 +18,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, LevelsetTextures, VelocityTextures},
+    definition::{FluidSettings, FluidTextures},
     material::VelocityMaterial,
     FluidPlugin,
 };
@@ -119,15 +119,15 @@ fn setup_scene(
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<(Entity, &LevelsetTextures, &VelocityTextures), Added<LevelsetTextures>>,
+    query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (entity, levelset_textures, velocity_textures) in &query {
+    for (entity, fluid_textures) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
-            levelset: levelset_textures.levelset_air0.clone(),
+            levelset: fluid_textures.levelset_air.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
             offset: 0.0,
             scale: -100.0,
@@ -138,8 +138,8 @@ fn on_fluid_setup(
         let material_velocity = velocity_materials.add(VelocityMaterial {
             u_range: Vec2::new(-10.0, 10.0),
             v_range: Vec2::new(-10.0, 10.0),
-            u: velocity_textures.u0.clone(),
-            v: velocity_textures.v0.clone(),
+            u: fluid_textures.u.clone(),
+            v: fluid_textures.v.clone(),
         });
 
         commands.spawn((

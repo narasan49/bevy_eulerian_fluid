@@ -1,5 +1,8 @@
 use bevy::{
-    render::render_resource::{CachedComputePipelineId, CachedPipelineState, PipelineCache},
+    prelude::*,
+    render::render_resource::{
+        CachedComputePipelineId, CachedPipelineState, ComputePass, PipelineCache,
+    },
     shader::PipelineCacheError,
 };
 
@@ -14,9 +17,45 @@ pub trait Pipeline {
             CachedPipelineState::Ok(_) => true,
             CachedPipelineState::Err(PipelineCacheError::ShaderNotLoaded(_)) => false,
             CachedPipelineState::Err(err) => {
-                panic!("{err}");
+                panic!("Failed to load compute pipeline: {err}");
             }
             _ => false,
         }
+    }
+}
+
+pub trait DispatchFluidPass {
+    const WORKGROUP_SIZE: u32 = 8;
+
+    fn dispatch_center(&mut self, size: UVec2);
+
+    fn dispatch_x_major(&mut self, size: UVec2);
+
+    fn dispatch_y_major(&mut self, size: UVec2);
+}
+
+impl DispatchFluidPass for ComputePass<'_> {
+    fn dispatch_center(&mut self, size: UVec2) {
+        self.dispatch_workgroups(
+            size.x / Self::WORKGROUP_SIZE,
+            size.y / Self::WORKGROUP_SIZE,
+            1,
+        );
+    }
+
+    fn dispatch_x_major(&mut self, size: UVec2) {
+        self.dispatch_workgroups(
+            size.x + 1,
+            size.y / Self::WORKGROUP_SIZE / Self::WORKGROUP_SIZE,
+            1,
+        );
+    }
+
+    fn dispatch_y_major(&mut self, size: UVec2) {
+        self.dispatch_workgroups(
+            size.x / Self::WORKGROUP_SIZE / Self::WORKGROUP_SIZE,
+            size.y + 1,
+            1,
+        );
     }
 }
