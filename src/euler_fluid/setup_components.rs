@@ -11,7 +11,6 @@ use crate::{
     advecct_scalar::AdvectLevelsetResource,
     advection::AdvectionResource,
     apply_forces::{ApplyForcesResource, ForceToFluid},
-    definition::{FluidGridLength, FluidSettings, FluidTextures},
     divergence::DivergenceResource,
     extrapolate_velocity::ExtrapolateVelocityResource,
     fluid_to_solid::{
@@ -25,6 +24,7 @@ use crate::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
         ReinitLevelsetIterateResource,
     },
+    settings::{FluidGridLength, FluidSettings, FluidTextures},
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
     solve_velocity::{SolveUResource, SolveVResource},
     texture::NewTexture,

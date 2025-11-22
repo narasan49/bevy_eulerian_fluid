@@ -16,7 +16,7 @@ use bevy::{
     },
 };
 
-use crate::{definition::FluidSettings, pipeline::Pipeline};
+use crate::{pipeline::Pipeline, settings::FluidSettings};
 
 pub(crate) struct ReinitializeLevelsetPlugin;
 

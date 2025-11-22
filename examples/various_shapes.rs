@@ -20,7 +20,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, FluidTextures},
+    settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};

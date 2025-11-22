@@ -3,7 +3,7 @@ pub mod fps_counter;
 use bevy::{camera::Projection, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 use bevy_eulerian_fluid::{
     apply_forces::{ForceToFluid, ForcesToFluid},
-    euler_fluid::definition::FluidSettings,
+    settings::FluidSettings,
 };
 
 pub fn mouse_motion(

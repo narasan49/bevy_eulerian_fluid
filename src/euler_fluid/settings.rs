@@ -3,7 +3,7 @@ use bevy::{prelude::*, render::extract_component::ExtractComponent};
 use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
 
 /// Setting for fluid simulation. By spawning fluid settings, components required to the simulation will be spawned and the simulation will start.
-/// Simulation result can be found on [`VelocityTextures`].
+/// Simulation result can be found on [`FluidTextures`].
 /// # Arguments
 /// * `size`: The size of 2D simulation domain in pixels. The size is recommended to be same between each dimension and to be multiple of 64 pixels.
 /// * `rho`: The density of fluid in unit of [kg/m^3]. Currently, uniform density is supported only.
@@ -17,7 +17,7 @@ use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
 /// };
 /// use bevy_eulerian_fluid::{
 ///     material::VelocityMaterial,
-///     definition::{FluidSettings, VelocityTextures},
+///     settings::{FluidSettings, FluidTextures},
 /// };
 ///
 /// // On Startup
@@ -33,18 +33,18 @@ use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
 /// // On Update
 /// fn on_fluid_setup(
 ///     mut commands: Commands,
-///     query: Query<(Entity, &VelocityTextures), Added<VelocityTextures>>,
+///     query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
 ///     mut meshes: ResMut<Assets<Mesh>>,
 ///     mut materials: ResMut<Assets<VelocityMaterial>>,
 /// ) {
 ///     // Spawn a mesh to visualize fluid simulation.
-///     for (entity, velocity_texture) in &query {
+///     for (entity, fluid_texture) in &query {
 ///         let mesh = meshes.add(Rectangle::default());
 ///         let material = materials.add(VelocityMaterial {
 ///             u_range: Vec2::new(-10.0, 10.0),
 ///             v_range: Vec2::new(-10.0, 10.0),
-///             u: velocity_texture.u0.clone(),
-///             v: velocity_texture.v0.clone(),
+///             u: fluid_texture.u.clone(),
+///             v: fluid_texture.v.clone(),
 ///         });
 ///         commands.entity(entity).insert((
 ///             Mesh2d(mesh),

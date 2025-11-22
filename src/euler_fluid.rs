@@ -1,7 +1,6 @@
 pub mod advecct_scalar;
 pub mod advection;
 pub mod apply_forces;
-pub mod definition;
 pub mod divergence;
 pub mod extrapolate_velocity;
 pub mod fluid_status;
@@ -13,6 +12,7 @@ pub mod physics_time;
 pub mod pipeline;
 pub mod reinitialize_levelset;
 pub mod render_node;
+pub mod settings;
 pub mod setup_components;
 pub mod solve_pressure;
 pub mod solve_velocity;
@@ -28,9 +28,8 @@ use bevy::{
 };
 
 use crate::material::FluidMaterialPlugin;
-use definition::FluidGridLength;
-use definition::FluidSettings;
 use render_node::{EulerFluidNode, FluidLabel};
+use settings::{FluidGridLength, FluidSettings};
 use setup_components::watch_fluid_component;
 
 pub struct FluidPlugin {

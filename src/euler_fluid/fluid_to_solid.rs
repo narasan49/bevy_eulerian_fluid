@@ -1,9 +1,9 @@
 use crate::{
-    definition::FluidGridLength,
     fluid_uniform::create_uniform_bind_group_layout,
     obstacle::{SolidEntities, SolidObstaclesBuffer},
     physics_time::PhysicsFrameInfo,
     pipeline::Pipeline,
+    settings::FluidGridLength,
 };
 use avian2d::prelude::{Forces, RigidBody, RigidBodyForces};
 use bevy::{

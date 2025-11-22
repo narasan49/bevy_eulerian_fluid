@@ -12,7 +12,7 @@ use bevy::{
     },
 };
 
-use crate::definition::FluidSettings;
+use crate::settings::FluidSettings;
 
 #[derive(ShaderType, Default, Copy, Clone)]
 pub struct ShapeVariant {

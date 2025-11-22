@@ -16,8 +16,8 @@ use bevy::{
 };
 
 use crate::{
-    definition::{FluidGridLength, FluidSettings},
     physics_time::FluidTimeStep,
+    settings::{FluidGridLength, FluidSettings},
 };
 
 pub(crate) struct SimulationUniformPlugin;
