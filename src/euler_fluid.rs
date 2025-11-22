@@ -9,7 +9,6 @@ pub mod fluid_uniform;
 pub mod initialize;
 pub mod obstacle;
 pub mod physics_time;
-pub mod pipeline;
 pub mod reinitialize_levelset;
 pub mod render_node;
 pub mod settings;
