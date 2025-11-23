@@ -8,7 +8,7 @@ const MAX_SOLIDS: u32 = 256;
 @group(0) @binding(0) var<storage, read_write> bins_force_x: array<atomic<i32>>;
 @group(0) @binding(1) var<storage, read_write> bins_force_y: array<atomic<i32>>;
 @group(0) @binding(2) var<storage, read_write> bins_torque: array<atomic<i32>>;
-@group(0) @binding(3) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(3) var levelset_solid: texture_storage_2d<r32float, read>;
 @group(0) @binding(4) var solid_id: texture_storage_2d<r32sint, read>;
 @group(0) @binding(5) var p1: texture_storage_2d<r32float, read>;
 
@@ -28,7 +28,7 @@ fn sample_forces_to_solid(
         // Fully solid
         return;
     }
-    
+
     let solid_id = textureLoad(solid_id, idx).r;
     if (solid_id == -1) {
         return;

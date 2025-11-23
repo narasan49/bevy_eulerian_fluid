@@ -3,15 +3,14 @@
 
 const LARGE_FLOAT: f32 = 1.0e6;
 
-@group(0) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var u_solid: texture_storage_2d<r32float, write>;
+@group(0) @binding(1) var v_solid: texture_storage_2d<r32float, write>;
+@group(0) @binding(2) var levelset_solid: texture_storage_2d<r32float, write>;
+@group(0) @binding(3) var solid_id: texture_storage_2d<r32sint, write>;
 
-@group(1) @binding(0) var levelset_solid: texture_storage_2d<r32float, read_write>;
-@group(1) @binding(1) var solid_id: texture_storage_2d<r32sint, read_write>;
+@group(1) @binding(0) var<storage, read> obstacles: array<SolidObstacle>;
 
-@group(2) @binding(0) var<storage, read> obstacles: array<SolidObstacle>;
-
-@group(3) @binding(0) var<uniform> simulation_uniform: SimulationUniform;
+@group(2) @binding(0) var<uniform> simulation_uniform: SimulationUniform;
 
 @compute @workgroup_size(8, 8, 1)
 fn update_solid(@builtin(global_invocation_id) global_id: vec3<u32>) {

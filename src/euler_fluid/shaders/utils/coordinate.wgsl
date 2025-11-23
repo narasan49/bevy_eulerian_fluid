@@ -17,7 +17,7 @@ fn top(x: vec2<i32>) -> vec2<i32> {
 }
 
 fn interp2d_center(
-    levelset: texture_storage_2d<r32float, read_write>,
+    levelset: texture_storage_2d<r32float, read>,
     x: vec2<f32>,
 ) -> f32 {
     let i = i32(floor(x.x));
@@ -33,7 +33,7 @@ fn interp2d_center(
 }
 
 fn interp2d_edge_x(
-    u: texture_storage_2d<r32float, read_write>,
+    u: texture_storage_2d<r32float, read>,
     x: vec2<f32>,
 ) -> f32 {
     let i = i32(round(x.x));
@@ -49,7 +49,7 @@ fn interp2d_edge_x(
 }
 
 fn interp2d_edge_y(
-    v: texture_storage_2d<r32float, read_write>,
+    v: texture_storage_2d<r32float, read>,
     x: vec2<f32>,
 ) -> f32 {
     let i = i32(floor(x.x));
@@ -65,8 +65,8 @@ fn interp2d_edge_y(
 }
 
 fn runge_kutta(
-    u: texture_storage_2d<r32float, read_write>,
-    v: texture_storage_2d<r32float, read_write>,
+    u: texture_storage_2d<r32float, read>,
+    v: texture_storage_2d<r32float, read>,
     x: vec2<f32>,
     dt: f32,
 ) -> vec2<f32> {

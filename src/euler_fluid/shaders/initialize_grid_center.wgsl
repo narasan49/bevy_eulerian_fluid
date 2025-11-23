@@ -1,7 +1,7 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 
-@group(0) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(1) var levelset_air1: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var levelset_air0: texture_storage_2d<r32float, write>;
+@group(0) @binding(1) var levelset_air1: texture_storage_2d<r32float, write>;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 

@@ -3,16 +3,14 @@
 
 // The number of texture_storage binding for WebGPU is limited to 8.
 // So solve_velocity_u and solve_velocity_v have different bindings for u0, u1 and v0, v1.
-@group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(1) var u1: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(2) var u_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var u0: texture_storage_2d<r32float, write>;
+@group(0) @binding(1) var u1: texture_storage_2d<r32float, read>;
+@group(0) @binding(2) var u_solid: texture_storage_2d<r32float, read>;
+@group(0) @binding(3) var p1: texture_storage_2d<r32float, read>;
+@group(0) @binding(4) var levelset_air0: texture_storage_2d<r32float, read>;
+@group(0) @binding(5) var levelset_solid: texture_storage_2d<r32float, read>;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
-
-@group(2) @binding(1) var p1: texture_storage_2d<r32float, read_write>;
-
-@group(3) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
-@group(3) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
 
 @compute @workgroup_size(1, 64, 1)
 fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
@@ -40,7 +38,7 @@ fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         textureStore(u0, x, textureLoad(u_solid, x));
         return;
     }
-    
+
     var p_ij = textureLoad(p1, x).r;
     var p_iminusj = textureLoad(p1, x - vec2<i32>(1, 0)).r;
 

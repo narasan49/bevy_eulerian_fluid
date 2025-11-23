@@ -11,8 +11,8 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, VelocityTextures},
     material::VelocityMaterial,
+    settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
@@ -80,17 +80,17 @@ fn setup_scene(mut commands: Commands) {
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<(Entity, &VelocityTextures), Added<VelocityTextures>>,
+    query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (entity, velocity_texture) in &query {
+    for (entity, fluid_texture) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(VelocityMaterial {
             u_range: Vec2::new(-10.0, 10.0),
             v_range: Vec2::new(-10.0, 10.0),
-            u: velocity_texture.u0.clone(),
-            v: velocity_texture.v0.clone(),
+            u: fluid_texture.u.clone(),
+            v: fluid_texture.v.clone(),
         });
 
         commands

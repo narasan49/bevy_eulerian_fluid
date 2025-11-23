@@ -3,9 +3,8 @@
 
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(1) var v0: texture_storage_2d<r32float, read_write>;
-
-@group(1) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
-@group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(2) var levelset_air0: texture_storage_2d<r32float, read>;
+@group(0) @binding(3) var levelset_solid: texture_storage_2d<r32float, read>;
 
 @compute @workgroup_size(1, 64, 1)
 fn extrapolate_u(
@@ -120,7 +119,7 @@ struct Level {
 }
 
 fn calculate_level(
-    levelset: texture_storage_2d<r32float, read_write>,
+    levelset: texture_storage_2d<r32float, read>,
     idx: vec2<i32>,
 ) -> Level {
     let level_ij = textureLoad(levelset, idx).r;
