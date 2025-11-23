@@ -8,7 +8,7 @@ use bevy::{
 };
 
 use crate::{
-    advecct_scalar::AdvectLevelsetResource,
+    advect_scalar::AdvectLevelsetResource,
     advection::AdvectionResource,
     apply_forces::{ApplyForcesResource, ForceToFluid},
     divergence::DivergenceResource,

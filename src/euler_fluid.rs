@@ -1,4 +1,4 @@
-pub mod advecct_scalar;
+pub mod advect_scalar;
 pub mod advection;
 pub mod apply_forces;
 pub mod divergence;
@@ -57,7 +57,7 @@ impl Plugin for FluidPlugin {
                 solve_pressure::SolvePressurePlugin,
                 solve_velocity::SolveVelocityPlugin,
                 extrapolate_velocity::ExtrapolateVelocityPlugin,
-                advecct_scalar::AdvectScalarPlugin,
+                advect_scalar::AdvectScalarPlugin,
                 reinitialize_levelset::ReinitializeLevelsetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
             ))

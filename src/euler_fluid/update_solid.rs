@@ -53,7 +53,7 @@ pub(crate) struct UpdateSolidPipeline {
 #[derive(Component)]
 pub(crate) struct UpdateSolidBindGroups {
     pub update_solid_bind_group: BindGroup,
-    pub update_solod_pressure_bind_group: BindGroup,
+    pub update_solid_pressure_bind_group: BindGroup,
 }
 
 impl Plugin for UpdateSolidPlugin {
@@ -151,7 +151,7 @@ fn prepare_bind_groups<'a>(
             .unwrap()
             .bind_group;
 
-        let update_solod_pressure_bind_group = update_solid_pressure_resource
+        let update_solid_pressure_bind_group = update_solid_pressure_resource
             .as_bind_group(
                 &pipeline.update_solid_pressure_bind_group_layout,
                 &render_device,
@@ -162,7 +162,7 @@ fn prepare_bind_groups<'a>(
 
         commands.entity(entity).insert(UpdateSolidBindGroups {
             update_solid_bind_group,
-            update_solod_pressure_bind_group,
+            update_solid_pressure_bind_group,
         });
     }
 }

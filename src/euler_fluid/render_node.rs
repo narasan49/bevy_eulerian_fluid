@@ -8,7 +8,7 @@ use bevy::{
 };
 
 use crate::{
-    advecct_scalar::{AdvectScalarBindGroups, AdvectScalarPipeline},
+    advect_scalar::{AdvectScalarBindGroups, AdvectScalarPipeline},
     advection::{AdvectionBindGroups, AdvectionPipeline},
     apply_forces::{ApplyForcesBindGroups, ApplyForcesPipeline},
     divergence::{DivergenceBindGroups, DivergencePipeline},
@@ -50,7 +50,7 @@ struct FluidBindGroupsQueryData {
     solve_pressure_bind_groups: &'static SolvePressureBindGroups,
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
-    advect_saclar_bind_groups: &'static AdvectScalarBindGroups,
+    advect_scalar_bind_groups: &'static AdvectScalarBindGroups,
     reinit_levelset_bind_groups: &'static ReinitLevelsetBindGroups,
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
@@ -262,7 +262,7 @@ impl render_graph::Node for EulerFluidNode {
                             advect_scalar(
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.advect_saclar_bind_groups,
+                                bind_groups.advect_scalar_bind_groups,
                                 bind_groups.simulation_uniform,
                                 advect_scalar_pipeline,
                                 fluid_settings.size,
@@ -615,6 +615,6 @@ fn update_solid(
     pass.dispatch_center(size);
 
     pass.set_pipeline(&update_solid_pressure_pipeline);
-    pass.set_bind_group(0, &bind_groups.update_solod_pressure_bind_group, &[]);
+    pass.set_bind_group(0, &bind_groups.update_solid_pressure_bind_group, &[]);
     pass.dispatch_center(size);
 }
