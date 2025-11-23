@@ -72,6 +72,20 @@ impl Default for FluidGridLength {
     }
 }
 
+/// Resultant textures from fluid simulation. These textures are automatically created when [`FluidSettings`] is spawned. See [`FluidSettings`] for the usage.
+/// # Textures
+/// * **`u`**: x-component velocity with size [`FluidSettings::size`] + (1, 0). Format: R32Float.
+/// * **`v`**: y-component velocity with size [`FluidSettings::size`] + (0, 1). Format: R32Float.
+/// * **`u_solid`**: x-component velocity of solid boundary with size [`FluidSettings::size`] + (1, 0). Format: R32Float.
+/// * **`v_solid`**: y-component velocity of solid boundary with size [`FluidSettings::size`] + (0, 1). Format: R32Float.
+/// * **`levelset_air`**: levelset between empty air (>=0) vs fluid or solid (<0) with size [`FluidSettings::size`]. Format: R32Float.
+/// * **`levelset_solid`**: levelset between solid (<0) vs fluid or empty air (>=0) with size [`FluidSettings::size`]. Format: R32Float.
+/// 
+/// # Notes
+/// A staggered (MAC) grid is used for the simulation. 
+/// * X-component velocity `u` is located on the x-faces of each cell
+/// * Y-component velocity `v` is located on the y-faces of each cell.
+/// * Levelset values are located on cell centers.
 #[derive(Component)]
 pub struct FluidTextures {
     pub u: Handle<Image>,
