@@ -44,3 +44,23 @@ impl<'a> NewTexture for ResMut<'a, Assets<Image>> {
         self.add(u0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bevy::{image::Image, math::UVec2, render::render_resource::TextureFormat};
+
+    use crate::texture::ImageForCS;
+
+    #[test]
+    fn create_image_handle() {
+        let size = UVec2::splat(16);
+        let format = TextureFormat::R32Float;
+        let image = Image::new_texture_storage(size, format);
+
+        let data = image.data.unwrap();
+        let zeros =
+            vec![0u8; (size.element_product() * format.block_copy_size(None).unwrap()) as usize];
+
+        assert_eq!(data, zeros);
+    }
+}
