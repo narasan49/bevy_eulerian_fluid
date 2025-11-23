@@ -6,13 +6,10 @@
 // So divergence has only bindings for u1 and v1.
 @group(0) @binding(0) var u1: texture_storage_2d<r32float, read>;
 @group(0) @binding(1) var v1: texture_storage_2d<r32float, read>;
-
-@group(1) @binding(0) var div: texture_storage_2d<r32float, read_write>;
-
-@group(2) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
-
-@group(3) @binding(0) var u_solid: texture_storage_2d<r32float, read_write>;
-@group(3) @binding(1) var v_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(2) var u_solid: texture_storage_2d<r32float, read>;
+@group(0) @binding(3) var v_solid: texture_storage_2d<r32float, read>;
+@group(0) @binding(4) var levelset_solid: texture_storage_2d<r32float, read>;
+@group(0) @binding(5) var div: texture_storage_2d<r32float, write>;
 
 @compute @workgroup_size(8, 8, 1)
 fn divergence(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
@@ -36,7 +33,7 @@ fn divergence(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
 
     let du_solid = (1.0 - f.iplusj) * u_solid_iplusj - (1.0 - f.iminusj) * u_solid_iminusj;
     let dv_solid = (1.0 - f.ijplus) * v_solid_ijplus - (1.0 - f.ijminus) * v_solid_ijminus;
-    
+
     let rhs = du_fluid + dv_fluid + du_solid + dv_solid;
 
     textureStore(div, idx, vec4<f32>(rhs, 0.0, 0.0, 0.0));

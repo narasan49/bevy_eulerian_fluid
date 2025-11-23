@@ -3,4 +3,5 @@ pub use euler_fluid::*;
 
 pub mod euler_fluid;
 pub mod material;
+pub mod pipeline;
 pub mod texture;

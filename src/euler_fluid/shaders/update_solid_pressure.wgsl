@@ -1,8 +1,7 @@
 #import bevy_fluid::levelset_utils::{project_onto_surface, levelset_solid_grid_center};
 
 @group(0) @binding(0) var p0: texture_storage_2d<r32float, read_write>;
-
-@group(1) @binding(2) var levelset_solid: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(1) var levelset_solid: texture_storage_2d<r32float, read>;
 
 @compute @workgroup_size(8, 8, 1)
 fn update_solid_pressure(

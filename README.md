@@ -8,14 +8,14 @@ Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
 ## Basic Usage
 1. Add `FluidPlugin` and `PhysicsPlugins` to the app with the same length unit.
-2. Spawn `FluidSettings`, then `FluidSimulationBundle` will be inserted automatically to the entity. By querying components bundled with `FluidSimulationBundle` such as `VelocityTextures`, the simulation results can be retreived.  
+2. Spawn `FluidSettings`, then `FluidSimulationBundle` will be inserted automatically to the entity. By querying components `FluidTextures`, the simulation results can be retreived.  
 
 Here is a short example. See [examples](./examples/) for the detailed implementation!  
 
 ```rust
 use avian2d::PhysicsPlugins;
 use bevy_eulerian_fluid::{
-    definition::{FluidSettings, LevelsetTextures, VelocityTextures},
+    settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
 
@@ -42,12 +42,12 @@ fn setup_scene(mut commands: Commands) {
 
 fn on_initialized(
     mut commands: Commands,
-    query: Query<(Entity, &LevelsetTextures, &VelocityTextures), Added<LevelsetTextures>>,
+    query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (entity, levelset_textures, velocity_textures) in &query {
+    for (entity, fluid_textures) in &query {
         // Implement your own code to visualize the results.
     }
 }

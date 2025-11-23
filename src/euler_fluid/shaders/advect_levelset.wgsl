@@ -1,13 +1,12 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 #import bevy_fluid::coordinate::{interp2d_center, runge_kutta};
 
-@group(0) @binding(0) var u0: texture_storage_2d<r32float, read_write>;
-@group(0) @binding(1) var v0: texture_storage_2d<r32float, read_write>;
+@group(0) @binding(0) var u0: texture_storage_2d<r32float, read>;
+@group(0) @binding(1) var v0: texture_storage_2d<r32float, read>;
+@group(0) @binding(2) var levelset_air0: texture_storage_2d<r32float, read>;
+@group(0) @binding(3) var levelset_air1: texture_storage_2d<r32float, write>;
 
-@group(1) @binding(0) var levelset_air0: texture_storage_2d<r32float, read_write>;
-@group(1) @binding(1) var levelset_air1: texture_storage_2d<r32float, read_write>;
-
-@group(2) @binding(0) var<uniform> constants: SimulationUniform;
+@group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
 @compute @workgroup_size(8, 8, 1)
 fn advect_levelset(

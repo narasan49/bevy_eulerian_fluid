@@ -7,18 +7,28 @@ use bevy::{
     },
 };
 
-use super::definition::{
-    DivergenceTextures, FluidSettings, JumpFloodingSeedsTextures, LevelsetTextures,
-    SolidVelocityTextures, VelocityTexturesIntermediate, VelocityTexturesU, VelocityTexturesV,
-};
-use crate::definition::{FluidGridLength, Force, SampleForcesResource, SolidCenterTextures};
 use crate::{
-    definition::{ForcesToSolid, SolidEntities, SolidForcesBins, MAX_SOLIDS},
-    euler_fluid::definition::{
-        FluidSimulationBundle, LocalForces, PressureTextures, SimulationUniform, VelocityTextures,
+    advect_scalar::AdvectLevelsetResource,
+    advection::AdvectionResource,
+    apply_forces::{ApplyForcesResource, ForceToFluid},
+    divergence::DivergenceResource,
+    extrapolate_velocity::ExtrapolateVelocityResource,
+    fluid_to_solid::{
+        forces_to_solid_readback, AccumulateForcesResource, FluidToSolidForce,
+        SampleForcesResource, MAX_SOLIDS,
     },
-    fluid_to_solid::forces_to_solid_readback,
+    fluid_uniform::SimulationUniform,
+    initialize::{InitializeGridCenterResource, InitializeVelocityResource},
+    obstacle::SolidEntities,
+    reinitialize_levelset::{
+        ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
+        ReinitLevelsetIterateResource,
+    },
+    settings::{FluidGridLength, FluidSettings, FluidTextures},
+    solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
+    solve_velocity::{SolveUResource, SolveVResource},
     texture::NewTexture,
+    update_solid::{UpdateSolidPressureResource, UpdateSolidResource},
 };
 
 pub(crate) fn watch_fluid_component(
@@ -59,61 +69,17 @@ pub(crate) fn watch_fluid_component(
         let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
         let jump_flooding_seeds_y = images.new_texture_storage(size, TextureFormat::R32Float);
 
-        let force = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
-        let position = buffers.add(ShaderStorageBuffer::from(vec![Vec2::ZERO; 0]));
+        let forces_to_fluid =
+            buffers.add(ShaderStorageBuffer::from(vec![ForceToFluid::default(); 0]));
 
         let bins_force_x = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
         let bins_force_y = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
         let bins_torque = buffers.add(ShaderStorageBuffer::from(vec![0u32; MAX_SOLIDS]));
 
         let mut forces_to_solid_buffer =
-            ShaderStorageBuffer::from(vec![Force::default(); MAX_SOLIDS]);
+            ShaderStorageBuffer::from(vec![FluidToSolidForce::default(); MAX_SOLIDS]);
         forces_to_solid_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
         let forces_to_solid_buffer = buffers.add(forces_to_solid_buffer);
-
-        let velocity_textures = VelocityTextures {
-            u0: u0.clone(),
-            v0: v0.clone(),
-            u1: u1.clone(),
-            v1: v1.clone(),
-        };
-
-        let velocity_textures_u = VelocityTexturesU {
-            u0: u0.clone(),
-            u1: u1.clone(),
-            u_solid: u_solid.clone(),
-        };
-
-        let velocity_textures_v = VelocityTexturesV {
-            v0: v0.clone(),
-            v1: v1.clone(),
-            v_solid: v_solid.clone(),
-        };
-
-        let velocity_textures_intermediate = VelocityTexturesIntermediate {
-            v1: v1.clone(),
-            u1: u1.clone(),
-        };
-
-        let solid_velocity_textures = SolidVelocityTextures { u_solid, v_solid };
-
-        let solid_center_textures = SolidCenterTextures {
-            levelset_solid: levelset_solid.clone(),
-            solid_id: solid_id.clone(),
-        };
-
-        let pressure_textures = PressureTextures {
-            p0: p0.clone(),
-            p1: p1.clone(),
-        };
-
-        let divergence_textures = DivergenceTextures { div };
-
-        let levelset_textures = LevelsetTextures {
-            levelset_air0,
-            levelset_air1,
-            levelset_solid: levelset_solid.clone(),
-        };
 
         let fluid_transform = match transform {
             Some(t) => t.to_matrix(),
@@ -130,20 +96,126 @@ pub(crate) fn watch_fluid_component(
             size: size.as_vec2(),
         };
 
-        let local_forces = LocalForces {
-            forces: force,
-            positions: position,
+        let fluid_textures = FluidTextures {
+            u: u0.clone(),
+            v: v0.clone(),
+            u_solid: u_solid.clone(),
+            v_solid: v_solid.clone(),
+            levelset_air: levelset_air0.clone(),
+            levelset_solid: levelset_solid.clone(),
         };
 
-        let jump_flooding_seeds_textures = JumpFloodingSeedsTextures {
-            jump_flooding_seeds_x,
-            jump_flooding_seeds_y,
+        let initialize_resource = InitializeVelocityResource {
+            u0: u0.clone(),
+            u1: u1.clone(),
+            v0: v0.clone(),
+            v1: v1.clone(),
         };
 
-        let solid_forces_bins = SolidForcesBins {
-            bins_force_x: bins_force_x.clone(),
-            bins_force_y: bins_force_y.clone(),
-            bins_torque: bins_torque.clone(),
+        let initialize_grid_center_resource = InitializeGridCenterResource {
+            levelset_air0: levelset_air0.clone(),
+            levelset_air1: levelset_air1.clone(),
+        };
+
+        let update_solid_resource = UpdateSolidResource {
+            u_solid: u_solid.clone(),
+            v_solid: v_solid.clone(),
+            levelset_solid: levelset_solid.clone(),
+            solid_id: solid_id.clone(),
+        };
+
+        let update_solid_pressure = UpdateSolidPressureResource {
+            p0: p0.clone(),
+            levelset_solid: levelset_solid.clone(),
+        };
+
+        let advection_resource = AdvectionResource {
+            u0: u0.clone(),
+            v0: v0.clone(),
+            u1: u1.clone(),
+            v1: v1.clone(),
+        };
+
+        let apply_forces_resource = ApplyForcesResource {
+            u1: u1.clone(),
+            v1: v1.clone(),
+            levelset_air0: levelset_air0.clone(),
+            forces_to_fluid: forces_to_fluid.clone(),
+        };
+
+        let divergence_resource = DivergenceResource {
+            u1: u1.clone(),
+            v1: v1.clone(),
+            u_solid: u_solid.clone(),
+            v_solid: v_solid.clone(),
+            levelset_solid: levelset_solid.clone(),
+            div: div.clone(),
+        };
+
+        let jacobi_iter_resource = JacobiIterationResource {
+            p0: p0.clone(),
+            p1: p1.clone(),
+            div: div.clone(),
+            levelset_air0: levelset_air0.clone(),
+            levelset_solid: levelset_solid.clone(),
+        };
+
+        let jacobi_iter_rev_resource = JacobiIterationReverseResource {
+            p0: p0.clone(),
+            p1: p1.clone(),
+            div: div.clone(),
+            levelset_air0: levelset_air0.clone(),
+            levelset_solid: levelset_solid.clone(),
+        };
+
+        let solve_u_resource = SolveUResource {
+            u0: u0.clone(),
+            u1: u1.clone(),
+            u_solid: u_solid.clone(),
+            p1: p1.clone(),
+            levelset_air0: levelset_air0.clone(),
+            levelset_solid: levelset_solid.clone(),
+        };
+
+        let solve_v_resource = SolveVResource {
+            v0: v0.clone(),
+            v1: v1.clone(),
+            v_solid: v_solid.clone(),
+            p1: p1.clone(),
+            levelset_air0: levelset_air0.clone(),
+            levelset_solid: levelset_solid.clone(),
+        };
+
+        let extrapolate_velocity_resource = ExtrapolateVelocityResource {
+            u0: u0.clone(),
+            v0: v0.clone(),
+            levelset_air0: levelset_air0.clone(),
+            levelset_solid: levelset_solid.clone(),
+        };
+
+        let advect_levelset_resource = AdvectLevelsetResource {
+            u0: u0.clone(),
+            v0: v0.clone(),
+            levelset_air0: levelset_air0.clone(),
+            levelset_air1: levelset_air1.clone(),
+        };
+
+        let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {
+            levelset_air1: levelset_air1.clone(),
+            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
+            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
+        };
+
+        let reinit_levelset_iterate_resource = ReinitLevelsetIterateResource {
+            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
+            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
+        };
+
+        let reinit_levelset_calculate_sdf_resource = ReinitLevelsetCalculateSdfResource {
+            levelset_air0: levelset_air0.clone(),
+            levelset_air1: levelset_air1.clone(),
+            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
+            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
         };
 
         let sample_forces_resource = SampleForcesResource {
@@ -155,7 +227,10 @@ pub(crate) fn watch_fluid_component(
             p1: p1.clone(),
         };
 
-        let forces_to_solid = ForcesToSolid {
+        let accumulate_forces_resource = AccumulateForcesResource {
+            bins_force_x: bins_force_x.clone(),
+            bins_force_y: bins_force_y.clone(),
+            bins_torque: bins_torque.clone(),
             forces: forces_to_solid_buffer.clone(),
         };
 
@@ -165,22 +240,29 @@ pub(crate) fn watch_fluid_component(
 
         commands
             .entity(entity)
-            .insert(FluidSimulationBundle {
-                velocity_textures,
-                velocity_textures_u,
-                velocity_textures_v,
-                velocity_textures_intermediate,
-                solid_velocity_textures,
-                pressure_textures,
-                divergence_textures,
-                local_forces,
-                levelset_textures,
-                jump_flooding_seeds_textures,
-                solid_forces_bins,
-                forces_to_solid,
-                solid_center_textures,
+            .insert((
+                fluid_textures,
+                initialize_resource,
+                initialize_grid_center_resource,
+                update_solid_resource,
+                update_solid_pressure,
+                advection_resource,
+                apply_forces_resource,
+                divergence_resource,
+                jacobi_iter_resource,
+                jacobi_iter_rev_resource,
+            ))
+            .insert((
+                solve_u_resource,
+                solve_v_resource,
+                extrapolate_velocity_resource,
+                advect_levelset_resource,
+                reinit_levelset_initialize_seeds_resource,
+                reinit_levelset_iterate_resource,
+                reinit_levelset_calculate_sdf_resource,
                 sample_forces_resource,
-            })
+                accumulate_forces_resource,
+            ))
             .insert(uniform)
             .insert(solid_entites)
             .insert(Readback::buffer(forces_to_solid_buffer.clone()))
