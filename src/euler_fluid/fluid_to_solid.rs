@@ -47,11 +47,11 @@ pub(crate) struct SampleForcesResource {
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct AccumulateForcesResource {
-    #[storage(0, visibility(compute), read_only)]
+    #[storage(0, visibility(compute))]
     pub bins_force_x: Handle<ShaderStorageBuffer>,
-    #[storage(1, visibility(compute), read_only)]
+    #[storage(1, visibility(compute))]
     pub bins_force_y: Handle<ShaderStorageBuffer>,
-    #[storage(2, visibility(compute), read_only)]
+    #[storage(2, visibility(compute))]
     pub bins_torque: Handle<ShaderStorageBuffer>,
     #[storage(3, visibility(compute))]
     pub forces: Handle<ShaderStorageBuffer>,

@@ -7,9 +7,10 @@ struct Force {
     torque: f32,
 }
 
-@group(0) @binding(0) var<storage, read> bins_force_x: array<atomic<i32>>;
-@group(0) @binding(1) var<storage, read> bins_force_y: array<atomic<i32>>;
-@group(0) @binding(2) var<storage, read> bins_torque: array<atomic<i32>>;
+// Note: atomic requires read_write storage buffer.
+@group(0) @binding(0) var<storage, read_write> bins_force_x: array<atomic<i32>>;
+@group(0) @binding(1) var<storage, read_write> bins_force_y: array<atomic<i32>>;
+@group(0) @binding(2) var<storage, read_write> bins_torque: array<atomic<i32>>;
 @group(0) @binding(3) var<storage, read_write> forces: array<Force>;
 
 @compute @workgroup_size(1, 1, 1)
