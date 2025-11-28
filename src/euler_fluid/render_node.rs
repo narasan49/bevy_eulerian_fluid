@@ -309,6 +309,7 @@ fn initialize(
     pipeline: &InitializePipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Initialize simulation");
     let initialize_velocity_pipeline = pipeline_cache
         .get_compute_pipeline(pipeline.init_velocity_pipeline)
         .unwrap();
@@ -328,6 +329,7 @@ fn initialize(
         &[uniform_bind_group.index],
     );
     pass.dispatch_center(size);
+    pass.pop_debug_group();
 }
 
 fn advection(
@@ -338,6 +340,7 @@ fn advection(
     advection_pipeline: &AdvectionPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Advect velocity");
     let advect_u_pipeline = pipeline_cache
         .get_compute_pipeline(advection_pipeline.advect_u_pipeline)
         .unwrap();
@@ -356,6 +359,7 @@ fn advection(
 
     pass.set_pipeline(&advect_v_pipeline);
     pass.dispatch_y_major(size);
+    pass.pop_debug_group();
 }
 
 fn apply_forces(
@@ -366,6 +370,7 @@ fn apply_forces(
     apply_forces_pipeline: &ApplyForcesPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Apply forces to fluid");
     let apply_forces_u_pipeline = pipeline_cache
         .get_compute_pipeline(apply_forces_pipeline.apply_forces_u_pipeline)
         .unwrap();
@@ -385,6 +390,7 @@ fn apply_forces(
 
     pass.set_pipeline(&apply_forces_v_pipeline);
     pass.dispatch_y_major(size);
+    pass.pop_debug_group();
 }
 
 fn divergence(
@@ -394,6 +400,7 @@ fn divergence(
     divergence_pipeline: &DivergencePipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Divergence");
     let divergence_pipeline = pipeline_cache
         .get_compute_pipeline(divergence_pipeline.divergence_pipeline)
         .unwrap();
@@ -401,6 +408,7 @@ fn divergence(
     pass.set_pipeline(&divergence_pipeline);
     pass.set_bind_group(0, &divergence_bind_groups.divergence_bind_group, &[]);
     pass.dispatch_center(size);
+    pass.pop_debug_group();
 }
 
 fn solve_pressure(
@@ -411,6 +419,7 @@ fn solve_pressure(
     solve_pressure_pipeline: &SolvePressurePipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Solve pressure");
     let jacobi_iteration_pipeline = pipeline_cache
         .get_compute_pipeline(solve_pressure_pipeline.jacobi_iteration_pipeline)
         .unwrap();
@@ -440,6 +449,7 @@ fn solve_pressure(
         );
         pass.dispatch_center(size);
     }
+    pass.pop_debug_group();
 }
 
 fn solve_velocity(
@@ -450,6 +460,7 @@ fn solve_velocity(
     solve_velocity_pipeline: &SolveVelocityPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Solve velocity");
     let solve_velocity_u_pipeline = pipeline_cache
         .get_compute_pipeline(solve_velocity_pipeline.solve_u_pipeline)
         .unwrap();
@@ -469,6 +480,7 @@ fn solve_velocity(
     pass.set_pipeline(&solve_velocity_v_pipeline);
     pass.set_bind_group(0, &solve_velocity_bind_groups.solve_v_bind_group, &[]);
     pass.dispatch_y_major(size);
+    pass.pop_debug_group();
 }
 
 fn extrapolate_velocity(
@@ -478,6 +490,7 @@ fn extrapolate_velocity(
     extrapolate_velocity_pipeline: &ExtrapolateVelocityPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Extrapolate velocity");
     let extrapolate_u_pipeline = pipeline_cache
         .get_compute_pipeline(extrapolate_velocity_pipeline.extrapolate_u_pipeline)
         .unwrap();
@@ -495,6 +508,7 @@ fn extrapolate_velocity(
     pass.dispatch_x_major(size);
     pass.set_pipeline(&extrapolate_v_pipeline);
     pass.dispatch_y_major(size);
+    pass.pop_debug_group();
 }
 
 fn advect_scalar(
@@ -505,6 +519,7 @@ fn advect_scalar(
     advect_scalar_pipeline: &AdvectScalarPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Advect scalar");
     let advect_levelset_pipeline = pipeline_cache
         .get_compute_pipeline(advect_scalar_pipeline.advect_levelset_pipeline)
         .unwrap();
@@ -522,6 +537,7 @@ fn advect_scalar(
 
     pass.set_pipeline(&advect_levelset_pipeline);
     pass.dispatch_center(size);
+    pass.pop_debug_group();
 }
 
 fn reinitialize_levelset(
@@ -531,6 +547,7 @@ fn reinitialize_levelset(
     pipeline: &ReinitLevelsetPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Reinitialize levelset");
     let init_seeds_pipeline = pipeline_cache
         .get_compute_pipeline(pipeline.init_seeds_pipeline)
         .unwrap();
@@ -555,6 +572,7 @@ fn reinitialize_levelset(
     pass.set_pipeline(&sdf_pipeline);
     pass.set_bind_group(0, &bind_groups.sdf_bind_group, &[]);
     pass.dispatch_center(size);
+    pass.pop_debug_group();
 }
 
 fn fluid_to_solid_forces(
@@ -566,6 +584,7 @@ fn fluid_to_solid_forces(
     pipeline: &FluidToSolidForcesPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Fluid to solid forces");
     let sample_forces_pipeline = pipeline_cache
         .get_compute_pipeline(pipeline.sample_forces_pipeline)
         .unwrap();
@@ -586,6 +605,7 @@ fn fluid_to_solid_forces(
     pass.set_pipeline(&accumulate_forces_pipeline);
     pass.set_bind_group(0, &bind_groups.accumulate_forces_bind_group, &[]);
     pass.dispatch_workgroups(MAX_SOLIDS as u32, 1, 1);
+    pass.pop_debug_group();
 }
 
 fn update_solid(
@@ -597,6 +617,7 @@ fn update_solid(
     pipeline: &UpdateSolidPipeline,
     size: UVec2,
 ) {
+    pass.push_debug_group("Update solid boundary");
     let update_solid_pipeline = pipeline_cache
         .get_compute_pipeline(pipeline.update_solid_pipeline)
         .unwrap();
@@ -617,4 +638,5 @@ fn update_solid(
     pass.set_pipeline(&update_solid_pressure_pipeline);
     pass.set_bind_group(0, &bind_groups.update_solid_pressure_bind_group, &[]);
     pass.dispatch_center(size);
+    pass.pop_debug_group();
 }
