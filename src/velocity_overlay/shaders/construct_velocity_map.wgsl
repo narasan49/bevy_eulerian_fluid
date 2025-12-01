@@ -1,5 +1,6 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
 #import bevy_render::view::uv_to_ndc;
+#import bevy_render::maths::PI;
 
 struct Arrow {
     position: vec2<f32>,
@@ -38,18 +39,23 @@ fn construct_velocity_arrows(
 
     for (var i = 0; i < overlay_settings.bin_size.x + 1; i++) {
         for (var j = 0; j < overlay_settings.bin_size.y; j++) {
-        u_average += textureLoad(u0, base_sampling_idx + vec2<i32>(i, j)).r / f32((overlay_settings.bin_size.x + 1) * overlay_settings.bin_size.y);
+            u_average += textureLoad(u0, base_sampling_idx + vec2<i32>(i, j)).r / f32((overlay_settings.bin_size.x + 1) * overlay_settings.bin_size.y);
         }
     }
 
     for (var i = 0; i < overlay_settings.bin_size.x; i++) {
         for (var j = 0; j < overlay_settings.bin_size.y + 1; j++) {
-        v_average += textureLoad(v0, base_sampling_idx + vec2<i32>(i, j)).r / f32(overlay_settings.bin_size.x * (overlay_settings.bin_size.y + 1));
+            v_average += textureLoad(v0, base_sampling_idx + vec2<i32>(i, j)).r / f32(overlay_settings.bin_size.x * (overlay_settings.bin_size.y + 1));
         }
     }
 
     let r = clamp(sqrt(u_average * u_average + v_average * v_average), 0, overlay_settings.max_clamp_speed);
-    let theta = atan(v_average/u_average);
+    var theta = atan(v_average/u_average);
+    if (u_average == 0.0) {
+        theta = 0.0;
+    } else if (u_average < 0.0) {
+        theta += PI;
+    }
 
     let position_ij = vec2<f32>(base_sampling_idx) + vec2<f32>(overlay_settings.bin_size) / 2.0;
     let uv = position_ij / vec2<f32>(textureDimensions(u0) - vec2<u32>(1, 0));
