@@ -13,7 +13,7 @@ use bevy::{
 };
 use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
-    velocity_overlay::{VelocityOverlay, VelocityOverlayPlugin},
+    velocity_overlay::{VelocityOverlay, VelocityOverlayGroup, VelocityOverlayPlugin},
     FluidPlugin,
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
@@ -74,6 +74,10 @@ fn main() {
     .add_systems(
         Update,
         reset_scene.run_if(input_just_pressed(KeyCode::KeyR)),
+    )
+    .add_systems(
+        Update,
+        toggle_arrow_visibility.run_if(input_just_pressed(KeyCode::KeyV)),
     );
 
     app.run();
@@ -285,6 +289,22 @@ fn reset_scene(
 
     spawn_fluid(&mut commands, &mut meshes);
     spawn_rigid_bodies(&mut commands, &mut materials, &mut meshes, asset_server);
+}
+
+fn toggle_arrow_visibility(mut query: Query<&mut Visibility, With<VelocityOverlayGroup>>) {
+    for mut visibility in &mut query {
+        match *visibility {
+            Visibility::Inherited => {
+                *visibility = Visibility::Hidden;
+            }
+            Visibility::Hidden => {
+                *visibility = Visibility::Visible;
+            }
+            Visibility::Visible => {
+                *visibility = Visibility::Hidden;
+            }
+        }
+    }
 }
 
 fn on_fluid_setup(

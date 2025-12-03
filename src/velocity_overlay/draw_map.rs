@@ -11,7 +11,9 @@ use bevy::{
 
 use crate::{
     settings::{FluidSettings, FluidTextures},
-    velocity_overlay::{construct_map::ConstructVelocityArrowsResource, VelocityOverlay},
+    velocity_overlay::{
+        construct_map::ConstructVelocityArrowsResource, VelocityOverlay, VelocityOverlayGroup,
+    },
 };
 
 const SHADER_PATH: &str = "shaders/vector_map.wgsl";
@@ -86,16 +88,15 @@ fn spawn_arrows_on_fluid_spawn(
             .entity(entity)
             .insert(construc_velocity_arrows_resource);
 
+        let proxy_entity = commands.spawn((VelocityOverlayGroup, ChildOf(entity))).id();
         // Spawn arrow instances as child entities.
         for _ in 0..arrow_dim {
-            let arrow_entity = commands
-                .spawn((
-                    Mesh2d(mesh.clone()),
-                    MeshMaterial2d(material.clone()),
-                    Transform::IDENTITY,
-                ))
-                .id();
-            commands.entity(entity).add_child(arrow_entity);
+            commands.spawn((
+                Mesh2d(mesh.clone()),
+                MeshMaterial2d(material.clone()),
+                Transform::IDENTITY,
+                ChildOf(proxy_entity),
+            ));
         }
     }
 }

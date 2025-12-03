@@ -25,6 +25,10 @@ impl Default for VelocityOverlay {
     }
 }
 
+#[derive(Component)]
+#[require(Transform, Visibility)]
+pub struct VelocityOverlayGroup;
+
 impl Plugin for VelocityOverlayPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
