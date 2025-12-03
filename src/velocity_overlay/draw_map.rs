@@ -6,7 +6,7 @@ use bevy::{
         storage::ShaderStorageBuffer,
     },
     shader::ShaderRef,
-    sprite_render::{Material2d, Material2dPlugin},
+    sprite_render::{AlphaMode2d, Material2d, Material2dPlugin},
 };
 
 use crate::{
@@ -51,6 +51,10 @@ impl Material2d for VectorMapMaterial {
             AssetPath::from_path_buf(embedded_path!(SHADER_PATH)).with_source("embedded"),
         )
     }
+
+    fn alpha_mode(&self) -> AlphaMode2d {
+        AlphaMode2d::Blend
+    }
 }
 
 fn spawn_arrows_on_fluid_spawn(
@@ -66,7 +70,9 @@ fn spawn_arrows_on_fluid_spawn(
             (fluid_settings.size / overlay_settings.bin_size).element_product() as usize;
         let buffer = buffers.add(ShaderStorageBuffer::from(vec![Arrow::default(); arrow_dim]));
 
-        let mesh = meshes.add(Segment2d::default());
+        // Segment2d does not contain UV.
+        // let mesh = meshes.add(Segment2d::default());
+        let mesh = meshes.add(Rectangle::from_size(Vec2::new(1.0, 0.1)));
         let material = materials.add(VectorMapMaterial {
             arrows: buffer.clone(),
         });

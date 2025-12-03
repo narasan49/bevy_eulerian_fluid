@@ -1,4 +1,5 @@
 #import bevy_sprite::mesh2d_functions
+#import bevy_sprite::mesh2d_view_bindings::globals
 
 struct Arrow {
     position: vec2<f32>,
@@ -9,12 +10,16 @@ struct Arrow {
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) uv: vec2<f32>,
 }
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
-    @location(1) color: vec4<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) color: vec4<f32>,
+    @location(3) uv_offset_per_instance: f32,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<storage, read> arrows: array<Arrow>;
@@ -35,8 +40,9 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     out.world_position = vec4<f32>(arrow.position + vertex_pos, 2.0, 1.0);
     out.clip_position = mesh2d_functions::mesh2d_position_world_to_clip(out.world_position);
-    // out.clip_position = mesh2d_functions::mesh2d_position_local_to_clip(world_from_local, vec4<f32>(vertex.position, 1.0));
+    out.uv = vertex.uv;
     out.color = arrow.color;
+    out.uv_offset_per_instance = fract(sin(f32(vertex.instance_index)) * 1000.0);
     return out;
 }
 
@@ -44,5 +50,9 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn fragment(
     mesh: VertexOutput
 ) -> @location(0) vec4<f32> {
-    return mesh.color;
+    let offset = fract(mesh.uv.x - globals.time + mesh.uv_offset_per_instance);
+
+    // sigmoid
+    let alpha = 1.0 / (1.0 + exp(-25.0 * (offset - 0.75)));
+    return mesh.color * vec4<f32>(vec3<f32>(offset), alpha);
 }

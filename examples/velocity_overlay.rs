@@ -118,7 +118,7 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
         VelocityOverlay {
             max_clamp_speed: 20.0,
             bin_size: UVec2::splat(16),
-            color: LinearRgba::GREEN,
+            color: LinearRgba::WHITE,
         },
     ));
 }
