@@ -39,15 +39,17 @@ fn construct_velocity_arrows(
 
     for (var i = 0; i < overlay_settings.bin_size.x + 1; i++) {
         for (var j = 0; j < overlay_settings.bin_size.y; j++) {
-            u_average += textureLoad(u0, base_sampling_idx + vec2<i32>(i, j)).r / f32((overlay_settings.bin_size.x + 1) * overlay_settings.bin_size.y);
+            u_average += textureLoad(u0, base_sampling_idx + vec2<i32>(i, j)).r;
         }
     }
+    u_average /= f32((overlay_settings.bin_size.x + 1) * overlay_settings.bin_size.y);
 
     for (var i = 0; i < overlay_settings.bin_size.x; i++) {
         for (var j = 0; j < overlay_settings.bin_size.y + 1; j++) {
-            v_average += textureLoad(v0, base_sampling_idx + vec2<i32>(i, j)).r / f32(overlay_settings.bin_size.x * (overlay_settings.bin_size.y + 1));
+            v_average += textureLoad(v0, base_sampling_idx + vec2<i32>(i, j)).r;
         }
     }
+    v_average /= f32(overlay_settings.bin_size.x * (overlay_settings.bin_size.y + 1));
 
     let r = clamp(sqrt(u_average * u_average + v_average * v_average), 0, overlay_settings.max_clamp_speed);
     var theta = atan(v_average/u_average);
@@ -63,7 +65,7 @@ fn construct_velocity_arrows(
     let half_size = 0.5 * simulation_uniform.size;
     let world_position = simulation_uniform.fluid_transform * vec4<f32>(ndc * half_size, 0.0, 1.0);
 
-    let workgroup_index = workgroup_id.x + workgroup_id.y * num_workgroups.x + workgroup_id.z * num_workgroups.x * num_workgroups.z;
+    let workgroup_index = workgroup_id.x + workgroup_id.y * num_workgroups.x;
     let bin_idx = workgroup_index * NUM_THREADS_PER_WORKGROUP + local_invocation_index;
     arrows[bin_idx] = Arrow(world_position.xy, vec2<f32>(r, theta), overlay_settings.color);
 }
