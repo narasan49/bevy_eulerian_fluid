@@ -95,7 +95,7 @@ fn setup_scene(mut commands: Commands) {
     ));
 
     commands.spawn((
-        Text::new("R: Reset Scene"),
+        Text::new("R: Reset Scene\nV: Toggle Velocity Overlay"),
         TextFont {
             font_size: 20.0,
             ..default()
