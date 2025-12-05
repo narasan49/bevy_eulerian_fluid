@@ -9,6 +9,7 @@ use bevy::{
 pub struct VelocityOverlayPlugin;
 
 #[derive(Component, ExtractComponent, ShaderType, Clone, Copy)]
+#[require(Transform, Visibility)]
 pub struct VelocityOverlay {
     pub max_clamp_speed: f32,
     pub bin_size: UVec2,
