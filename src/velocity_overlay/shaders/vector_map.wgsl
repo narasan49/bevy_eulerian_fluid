@@ -28,17 +28,15 @@ struct VertexOutput {
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
     let arrow = arrows[vertex.instance_index];
-    var world_from_local = mesh2d_functions::get_world_from_local(vertex.instance_index);
-    let vertex_position = mesh2d_functions::mesh2d_position_local_to_world(world_from_local, vec4<f32>(vertex.position, 1.0)).xy;
 
     let cos_theta = cos(arrow.vector[1]);
     let sin_theta = sin(arrow.vector[1]);
-    let vertex_pos = 0.5 * arrow.vector[0] * vec2<f32>(
-        vertex_position.x * cos_theta + vertex_position.y * sin_theta,
-        -vertex_position.x * sin_theta + vertex_position.y * cos_theta,
+    let arrow_vertex_local_pos = arrow.vector[0] * vec2<f32>(
+        vertex.position.x * cos_theta + vertex.position.y * sin_theta,
+        -vertex.position.x * sin_theta + vertex.position.y * cos_theta,
     );
 
-    out.world_position = vec4<f32>(arrow.position + vertex_pos, 2.0, 1.0);
+    out.world_position = vec4<f32>(arrow.position + arrow_vertex_local_pos, 2.0, 1.0);
     out.clip_position = mesh2d_functions::mesh2d_position_world_to_clip(out.world_position);
     out.uv = vertex.uv;
     out.color = arrow.color;
