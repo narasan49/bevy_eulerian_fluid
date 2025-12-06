@@ -66,7 +66,7 @@ fn spawn_arrows_on_fluid_spawn(
     mut materials: ResMut<Assets<VectorMapMaterial>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (entity, fluid_settings, fluid_texture, overlay_settings) in &query {
+    for (entity, fluid_settings, fluid_textures, overlay_settings) in &query {
         info!("Setting up velocity vector map.");
         let arrow_dim =
             (fluid_settings.size / overlay_settings.bin_size).element_product() as usize;
@@ -79,23 +79,23 @@ fn spawn_arrows_on_fluid_spawn(
             arrows: buffer.clone(),
         });
         let construc_velocity_arrows_resource = ConstructVelocityArrowsResource {
-            u0: fluid_texture.u.clone(),
-            v0: fluid_texture.v.clone(),
-            arrows: buffer,
+            u0: fluid_textures.u.clone(),
+            v0: fluid_textures.v.clone(),
+            arrows: buffer.clone(),
         };
 
         commands
             .entity(entity)
             .insert(construc_velocity_arrows_resource);
 
-        let proxy_entity = commands.spawn((VelocityOverlayGroup, ChildOf(entity))).id();
+        let group_entity = commands.spawn((VelocityOverlayGroup, ChildOf(entity))).id();
         // Spawn arrow instances as child entities.
         for _ in 0..arrow_dim {
             commands.spawn((
                 Mesh2d(mesh.clone()),
                 MeshMaterial2d(material.clone()),
                 Transform::IDENTITY,
-                ChildOf(proxy_entity),
+                ChildOf(group_entity),
             ));
         }
     }
