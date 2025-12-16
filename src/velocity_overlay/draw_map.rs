@@ -1,5 +1,6 @@
 use bevy::{
     asset::{embedded_asset, embedded_path, AssetPath},
+    mesh::MeshTag,
     prelude::*,
     render::{
         render_resource::{AsBindGroup, ShaderType},
@@ -90,10 +91,11 @@ fn spawn_arrows_on_fluid_spawn(
 
         let group_entity = commands.spawn((VelocityOverlayGroup, ChildOf(entity))).id();
         // Spawn arrow instances as child entities.
-        for _ in 0..arrow_dim {
+        for idx in 0..arrow_dim {
             commands.spawn((
                 Mesh2d(mesh.clone()),
                 MeshMaterial2d(material.clone()),
+                MeshTag(idx as u32),
                 Transform::IDENTITY,
                 ChildOf(group_entity),
             ));

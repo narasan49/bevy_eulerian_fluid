@@ -27,7 +27,10 @@ struct VertexOutput {
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
-    let arrow = arrows[vertex.instance_index];
+    // workaround: wrong instance_index start location for multiple fluids situation.
+    // let arrow = arrows[vertex.instance_index] // does not work..
+    let idx = mesh2d_functions::get_tag(vertex.instance_index);
+    let arrow = arrows[idx];
 
     let cos_theta = cos(arrow.vector[1]);
     let sin_theta = sin(arrow.vector[1]);
@@ -40,7 +43,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.clip_position = mesh2d_functions::mesh2d_position_world_to_clip(out.world_position);
     out.uv = vertex.uv;
     out.color = arrow.color;
-    out.uv_offset_per_instance = fract(sin(f32(vertex.instance_index)) * 1000.0);
+    out.uv_offset_per_instance = fract(sin(f32(idx)) * 1000.0);
     return out;
 }
 
