@@ -5,3 +5,4 @@ pub mod euler_fluid;
 pub mod material;
 pub mod pipeline;
 pub mod texture;
+pub mod velocity_overlay;
