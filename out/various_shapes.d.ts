@@ -8,9 +8,9 @@ export interface InitOutput {
   readonly main: (a: number, b: number) => number;
   readonly wasm_bindgen__convert__closures_____invoke__h1b37da31ba2c44fe: (a: number, b: number, c: any) => void;
   readonly wasm_bindgen__closure__destroy__h3b9fb03aec68649e: (a: number, b: number) => void;
+  readonly wasm_bindgen__convert__closures_____invoke__h14c6745f45b0cf91: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h888b72ee0bab0c0c: (a: number, b: number, c: any) => void;
   readonly wasm_bindgen__closure__destroy__h2665f3aa3d852a21: (a: number, b: number) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h14c6745f45b0cf91: (a: number, b: number) => void;
   readonly wasm_bindgen__convert__closures_____invoke__h4351cc69a913605e: (a: number, b: number, c: any, d: any) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
