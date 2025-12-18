@@ -80,7 +80,7 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands.spawn((
         FluidSettings {
-            rho: 99.70, // water in 2D
+            rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
             size: SIZE,
             initial_fluid_level: 0.7,

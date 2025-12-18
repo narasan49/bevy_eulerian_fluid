@@ -28,10 +28,10 @@ use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
 ///     let mesh = meshes.add(Rectangle::from_size(Vec2::splat(512.0)));
 ///     commands.spawn((
 ///         FluidSettings {
-///             rho: 99.7f32, // water density in 2D
+///             rho: 99.7, // water density in 2D
 ///             gravity: Vec2::ZERO,
 ///             size: UVec2::splat(512),
-///             initial_fluid_level: 1.0f32, // filled with fluid
+///             initial_fluid_level: 1.0, // filled with fluid
 ///         },
 ///         Mesh2d(mesh),
 ///     ));
