@@ -14,7 +14,7 @@ use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
@@ -55,7 +55,7 @@ fn main() {
         )
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-        .add_plugins(FpsCounterPlugin)
+        .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
         .add_systems(Startup, setup_scene)
         .add_systems(Update, (mouse_motion, on_fluid_setup))
         .run();
@@ -86,6 +86,15 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             ));
         }
     }
+
+    commands.spawn((
+        Text::new("V: Toggle Velocity Overlay"),
+        TextFont {
+            font_size: 20.0,
+            ..default()
+        },
+        TextColor::WHITE,
+    ));
 }
 
 fn on_fluid_setup(

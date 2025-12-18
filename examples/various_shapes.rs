@@ -23,7 +23,7 @@ use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
@@ -68,7 +68,7 @@ fn main() {
     )
     .add_plugins(FluidPlugin::new(LENGTH_UNIT))
     .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins(FpsCounterPlugin)
+    .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
     .add_plugins(Material2dPlugin::<CustomMaterial>::default())
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
     .add_systems(
@@ -97,7 +97,7 @@ fn setup_scene(mut commands: Commands) {
     ));
 
     commands.spawn((
-        Text::new("R: Reset Scene"),
+        Text::new("R: Reset Scene\nV: Toggle Velocity Overlay"),
         TextFont {
             font_size: 20.0,
             ..default()
