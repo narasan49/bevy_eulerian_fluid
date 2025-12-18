@@ -69,15 +69,20 @@ fn main() {
     app.run();
 }
 
-fn setup_scene(mut commands: Commands) {
+fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.spawn(Camera2d);
 
-    commands.spawn(FluidSettings {
-        rho: 99.7f32, // water in 2D
-        gravity: Vec2::Y * 9.8,
-        size: SIZE,
-        initial_fluid_level: 0.6,
-    });
+    let mesh = meshes.add(Rectangle::from_size(SIZE.as_vec2()));
+    commands.spawn((
+        FluidSettings {
+            rho: 99.7f32, // water in 2D
+            gravity: Vec2::Y * 9.8,
+            size: SIZE,
+            initial_fluid_level: 0.6,
+        },
+        Mesh2d(mesh),
+        Transform::default().with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
+    ));
 }
 
 fn on_fluid_setup(
@@ -88,7 +93,6 @@ fn on_fluid_setup(
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
     for (entity, fluid_textures) in &query {
-        let mesh = meshes.add(Rectangle::default());
         let material = materials.add(CustomMaterial {
             levelset: fluid_textures.levelset_air.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
@@ -96,13 +100,7 @@ fn on_fluid_setup(
             scale: -100.0,
         });
 
-        commands.entity(entity).insert((
-            Mesh2d(mesh.clone()),
-            MeshMaterial2d(material),
-            Transform::default()
-                .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0))
-                .with_scale(SIZE.as_vec2().extend(0.0)),
-        ));
+        commands.entity(entity).insert(MeshMaterial2d(material));
 
         let material_velocity = velocity_materials.add(VelocityMaterial {
             u_range: Vec2::new(-10.0, 10.0),
@@ -111,12 +109,12 @@ fn on_fluid_setup(
             v: fluid_textures.v.clone(),
         });
 
+        let mesh = meshes.add(Rectangle::from_size(SIZE.as_vec2()));
         commands.spawn((
             Mesh2d(mesh),
             MeshMaterial2d(material_velocity),
             Transform::default()
-                .with_translation((SIZE.as_vec2() * Vec2::new(0.5, 0.0)).extend(0.0))
-                .with_scale(SIZE.as_vec2().extend(0.0)),
+                .with_translation((SIZE.as_vec2() * Vec2::new(0.5, 0.0)).extend(0.0)),
         ));
 
         // Draw labels for each panel
