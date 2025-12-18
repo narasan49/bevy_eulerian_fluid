@@ -22,30 +22,36 @@ use bevy_eulerian_fluid::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        // Specify length unit same as PhysicsPlugins
         .add_plugins(FluidPlugin::new(10.0))
         .add_plugins(PhysicsPlugins::default().with_length_unit(10.0))
         .add_systems(Startup, setup_scene)
-        .add_systems(Update, on_initialized)
+        .add_systems(Update, on_fluid_setup)
         .run();
 }
 
-fn setup_scene(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+fn setup_scene(
+  mut commands: Commands,
+  mut meshes: ResMut<Assets<Mesh>>,
+) {
+    commands.spawn(Camera2d);
 
-    commands.spawn(FluidSettings {
-        rho: 997f32, // water
-        gravity: Vec2::Y,
-        size: UVec2::new(512),
-        initial_fluid_level: 0.9,
-    });
+    let mesh = meshes.add(Rectangle::from_size(Vec2::splat(512.0)));
+    commands.spawn((
+        FluidSettings {
+            rho: 99.7, // water density in 2D
+            gravity: Vec2::Y * 9.8,
+            size: UVec2::new(512),
+            initial_fluid_level: 0.9,
+        },
+        Mesh2d(mesh),
+    );
 }
 
-fn on_initialized(
+fn on_fluid_setup(
     mut commands: Commands,
     query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<CustomMaterial>>,
-    mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
     for (entity, fluid_textures) in &query {
         // Implement your own code to visualize the results.
