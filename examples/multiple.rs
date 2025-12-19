@@ -14,7 +14,7 @@ use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
@@ -55,49 +55,54 @@ fn main() {
         )
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-        .add_plugins(FpsCounterPlugin)
+        .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
         .add_systems(Startup, setup_scene)
         .add_systems(Update, (mouse_motion, on_fluid_setup))
         .run();
 }
 
-fn setup_scene(mut commands: Commands) {
+fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     info!("initialize scene.");
     commands.spawn(Camera2d);
 
     let size = 128u32;
     for i in 0..4 {
         for j in 0..2 {
+            let mesh = meshes.add(Rectangle::from_size(Vec2::splat(size as f32)));
             let translation = Vec3::new(
                 (i * size) as f32 * 1.1 - size as f32 * 1.6,
                 (j * size) as f32 * 1.1 - size as f32 * 0.8,
                 0.0,
             );
-            commands
-                .spawn(FluidSettings {
-                    rho: 1.293f32,
+            commands.spawn((
+                FluidSettings {
+                    rho: 99.7, // water density in 2D
                     gravity: Vec2::ZERO,
                     size: UVec2::splat(size),
-                    initial_fluid_level: 1.0f32,
-                })
-                .insert(
-                    Transform::default()
-                        .with_scale(Vec3::splat(size as f32))
-                        .with_translation(translation),
-                );
+                    initial_fluid_level: 1.0,
+                },
+                Transform::default().with_translation(translation),
+                Mesh2d(mesh),
+            ));
         }
     }
+
+    commands.spawn((
+        Text::new("V: Toggle Velocity Overlay"),
+        TextFont {
+            font_size: 20.0,
+            ..default()
+        },
+        TextColor::WHITE,
+    ));
 }
 
 fn on_fluid_setup(
     mut commands: Commands,
-    query: Query<(&FluidTextures, &Transform), Added<FluidTextures>>,
-    mut meshes: ResMut<Assets<Mesh>>,
+    query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut materials: ResMut<Assets<VelocityMaterial>>,
 ) {
-    for (fluid_texture, transform) in &query {
-        // spwan plane to visualize advection
-        let mesh = meshes.add(Rectangle::default());
+    for (entity, fluid_texture) in &query {
         let material = materials.add(VelocityMaterial {
             u_range: Vec2::new(-10.0, 10.0),
             v_range: Vec2::new(-10.0, 10.0),
@@ -105,6 +110,6 @@ fn on_fluid_setup(
             v: fluid_texture.v.clone(),
         });
 
-        commands.spawn((Mesh2d(mesh), MeshMaterial2d(material), *transform));
+        commands.entity(entity).insert(MeshMaterial2d(material));
     }
 }

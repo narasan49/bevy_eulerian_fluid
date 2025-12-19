@@ -1,4 +1,5 @@
 pub mod fps_counter;
+pub mod overlay;
 
 use bevy::{camera::Projection, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 use bevy_eulerian_fluid::{

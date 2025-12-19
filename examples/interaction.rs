@@ -69,10 +69,10 @@ fn setup_scene(mut commands: Commands) {
 
     commands.spawn((
         FluidSettings {
-            rho: 1.293f32, // air
+            rho: 99.7, // water density in 2D
             gravity: Vec2::ZERO,
             size: UVec2::splat(256),
-            initial_fluid_level: 1.0f32,
+            initial_fluid_level: 1.0,
         },
         Transform::default().with_scale(Vec3::splat(256.0)),
     ));

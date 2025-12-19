@@ -13,7 +13,8 @@ use bevy::{
 use crate::{
     settings::{FluidSettings, FluidTextures},
     velocity_overlay::{
-        construct_map::ConstructVelocityArrowsResource, VelocityOverlay, VelocityOverlayGroup,
+        construct_map::ConstructVelocityArrowsResource, InitialOverlayVisibility, VelocityOverlay,
+        VelocityOverlayGroup,
     },
 };
 
@@ -62,12 +63,21 @@ impl Material2d for VectorMapMaterial {
 
 fn spawn_arrows_on_fluid_spawn(
     mut commands: Commands,
-    query: Query<(Entity, &FluidSettings, &FluidTextures, &VelocityOverlay), Added<FluidTextures>>,
+    query: Query<
+        (
+            Entity,
+            &FluidSettings,
+            &FluidTextures,
+            &VelocityOverlay,
+            &InitialOverlayVisibility,
+        ),
+        Added<FluidTextures>,
+    >,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<VectorMapMaterial>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (entity, fluid_settings, fluid_textures, overlay_settings) in &query {
+    for (entity, fluid_settings, fluid_textures, overlay_settings, initial_visibility) in &query {
         info!("Setting up velocity vector map.");
         let arrow_dim =
             (fluid_settings.size / overlay_settings.bin_size).element_product() as usize;
@@ -89,7 +99,9 @@ fn spawn_arrows_on_fluid_spawn(
             .entity(entity)
             .insert(construc_velocity_arrows_resource);
 
-        let group_entity = commands.spawn((VelocityOverlayGroup, ChildOf(entity))).id();
+        let group_entity = commands
+            .spawn((VelocityOverlayGroup, initial_visibility.0, ChildOf(entity)))
+            .id();
         // Spawn arrow instances as child entities.
         for idx in 0..arrow_dim {
             commands.spawn((
