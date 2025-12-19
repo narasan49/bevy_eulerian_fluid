@@ -23,7 +23,7 @@ use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
@@ -68,7 +68,7 @@ fn main() {
     )
     .add_plugins(FluidPlugin::new(LENGTH_UNIT))
     .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins(FpsCounterPlugin)
+    .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
     .add_plugins(Material2dPlugin::<CustomMaterial>::default())
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
     .add_systems(
@@ -97,7 +97,7 @@ fn setup_scene(mut commands: Commands) {
     ));
 
     commands.spawn((
-        Text::new("R: Reset Scene"),
+        Text::new("R: Reset Scene\nV: Toggle Velocity Overlay"),
         TextFont {
             font_size: 20.0,
             ..default()
@@ -114,7 +114,7 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands.spawn((
         FluidSettings {
-            rho: 99.70, // water in 2D
+            rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
             size: SIZE,
             initial_fluid_level: 0.7,
