@@ -12,7 +12,9 @@ use crate::{
     advection::AdvectionResource,
     apply_forces::{ApplyForcesResource, ForceToFluid},
     divergence::DivergenceResource,
-    extrapolate_velocity::ExtrapolateVelocityResource,
+    extrapolate_velocity::{
+        ExtrapolateUResource, ExtrapolateVResource, InitializeUValid, InitializeVValid,
+    },
     fluid_to_solid::{
         forces_to_solid_readback, AccumulateForcesResource, FluidToSolidForce,
         SampleForcesResource, MAX_SOLIDS,
@@ -56,6 +58,11 @@ pub(crate) fn watch_fluid_component(
         let u_solid = images.new_texture_storage(size_u, TextureFormat::R32Float);
         let v_solid = images.new_texture_storage(size_v, TextureFormat::R32Float);
         let solid_id = images.new_texture_storage(size, TextureFormat::R32Sint);
+
+        let in_is_u_valid = images.new_texture_storage(size_u, TextureFormat::R32Sint);
+        let out_is_u_valid = images.new_texture_storage(size_u, TextureFormat::R32Sint);
+        let in_is_v_valid = images.new_texture_storage(size_v, TextureFormat::R32Sint);
+        let out_is_v_valid = images.new_texture_storage(size_v, TextureFormat::R32Sint);
 
         let div = images.new_texture_storage(size, TextureFormat::R32Float);
 
@@ -186,11 +193,26 @@ pub(crate) fn watch_fluid_component(
             levelset_solid: levelset_solid.clone(),
         };
 
-        let extrapolate_velocity_resource = ExtrapolateVelocityResource {
+        let init_u_valid = InitializeUValid {
+            is_u_valid: in_is_u_valid.clone(),
+            levelset_air: levelset_air0.clone(),
+        };
+
+        let extrapolate_u_resource = ExtrapolateUResource {
             u0: u0.clone(),
+            in_is_u_valid: in_is_u_valid.clone(),
+            out_is_u_valid: out_is_u_valid.clone(),
+        };
+
+        let init_v_valid = InitializeVValid {
+            is_v_valid: in_is_v_valid.clone(),
+            levelset_air: levelset_air0.clone(),
+        };
+
+        let extrapolate_v_resource = ExtrapolateVResource {
             v0: v0.clone(),
-            levelset_air0: levelset_air0.clone(),
-            levelset_solid: levelset_solid.clone(),
+            in_is_v_valid: in_is_v_valid.clone(),
+            out_is_v_valid: out_is_v_valid.clone(),
         };
 
         let advect_levelset_resource = AdvectLevelsetResource {
@@ -255,13 +277,18 @@ pub(crate) fn watch_fluid_component(
             .insert((
                 solve_u_resource,
                 solve_v_resource,
-                extrapolate_velocity_resource,
                 advect_levelset_resource,
                 reinit_levelset_initialize_seeds_resource,
                 reinit_levelset_iterate_resource,
                 reinit_levelset_calculate_sdf_resource,
                 sample_forces_resource,
                 accumulate_forces_resource,
+            ))
+            .insert((
+                init_u_valid,
+                init_v_valid,
+                extrapolate_u_resource,
+                extrapolate_v_resource,
             ))
             .insert(uniform)
             .insert(solid_entites)

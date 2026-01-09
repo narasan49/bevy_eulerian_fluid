@@ -491,6 +491,12 @@ fn extrapolate_velocity(
     size: UVec2,
 ) {
     pass.push_debug_group("Extrapolate velocity");
+    let initialize_u_valid_pipeline = pipeline_cache
+        .get_compute_pipeline(extrapolate_velocity_pipeline.initialize_u_valid_pipeline)
+        .unwrap();
+    let initialize_v_valid_pipeline = pipeline_cache
+        .get_compute_pipeline(extrapolate_velocity_pipeline.initialize_v_valid_pipeline)
+        .unwrap();
     let extrapolate_u_pipeline = pipeline_cache
         .get_compute_pipeline(extrapolate_velocity_pipeline.extrapolate_u_pipeline)
         .unwrap();
@@ -498,16 +504,52 @@ fn extrapolate_velocity(
         .get_compute_pipeline(extrapolate_velocity_pipeline.extrapolate_v_pipeline)
         .unwrap();
 
+    pass.set_pipeline(&initialize_u_valid_pipeline);
     pass.set_bind_group(
         0,
-        &extrapolate_velocity_bind_groups.extrapolate_velocity_bind_group,
+        &extrapolate_velocity_bind_groups.initialize_u_valid_bind_group,
         &[],
     );
-
-    pass.set_pipeline(&extrapolate_u_pipeline);
     pass.dispatch_x_major(size);
-    pass.set_pipeline(&extrapolate_v_pipeline);
+
+    pass.set_pipeline(&initialize_v_valid_pipeline);
+    pass.set_bind_group(
+        0,
+        &extrapolate_velocity_bind_groups.initialize_v_valid_bind_group,
+        &[],
+    );
     pass.dispatch_y_major(size);
+
+    for _ in 0..(10 / 2) {
+        pass.set_pipeline(&extrapolate_u_pipeline);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_u_bind_group,
+            &[],
+        );
+        pass.dispatch_x_major(size);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_u_reverse_bind_group,
+            &[],
+        );
+        pass.dispatch_x_major(size);
+
+        pass.set_pipeline(&extrapolate_v_pipeline);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_v_bind_group,
+            &[],
+        );
+        pass.dispatch_y_major(size);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_v_reverse_bind_group,
+            &[],
+        );
+        pass.dispatch_y_major(size);
+    }
+
     pass.pop_debug_group();
 }
 

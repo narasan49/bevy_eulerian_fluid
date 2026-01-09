@@ -5,7 +5,7 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId,
+            AsBindGroup, BindGroup, BindGroupEntries, BindGroupLayout, CachedComputePipelineId,
             ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
@@ -20,34 +20,76 @@ use crate::pipeline::Pipeline;
 pub(crate) struct ExtrapolateVelocityPlugin;
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub struct ExtrapolateVelocityResource {
+pub struct InitializeUValid {
+    #[storage_texture(0, image_format = R32Sint, access = WriteOnly)]
+    pub is_u_valid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
+    pub levelset_air: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct InitializeVValid {
+    #[storage_texture(0, image_format = R32Sint, access = WriteOnly)]
+    pub is_v_valid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
+    pub levelset_air: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct ExtrapolateUResource {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub u0: Handle<Image>,
-    #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
+    #[storage_texture(1, image_format = R32Sint, access = ReadOnly)]
+    pub in_is_u_valid: Handle<Image>,
+    #[storage_texture(2, image_format = R32Sint, access = WriteOnly)]
+    pub out_is_u_valid: Handle<Image>,
+}
+
+#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
+pub struct ExtrapolateVResource {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
     pub v0: Handle<Image>,
-    #[storage_texture(2, image_format = R32Float, access = ReadOnly)]
-    pub levelset_air0: Handle<Image>,
-    #[storage_texture(3, image_format = R32Float, access = ReadOnly)]
-    pub levelset_solid: Handle<Image>,
+    #[storage_texture(1, image_format = R32Sint, access = ReadOnly)]
+    pub in_is_v_valid: Handle<Image>,
+    #[storage_texture(2, image_format = R32Sint, access = WriteOnly)]
+    pub out_is_v_valid: Handle<Image>,
 }
 
 #[derive(Resource)]
 pub(crate) struct ExtrapolateVelocityPipeline {
+    pub initialize_u_valid_pipeline: CachedComputePipelineId,
+    pub initialize_v_valid_pipeline: CachedComputePipelineId,
     pub extrapolate_u_pipeline: CachedComputePipelineId,
     pub extrapolate_v_pipeline: CachedComputePipelineId,
-    extrapolate_velocity_bind_group_layout: BindGroupLayout,
+    initialize_u_valid_bind_group_layout: BindGroupLayout,
+    initialize_v_valid_bind_group_layout: BindGroupLayout,
+    extrapolate_u_bind_group_layout: BindGroupLayout,
+    extrapolate_v_bind_group_layout: BindGroupLayout,
 }
 
 #[derive(Component)]
 pub(crate) struct ExtrapolateVelocityBindGroups {
-    pub extrapolate_velocity_bind_group: BindGroup,
+    pub initialize_u_valid_bind_group: BindGroup,
+    pub initialize_v_valid_bind_group: BindGroup,
+    pub extrapolate_u_bind_group: BindGroup,
+    pub extrapolate_u_reverse_bind_group: BindGroup,
+    pub extrapolate_v_bind_group: BindGroup,
+    pub extrapolate_v_reverse_bind_group: BindGroup,
 }
 
 impl Plugin for ExtrapolateVelocityPlugin {
     fn build(&self, app: &mut App) {
-        embedded_asset!(app, "shaders/extrapolate_velocity.wgsl");
+        embedded_asset!(app, "shaders/extrapolate/initialize_u_valid.wgsl");
+        embedded_asset!(app, "shaders/extrapolate/initialize_v_valid.wgsl");
+        embedded_asset!(app, "shaders/extrapolate/extrapolate_u.wgsl");
+        embedded_asset!(app, "shaders/extrapolate/extrapolate_v.wgsl");
 
-        app.add_plugins(ExtractComponentPlugin::<ExtrapolateVelocityResource>::default());
+        app.add_plugins((
+            ExtractComponentPlugin::<InitializeUValid>::default(),
+            ExtractComponentPlugin::<InitializeVValid>::default(),
+            ExtractComponentPlugin::<ExtrapolateUResource>::default(),
+            ExtractComponentPlugin::<ExtrapolateVResource>::default(),
+        ));
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
@@ -75,30 +117,73 @@ impl FromWorld for ExtrapolateVelocityPipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let extrapolate_velocity_bind_group_layout =
-            ExtrapolateVelocityResource::bind_group_layout(render_device);
+        let initialize_u_valid_bind_group_layout =
+            InitializeUValid::bind_group_layout(render_device);
+        let initialize_v_valid_bind_group_layout =
+            InitializeVValid::bind_group_layout(render_device);
+
+        let extrapolate_u_bind_group_layout =
+            ExtrapolateUResource::bind_group_layout(render_device);
+        let extrapolate_v_bind_group_layout =
+            ExtrapolateVResource::bind_group_layout(render_device);
+
+        let initialize_u_valid_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some("InitializeUValid".into()),
+                layout: vec![initialize_u_valid_bind_group_layout.clone()],
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/extrapolate/initialize_u_valid.wgsl"
+                ),
+                entry_point: Some("initialize_u_valid".into()),
+                ..default()
+            });
+
+        let initialize_v_valid_pipeline =
+            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+                label: Some("InitializeVValid".into()),
+                layout: vec![initialize_v_valid_bind_group_layout.clone()],
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/extrapolate/initialize_v_valid.wgsl"
+                ),
+                entry_point: Some("initialize_v_valid".into()),
+                ..default()
+            });
 
         let extrapolate_u_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("ExtrapolateU".into()),
-                layout: vec![extrapolate_velocity_bind_group_layout.clone()],
-                shader: load_embedded_asset!(asset_server, "shaders/extrapolate_velocity.wgsl"),
+                layout: vec![extrapolate_u_bind_group_layout.clone()],
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/extrapolate/extrapolate_u.wgsl"
+                ),
                 entry_point: Some("extrapolate_u".into()),
                 ..default()
             });
+
         let extrapolate_v_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
                 label: Some("ExtrapolateV".into()),
-                layout: vec![extrapolate_velocity_bind_group_layout.clone()],
-                shader: load_embedded_asset!(asset_server, "shaders/extrapolate_velocity.wgsl"),
+                layout: vec![extrapolate_v_bind_group_layout.clone()],
+                shader: load_embedded_asset!(
+                    asset_server,
+                    "shaders/extrapolate/extrapolate_v.wgsl"
+                ),
                 entry_point: Some("extrapolate_v".into()),
                 ..default()
             });
 
         ExtrapolateVelocityPipeline {
+            initialize_u_valid_pipeline,
+            initialize_v_valid_pipeline,
             extrapolate_u_pipeline,
             extrapolate_v_pipeline,
-            extrapolate_velocity_bind_group_layout,
+            initialize_u_valid_bind_group_layout,
+            initialize_v_valid_bind_group_layout,
+            extrapolate_u_bind_group_layout,
+            extrapolate_v_bind_group_layout,
         }
     }
 }
@@ -106,27 +191,93 @@ impl FromWorld for ExtrapolateVelocityPipeline {
 fn prepare_bind_groups(
     mut commands: Commands,
     pipeline: Res<ExtrapolateVelocityPipeline>,
-    query: Query<(Entity, &ExtrapolateVelocityResource)>,
+    query: Query<(
+        Entity,
+        &InitializeUValid,
+        &InitializeVValid,
+        &ExtrapolateUResource,
+        &ExtrapolateVResource,
+    )>,
     render_device: Res<RenderDevice>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
 ) {
     let mut param = (gpu_images, fallback_image, buffers);
-    for (entity, extrapolate_velocity) in &query {
-        let extrapolate_velocity_bind_group = extrapolate_velocity
+    for (entity, initialize_u_valid, initialize_v_valid, extrapolate_u, extrapolate_v) in &query {
+        let initialize_v_valid_bind_group = initialize_v_valid
             .as_bind_group(
-                &pipeline.extrapolate_velocity_bind_group_layout,
+                &pipeline.initialize_v_valid_bind_group_layout,
                 &render_device,
                 &mut param,
             )
             .unwrap()
             .bind_group;
 
+        let initialize_u_valid_bind_group = initialize_u_valid
+            .as_bind_group(
+                &pipeline.initialize_u_valid_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        let extrapolate_u_bind_group = extrapolate_u
+            .as_bind_group(
+                &pipeline.extrapolate_u_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        let extrapolate_v_bind_group = extrapolate_v
+            .as_bind_group(
+                &pipeline.extrapolate_v_bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        let u0 = param.0.get(&extrapolate_u.u0).unwrap();
+        let in_is_u_valid = param.0.get(&extrapolate_u.in_is_u_valid).unwrap();
+        let out_is_u_valid = param.0.get(&extrapolate_u.out_is_u_valid).unwrap();
+
+        let extrapolate_u_reverse_bind_group = render_device.create_bind_group(
+            None,
+            &pipeline.extrapolate_u_bind_group_layout,
+            &BindGroupEntries::sequential((
+                &u0.texture_view,
+                &out_is_u_valid.texture_view,
+                &in_is_u_valid.texture_view,
+            )),
+        );
+
+        let v0 = param.0.get(&extrapolate_v.v0).unwrap();
+        let in_is_v_valid = param.0.get(&extrapolate_v.in_is_v_valid).unwrap();
+        let out_is_v_valid = param.0.get(&extrapolate_v.out_is_v_valid).unwrap();
+
+        let extrapolate_v_reverse_bind_group = render_device.create_bind_group(
+            None,
+            &pipeline.extrapolate_v_bind_group_layout,
+            &BindGroupEntries::sequential((
+                &v0.texture_view,
+                &out_is_v_valid.texture_view,
+                &in_is_v_valid.texture_view,
+            )),
+        );
+
         commands
             .entity(entity)
             .insert(ExtrapolateVelocityBindGroups {
-                extrapolate_velocity_bind_group,
+                initialize_u_valid_bind_group,
+                initialize_v_valid_bind_group,
+                extrapolate_u_bind_group,
+                extrapolate_v_bind_group,
+                extrapolate_u_reverse_bind_group,
+                extrapolate_v_reverse_bind_group,
             });
     }
 }
