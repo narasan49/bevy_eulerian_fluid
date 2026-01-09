@@ -30,7 +30,7 @@ use crate::{
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
     solve_velocity::{SolveUResource, SolveVResource},
     texture::NewTexture,
-    update_solid::{UpdateSolidPressureResource, UpdateSolidResource},
+    update_solid::UpdateSolidResource,
 };
 
 pub(crate) fn watch_fluid_component(
@@ -129,11 +129,6 @@ pub(crate) fn watch_fluid_component(
             v_solid: v_solid.clone(),
             levelset_solid: levelset_solid.clone(),
             solid_id: solid_id.clone(),
-        };
-
-        let update_solid_pressure = UpdateSolidPressureResource {
-            p0: p0.clone(),
-            levelset_solid: levelset_solid.clone(),
         };
 
         let advection_resource = AdvectionResource {
@@ -267,7 +262,6 @@ pub(crate) fn watch_fluid_component(
                 initialize_resource,
                 initialize_grid_center_resource,
                 update_solid_resource,
-                update_solid_pressure,
                 advection_resource,
                 apply_forces_resource,
                 divergence_resource,

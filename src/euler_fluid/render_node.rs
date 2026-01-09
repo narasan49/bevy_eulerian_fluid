@@ -663,9 +663,6 @@ fn update_solid(
     let update_solid_pipeline = pipeline_cache
         .get_compute_pipeline(pipeline.update_solid_pipeline)
         .unwrap();
-    let update_solid_pressure_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.update_solid_pressure_pipeline)
-        .unwrap();
 
     pass.set_pipeline(&update_solid_pipeline);
     pass.set_bind_group(0, &bind_groups.update_solid_bind_group, &[]);
@@ -677,8 +674,5 @@ fn update_solid(
     );
     pass.dispatch_center(size);
 
-    pass.set_pipeline(&update_solid_pressure_pipeline);
-    pass.set_bind_group(0, &bind_groups.update_solid_pressure_bind_group, &[]);
-    pass.dispatch_center(size);
     pass.pop_debug_group();
 }

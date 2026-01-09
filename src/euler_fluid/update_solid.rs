@@ -34,37 +34,22 @@ pub(crate) struct UpdateSolidResource {
     pub solid_id: Handle<Image>,
 }
 
-#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub(crate) struct UpdateSolidPressureResource {
-    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
-    pub p0: Handle<Image>,
-    #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
-    pub levelset_solid: Handle<Image>,
-}
-
 #[derive(Resource)]
 pub(crate) struct UpdateSolidPipeline {
     pub update_solid_pipeline: CachedComputePipelineId,
-    pub update_solid_pressure_pipeline: CachedComputePipelineId,
     update_solid_bind_group_layout: BindGroupLayout,
-    update_solid_pressure_bind_group_layout: BindGroupLayout,
 }
 
 #[derive(Component)]
 pub(crate) struct UpdateSolidBindGroups {
     pub update_solid_bind_group: BindGroup,
-    pub update_solid_pressure_bind_group: BindGroup,
 }
 
 impl Plugin for UpdateSolidPlugin {
     fn build(&self, app: &mut App) {
         embedded_asset!(app, "shaders/update_solid.wgsl");
-        embedded_asset!(app, "shaders/update_solid_pressure.wgsl");
 
-        app.add_plugins((
-            ExtractComponentPlugin::<UpdateSolidResource>::default(),
-            ExtractComponentPlugin::<UpdateSolidPressureResource>::default(),
-        ));
+        app.add_plugins((ExtractComponentPlugin::<UpdateSolidResource>::default(),));
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
@@ -82,7 +67,6 @@ impl Plugin for UpdateSolidPlugin {
 impl Pipeline for UpdateSolidPipeline {
     fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
         Self::is_pipeline_loaded(pipeline_cache, self.update_solid_pipeline)
-            && Self::is_pipeline_loaded(pipeline_cache, self.update_solid_pressure_pipeline)
     }
 }
 
@@ -94,8 +78,6 @@ impl FromWorld for UpdateSolidPipeline {
 
         let uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
         let update_solid_bind_group_layout = UpdateSolidResource::bind_group_layout(render_device);
-        let update_solid_pressure_bind_group_layout =
-            UpdateSolidPressureResource::bind_group_layout(render_device);
         let solid_obstacles_bind_group_layout =
             SolidObstaclesBuffer::bind_group_layout(render_device);
 
@@ -112,20 +94,9 @@ impl FromWorld for UpdateSolidPipeline {
                 ..default()
             });
 
-        let update_solid_pressure_pipeline =
-            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("UpdateSolidPressurePipeline".into()),
-                layout: vec![update_solid_pressure_bind_group_layout.clone()],
-                shader: load_embedded_asset!(asset_server, "shaders/update_solid_pressure.wgsl"),
-                entry_point: Some("update_solid_pressure".into()),
-                ..default()
-            });
-
         UpdateSolidPipeline {
             update_solid_pipeline,
-            update_solid_pressure_pipeline,
             update_solid_bind_group_layout,
-            update_solid_pressure_bind_group_layout,
         }
     }
 }
@@ -133,7 +104,7 @@ impl FromWorld for UpdateSolidPipeline {
 fn prepare_bind_groups<'a>(
     mut commands: Commands,
     pipeline: Res<UpdateSolidPipeline>,
-    query: Query<(Entity, &UpdateSolidResource, &UpdateSolidPressureResource)>,
+    query: Query<(Entity, &UpdateSolidResource)>,
     render_device: Res<RenderDevice>,
     mut param: (
         Res<'a, RenderAssets<GpuImage>>,
@@ -141,7 +112,7 @@ fn prepare_bind_groups<'a>(
         Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
     ),
 ) {
-    for (entity, update_solid_resource, update_solid_pressure_resource) in &query {
+    for (entity, update_solid_resource) in &query {
         let update_solid_bind_group = update_solid_resource
             .as_bind_group(
                 &pipeline.update_solid_bind_group_layout,
@@ -151,18 +122,8 @@ fn prepare_bind_groups<'a>(
             .unwrap()
             .bind_group;
 
-        let update_solid_pressure_bind_group = update_solid_pressure_resource
-            .as_bind_group(
-                &pipeline.update_solid_pressure_bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
         commands.entity(entity).insert(UpdateSolidBindGroups {
             update_solid_bind_group,
-            update_solid_pressure_bind_group,
         });
     }
 }
