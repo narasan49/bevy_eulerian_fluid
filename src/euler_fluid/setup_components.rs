@@ -22,6 +22,10 @@ use crate::{
     fluid_uniform::SimulationUniform,
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
     obstacle::SolidEntities,
+    particle_levelset::{
+        initialize_interface_indices::InitializeInterfaceIndicesResource,
+        initialize_particles::InitializeParticlesResource,
+    },
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
         ReinitLevelsetIterateResource,
@@ -71,6 +75,7 @@ pub(crate) fn watch_fluid_component(
 
         let levelset_air0 = images.new_texture_storage(size, TextureFormat::R32Float);
         let levelset_air1 = images.new_texture_storage(size, TextureFormat::R32Float);
+        let grad_levelset_air = images.new_texture_storage(size, TextureFormat::Rg32Float);
         let levelset_solid = images.new_texture_storage(size, TextureFormat::R32Float);
 
         let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
@@ -87,6 +92,13 @@ pub(crate) fn watch_fluid_component(
             ShaderStorageBuffer::from(vec![FluidToSolidForce::default(); MAX_SOLIDS]);
         forces_to_solid_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
         let forces_to_solid_buffer = buffers.add(forces_to_solid_buffer);
+
+        let levelset_particles = buffers.add(ShaderStorageBuffer::from(vec![
+            Vec2::ZERO;
+            4 * size.element_product()
+                as usize
+        ]));
+        let near_interface = images.new_texture_storage(size, TextureFormat::R8Uint);
 
         let fluid_transform = match transform {
             Some(t) => t.to_matrix(),
@@ -122,6 +134,22 @@ pub(crate) fn watch_fluid_component(
         let initialize_grid_center_resource = InitializeGridCenterResource {
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
+            grad_levelset_air: grad_levelset_air.clone(),
+        };
+
+        let initialize_interface_indices_resource = InitializeInterfaceIndicesResource {
+            levelset: levelset_air0.clone(),
+            near_interface: near_interface.clone(),
+        };
+
+        let count = buffers.add(ShaderStorageBuffer::from(0u32));
+
+        let initialize_particles_resource = InitializeParticlesResource {
+            count,
+            levelset_particles: levelset_particles.clone(),
+            levelset_air: levelset_air0.clone(),
+            grad_levelset_air: grad_levelset_air.clone(),
+            near_interface: near_interface.clone(),
         };
 
         let update_solid_resource = UpdateSolidResource {
@@ -261,6 +289,8 @@ pub(crate) fn watch_fluid_component(
                 fluid_textures,
                 initialize_resource,
                 initialize_grid_center_resource,
+                initialize_interface_indices_resource,
+                initialize_particles_resource,
                 update_solid_resource,
                 advection_resource,
                 apply_forces_resource,

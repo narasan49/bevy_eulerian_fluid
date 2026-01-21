@@ -20,6 +20,12 @@ use crate::{
     },
     fluid_uniform::SimulationUniformBindGroup,
     initialize::{InitializeBindGroups, InitializePipeline},
+    particle_levelset::{
+        initialize_interface_indices::{
+            InitializeInterfaceIndicesBindGroups, InitializeInterfaceIndicesPipeline,
+        },
+        initialize_particles::{InitializeParticlesBindGroups, InitializeParticlesPipeline},
+    },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{DispatchFluidPass, Pipeline},
     reinitialize_levelset::{ReinitLevelsetBindGroups, ReinitLevelsetPipeline},
@@ -43,6 +49,8 @@ enum State {
 #[derive(QueryData)]
 struct FluidBindGroupsQueryData {
     initialize_bind_groups: &'static InitializeBindGroups,
+    initialize_interface_indices_bind_groups: &'static InitializeInterfaceIndicesBindGroups,
+    initialize_particles_bind_groups: &'static InitializeParticlesBindGroups,
     update_solid_bind_groups: &'static UpdateSolidBindGroups,
     advection_bind_groups: &'static AdvectionBindGroups,
     apply_forces_bind_groups: &'static ApplyForcesBindGroups,
@@ -88,6 +96,10 @@ impl render_graph::Node for EulerFluidNode {
         match self.state {
             State::Loading => {
                 let initialize_pipeline = world.resource::<InitializePipeline>();
+                let initialize_interface_indices_pipeline =
+                    world.resource::<InitializeInterfaceIndicesPipeline>();
+                let initialize_particles_pipeline = world.resource::<InitializeParticlesPipeline>();
+
                 let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                 let advection_pipeline = world.resource::<AdvectionPipeline>();
                 let divergence_pipeline = world.resource::<DivergencePipeline>();
@@ -100,6 +112,8 @@ impl render_graph::Node for EulerFluidNode {
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && initialize_interface_indices_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && initialize_particles_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && update_solid_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advection_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && apply_forcces_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -170,12 +184,32 @@ impl render_graph::Node for EulerFluidNode {
                             );
 
                             let initialize_pipeline = world.resource::<InitializePipeline>();
+                            let initialize_interface_indices_pipeline =
+                                world.resource::<InitializeInterfaceIndicesPipeline>();
+                            let initialize_particles_pipeline =
+                                world.resource::<InitializeParticlesPipeline>();
                             initialize(
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.initialize_bind_groups,
                                 bind_groups.simulation_uniform,
                                 initialize_pipeline,
+                                fluid_settings.size,
+                            );
+
+                            initialize_interface_indices(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.initialize_interface_indices_bind_groups,
+                                initialize_interface_indices_pipeline,
+                                fluid_settings.size,
+                            );
+
+                            initialize_particles(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.initialize_particles_bind_groups,
+                                initialize_particles_pipeline,
                                 fluid_settings.size,
                             );
                         }
@@ -329,6 +363,44 @@ fn initialize(
         &[uniform_bind_group.index],
     );
     pass.dispatch_center(size);
+    pass.pop_debug_group();
+}
+
+fn initialize_interface_indices(
+    pipeline_cache: &PipelineCache,
+    pass: &mut ComputePass,
+    bind_groups: &InitializeInterfaceIndicesBindGroups,
+    pipeline: &InitializeInterfaceIndicesPipeline,
+    size: UVec2,
+) {
+    pass.push_debug_group("Initialize Interface Indices");
+    let pipeline = pipeline_cache
+        .get_compute_pipeline(pipeline.pipeline)
+        .unwrap();
+
+    pass.set_pipeline(pipeline);
+    pass.set_bind_group(0, &bind_groups.0, &[]);
+    pass.dispatch_center(size);
+
+    pass.pop_debug_group();
+}
+
+fn initialize_particles(
+    pipeline_cache: &PipelineCache,
+    pass: &mut ComputePass,
+    bind_groups: &InitializeParticlesBindGroups,
+    pipeline: &InitializeParticlesPipeline,
+    size: UVec2,
+) {
+    pass.push_debug_group("Initialize Particles");
+    let pipeline = pipeline_cache
+        .get_compute_pipeline(pipeline.pipeline)
+        .unwrap();
+
+    pass.set_pipeline(pipeline);
+    pass.set_bind_group(0, &bind_groups.0, &[]);
+    pass.dispatch_center(size);
+
     pass.pop_debug_group();
 }
 

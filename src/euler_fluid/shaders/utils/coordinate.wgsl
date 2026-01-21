@@ -32,6 +32,22 @@ fn interp2d_center(
     return mix(mix(levelset00, levelset10, fract_i), mix(levelset01, levelset11, fract_i), fract_j);
 }
 
+fn interp2d_center_rg32float(
+    levelset: texture_storage_2d<rg32float, read>,
+    x: vec2<f32>,
+) -> vec2<f32> {
+    let i = i32(floor(x.x));
+    let j = i32(floor(x.y));
+    let fract_i = x.x - f32(i);
+    let fract_j = x.y - f32(j);
+    let levelset00 = textureLoad(levelset, vec2<i32>(i, j)).rg;
+    let levelset10 = textureLoad(levelset, vec2<i32>(i + 1, j)).rg;
+    let levelset01 = textureLoad(levelset, vec2<i32>(i, j + 1)).rg;
+    let levelset11 = textureLoad(levelset, vec2<i32>(i + 1, j + 1)).rg;
+
+    return mix(mix(levelset00, levelset10, fract_i), mix(levelset01, levelset11, fract_i), fract_j);
+}
+
 fn interp2d_edge_x(
     u: texture_storage_2d<r32float, read>,
     x: vec2<f32>,

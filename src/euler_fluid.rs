@@ -8,6 +8,7 @@ pub mod fluid_to_solid;
 pub mod fluid_uniform;
 pub mod initialize;
 pub mod obstacle;
+pub mod particle_levelset;
 pub mod physics_time;
 pub mod reinitialize_levelset;
 pub mod render_node;
@@ -60,6 +61,7 @@ impl Plugin for FluidPlugin {
                 advect_scalar::AdvectScalarPlugin,
                 reinitialize_levelset::ReinitializeLevelsetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
+                particle_levelset::ParticleLevelsetPlugin,
             ))
             .add_plugins(FluidMaterialPlugin)
             .add_plugins((
