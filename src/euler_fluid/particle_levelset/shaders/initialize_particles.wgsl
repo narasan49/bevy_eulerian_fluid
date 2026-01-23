@@ -36,25 +36,6 @@ fn attraction(
 ) -> vec2<f32> {
     let phi = interp2d_center(levelset_air, x);
     let grad_phi = interp2d_center_rg32float(grad_levelset_air, x);
-    
-    // extrapolate
-    // if tex_idx.x == 0 {
-    //     phi_x_minus = 2.0 * phi - phi_x_plus;
-    // } else if tex_idx.x == dim.x - 1 {
-    //     phi_x_plus = 2.0 * phi - phi_x_minus;
-    // }
-
-    // if tex_idx.y == 0 {
-    //     phi_y_minus = 2.0 * phi - phi_y_plus;
-    // } else if tex_idx.y == dim.y - 1 {
-    //     phi_y_plus = 2.0 * phi - phi_y_minus;
-    // }
-
-    // let phi_grad = vec2<f32>(
-    //     0.5 * (phi_x_plus - phi_x_minus),
-    //     0.5 * (phi_y_plus - phi_y_minus),
-    // );
-
     let grad_phi_norm = normalize(grad_phi);
 
     return x - phi * grad_phi_norm;

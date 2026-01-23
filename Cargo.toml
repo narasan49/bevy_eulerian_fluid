@@ -21,6 +21,7 @@ bevy = {version = "0.17", default-features = false, features = [
     "bevy_sprite_render"
 ]}
 avian2d = "0.4"
+bytemuck = "1.24.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
@@ -48,3 +49,7 @@ opt-level = 3
 
 [profile.dev]
 opt-level = 1
+
+[profile.dev-debug]
+inherits = "dev"
+opt-level = 0

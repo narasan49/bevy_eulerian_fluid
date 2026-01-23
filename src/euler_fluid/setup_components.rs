@@ -23,6 +23,7 @@ use crate::{
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
     obstacle::SolidEntities,
     particle_levelset::{
+        advect_particles::AdvectParticlesResource,
         initialize_interface_indices::InitializeInterfaceIndicesResource,
         initialize_particles::InitializeParticlesResource,
     },
@@ -122,6 +123,7 @@ pub(crate) fn watch_fluid_component(
             v_solid: v_solid.clone(),
             levelset_air: levelset_air0.clone(),
             levelset_solid: levelset_solid.clone(),
+            levelset_particles: levelset_particles.clone(),
         };
 
         let initialize_resource = InitializeVelocityResource {
@@ -145,7 +147,7 @@ pub(crate) fn watch_fluid_component(
         let count = buffers.add(ShaderStorageBuffer::from(0u32));
 
         let initialize_particles_resource = InitializeParticlesResource {
-            count,
+            count: count.clone(),
             levelset_particles: levelset_particles.clone(),
             levelset_air: levelset_air0.clone(),
             grad_levelset_air: grad_levelset_air.clone(),
@@ -245,6 +247,13 @@ pub(crate) fn watch_fluid_component(
             levelset_air1: levelset_air1.clone(),
         };
 
+        let advect_levelset_particles_resource = AdvectParticlesResource {
+            count: count.clone(),
+            levelset_particles: levelset_particles.clone(),
+            u0: u0.clone(),
+            v0: v0.clone(),
+        };
+
         let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {
             levelset_air1: levelset_air1.clone(),
             jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
@@ -302,6 +311,7 @@ pub(crate) fn watch_fluid_component(
                 solve_u_resource,
                 solve_v_resource,
                 advect_levelset_resource,
+                advect_levelset_particles_resource,
                 reinit_levelset_initialize_seeds_resource,
                 reinit_levelset_iterate_resource,
                 reinit_levelset_calculate_sdf_resource,

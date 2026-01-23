@@ -21,6 +21,7 @@ use crate::{
     fluid_uniform::SimulationUniformBindGroup,
     initialize::{InitializeBindGroups, InitializePipeline},
     particle_levelset::{
+        advect_particles::{AdvectParticlesBindGroups, AdvectParticlesPipeline},
         initialize_interface_indices::{
             InitializeInterfaceIndicesBindGroups, InitializeInterfaceIndicesPipeline,
         },
@@ -59,6 +60,7 @@ struct FluidBindGroupsQueryData {
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
     advect_scalar_bind_groups: &'static AdvectScalarBindGroups,
+    advect_particles_bind_groups: &'static AdvectParticlesBindGroups,
     reinit_levelset_bind_groups: &'static ReinitLevelsetBindGroups,
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
@@ -108,6 +110,7 @@ impl render_graph::Node for EulerFluidNode {
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
+                let advect_particles_pipeline = world.resource::<AdvectParticlesPipeline>();
                 let reinit_levelset_pipeline = world.resource::<ReinitLevelsetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
@@ -122,6 +125,7 @@ impl render_graph::Node for EulerFluidNode {
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advect_scalar_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && advect_particles_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && reinit_levelset_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
                 {
@@ -201,6 +205,7 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.initialize_interface_indices_bind_groups,
+                                bind_groups.simulation_uniform,
                                 initialize_interface_indices_pipeline,
                                 fluid_settings.size,
                             );
@@ -302,6 +307,16 @@ impl render_graph::Node for EulerFluidNode {
                                 fluid_settings.size,
                             );
 
+                            let advect_particles_pipeline =
+                                world.resource::<AdvectParticlesPipeline>();
+                            advect_particles(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.advect_particles_bind_groups,
+                                bind_groups.simulation_uniform,
+                                advect_particles_pipeline,
+                            );
+
                             let reinit_levelset_pipeline =
                                 world.resource::<ReinitLevelsetPipeline>();
                             reinitialize_levelset(
@@ -370,6 +385,7 @@ fn initialize_interface_indices(
     pipeline_cache: &PipelineCache,
     pass: &mut ComputePass,
     bind_groups: &InitializeInterfaceIndicesBindGroups,
+    uniform_bind_group: &SimulationUniformBindGroup,
     pipeline: &InitializeInterfaceIndicesPipeline,
     size: UVec2,
 ) {
@@ -380,6 +396,11 @@ fn initialize_interface_indices(
 
     pass.set_pipeline(pipeline);
     pass.set_bind_group(0, &bind_groups.0, &[]);
+    pass.set_bind_group(
+        1,
+        &uniform_bind_group.bind_group,
+        &[uniform_bind_group.index],
+    );
     pass.dispatch_center(size);
 
     pass.pop_debug_group();
@@ -652,6 +673,28 @@ fn advect_scalar(
     pass.set_pipeline(&advect_levelset_pipeline);
     pass.dispatch_center(size);
     pass.pop_debug_group();
+}
+
+fn advect_particles(
+    pipeline_cache: &PipelineCache,
+    pass: &mut ComputePass,
+    bind_groups: &AdvectParticlesBindGroups,
+    uniform_bind_group: &SimulationUniformBindGroup,
+    pipeline: &AdvectParticlesPipeline,
+) {
+    pass.push_debug_group("Advect particles");
+    let pipeline = pipeline_cache
+        .get_compute_pipeline(pipeline.pipeline)
+        .unwrap();
+
+    pass.set_pipeline(pipeline);
+    pass.set_bind_group(0, &bind_groups.0, &[]);
+    pass.set_bind_group(
+        1,
+        &uniform_bind_group.bind_group,
+        &[uniform_bind_group.index],
+    );
+    pass.dispatch_workgroups(1, 1, 1);
 }
 
 fn reinitialize_levelset(
