@@ -23,7 +23,7 @@ use crate::{
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
     obstacle::SolidEntities,
     particle_levelset::{
-        advect_particles::AdvectParticlesResource,
+        advect_particles::AdvectParticlesResource, distribute_particles_to_grid,
         initialize_interface_indices::InitializeInterfaceIndicesResource,
         initialize_particles::InitializeParticlesResource,
     },
@@ -100,6 +100,9 @@ pub(crate) fn watch_fluid_component(
                 as usize
         ]));
         let near_interface = images.new_texture_storage(size, TextureFormat::R8Uint);
+
+        let (cell_particle_counts, sorted_particles, block_scan_sums) =
+            distribute_particles_to_grid::create_buffers(&mut buffers, size);
 
         let fluid_transform = match transform {
             Some(t) => t.to_matrix(),
@@ -328,5 +331,16 @@ pub(crate) fn watch_fluid_component(
             .insert(solid_entites)
             .insert(Readback::buffer(forces_to_solid_buffer.clone()))
             .observe(forces_to_solid_readback);
+
+        distribute_particles_to_grid::insert_distribute_particles_resources(
+            &mut commands,
+            entity,
+            levelset_particles,
+            count,
+            cell_particle_counts,
+            block_scan_sums,
+            sorted_particles,
+            settings.size,
+        );
     }
 }

@@ -22,6 +22,9 @@ use crate::{
     initialize::{InitializeBindGroups, InitializePipeline},
     particle_levelset::{
         advect_particles::{AdvectParticlesBindGroups, AdvectParticlesPipeline},
+        distribute_particles_to_grid::{
+            self, DistributeParticlesToGridBindGroups, DistributeParticlesToGridPipelines,
+        },
         initialize_interface_indices::{
             InitializeInterfaceIndicesBindGroups, InitializeInterfaceIndicesPipeline,
         },
@@ -64,6 +67,7 @@ struct FluidBindGroupsQueryData {
     reinit_levelset_bind_groups: &'static ReinitLevelsetBindGroups,
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
+    distribute_particles_to_grid_bind_groups: &'static DistributeParticlesToGridBindGroups,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -114,6 +118,9 @@ impl render_graph::Node for EulerFluidNode {
                 let reinit_levelset_pipeline = world.resource::<ReinitLevelsetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
+                let distribute_particles_to_grid_pipeline =
+                    world.resource::<DistributeParticlesToGridPipelines>();
+
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && initialize_interface_indices_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && initialize_particles_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -128,6 +135,12 @@ impl render_graph::Node for EulerFluidNode {
                     && advect_particles_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && reinit_levelset_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && distribute_particles_to_grid_pipeline
+                        .count_particles
+                        .is_pipeline_state_ready(pipeline_cache)
+                    && distribute_particles_to_grid_pipeline
+                        .prefix_sum
+                        .is_pipeline_state_ready(pipeline_cache)
                 {
                     self.state = State::Init;
                 }
@@ -315,6 +328,16 @@ impl render_graph::Node for EulerFluidNode {
                                 bind_groups.advect_particles_bind_groups,
                                 bind_groups.simulation_uniform,
                                 advect_particles_pipeline,
+                            );
+
+                            let distribute_particles_to_grid_pipeline =
+                                world.resource::<DistributeParticlesToGridPipelines>();
+                            distribute_particles_to_grid::dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.distribute_particles_to_grid_bind_groups,
+                                distribute_particles_to_grid_pipeline,
+                                fluid_settings.size,
                             );
 
                             let reinit_levelset_pipeline =
@@ -695,6 +718,7 @@ fn advect_particles(
         &[uniform_bind_group.index],
     );
     pass.dispatch_workgroups(1, 1, 1);
+    pass.pop_debug_group();
 }
 
 fn reinitialize_levelset(
