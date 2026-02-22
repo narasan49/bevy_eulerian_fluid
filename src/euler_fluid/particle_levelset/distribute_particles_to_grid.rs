@@ -43,9 +43,15 @@ pub(crate) struct SortParticlesResource {
     #[storage(0, read_only, visibility(compute))]
     pub particles: Handle<ShaderStorageBuffer>,
     #[storage(1, read_only, visibility(compute))]
+    pub particle_count: Handle<ShaderStorageBuffer>,
+    #[storage(2, read_only, visibility(compute))]
     pub cell_offsets: Handle<ShaderStorageBuffer>,
-    #[storage(2, visibility(compute))]
+    #[storage(3, visibility(compute))]
     pub sorted_particles: Handle<ShaderStorageBuffer>,
+    #[uniform(4)]
+    pub grid_size: UVec2,
+    #[storage(5, visibility(compute))]
+    pub cell_cursor: Handle<ShaderStorageBuffer>,
 }
 
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
@@ -60,7 +66,7 @@ pub(crate) struct DistributeParticlesResource {
 pub(crate) struct DistributeParticlesToGridBindGroups {
     pub count_particles_bind_group: BindGroup,
     pub prefix_sum_bind_group: BindGroup,
-    // pub sort_particles_bind_group: BindGroup,
+    pub sort_particles_bind_group: BindGroup,
     // pub distribute_paarticles_bind_group: BindGroup,
 }
 
@@ -71,11 +77,12 @@ pub(crate) fn create_buffers(
     Handle<ShaderStorageBuffer>,
     Handle<ShaderStorageBuffer>,
     Handle<ShaderStorageBuffer>,
+    Handle<ShaderStorageBuffer>,
 ) {
     let size_grid = size.element_product() as usize;
 
     let cell_particle_counts = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid]));
-    let sorted_particles = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid]));
+    let sorted_particles = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid * 4]));
 
     let block_scan_sums = buffers.add(ShaderStorageBuffer::from(vec![
         0u32;
@@ -83,7 +90,14 @@ pub(crate) fn create_buffers(
             / PREFIX_SUM_BLOCK_SIZE
     ]));
 
-    (cell_particle_counts, sorted_particles, block_scan_sums)
+    let cell_cursor = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid]));
+
+    (
+        cell_particle_counts,
+        sorted_particles,
+        block_scan_sums,
+        cell_cursor,
+    )
 }
 
 pub(crate) fn insert_distribute_particles_resources(
@@ -94,6 +108,7 @@ pub(crate) fn insert_distribute_particles_resources(
     cell_particle_counts: Handle<ShaderStorageBuffer>,
     block_scan_sums: Handle<ShaderStorageBuffer>,
     sorted_particles: Handle<ShaderStorageBuffer>,
+    cell_cursor: Handle<ShaderStorageBuffer>,
     grid_size: UVec2,
 ) {
     let count_particle_resource = CountParticlesInCellResource {
@@ -110,8 +125,11 @@ pub(crate) fn insert_distribute_particles_resources(
 
     let sort_particles_resource = SortParticlesResource {
         particles: particles.clone(),
+        particle_count: particle_count.clone(),
         cell_offsets: cell_particle_counts.clone(),
         sorted_particles: sorted_particles.clone(),
+        cell_cursor: cell_cursor.clone(),
+        grid_size,
     };
 
     let distribute_particles_resource = DistributeParticlesResource {
@@ -131,7 +149,7 @@ pub(crate) fn insert_distribute_particles_resources(
 pub(crate) struct DistributeParticlesToGridPipelines {
     pub count_particles: CountParticlesPipeline,
     pub prefix_sum: PrefixSumParticleCountsPipeline,
-    // pub sort_particles: SortParticlesPipeline,
+    pub sort_particles: SortParticlesPipeline,
     // pub distribute_particles: DistributeParticlesPipeline,
 }
 
@@ -161,13 +179,13 @@ impl FromWorld for DistributeParticlesToGridPipelines {
     fn from_world(world: &mut World) -> Self {
         let count_particles = CountParticlesPipeline::from_world(world);
         let prefix_sum = PrefixSumParticleCountsPipeline::from_world(world);
-        // let sort_particles = SortParticlesPipeline::from_world(world);
+        let sort_particles = SortParticlesPipeline::from_world(world);
         // let distribute_particles = DistributeParticlesPipeline::from_world(world);
 
         DistributeParticlesToGridPipelines {
             count_particles,
             prefix_sum,
-            // sort_particles,
+            sort_particles,
             // distribute_particles,
         }
     }
@@ -320,10 +338,14 @@ fn create_pipeline(
 }
 
 pub(super) fn reset_buffers(
-    query: Query<(&PrefixSumParticleCountsResource, &FluidSettings)>,
+    query: Query<(
+        &PrefixSumParticleCountsResource,
+        &SortParticlesResource,
+        &FluidSettings,
+    )>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (resource, settings) in &query {
+    for (resource, sort_particles_resource, settings) in &query {
         let grid_size = settings.size.element_product() as usize;
 
         let cell_offsets = buffers.get_mut(&resource.cell_offsets).unwrap();
@@ -331,6 +353,11 @@ pub(super) fn reset_buffers(
 
         let block_scan_sums = buffers.get_mut(&resource.block_scan_sums).unwrap();
         block_scan_sums.set_data(vec![0u32; grid_size / PREFIX_SUM_BLOCK_SIZE]);
+
+        let cell_cursor = buffers
+            .get_mut(&sort_particles_resource.cell_cursor)
+            .unwrap();
+        cell_cursor.set_data(vec![0u32; grid_size]);
     }
 }
 
@@ -341,6 +368,7 @@ pub(super) fn prepare_bind_groups<'a>(
         Entity,
         &CountParticlesInCellResource,
         &PrefixSumParticleCountsResource,
+        &SortParticlesResource,
     )>,
     render_device: Res<RenderDevice>,
     mut param: (
@@ -349,7 +377,7 @@ pub(super) fn prepare_bind_groups<'a>(
         Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
     ),
 ) {
-    for (entity, count_particles_resource, prefix_sum_resource) in &query {
+    for (entity, count_particles_resource, prefix_sum_resource, sort_particles_resource) in &query {
         let count_particles_bind_group = count_particles_resource
             .as_bind_group(
                 &pipelines.count_particles.bind_group_layout,
@@ -368,11 +396,21 @@ pub(super) fn prepare_bind_groups<'a>(
             .unwrap()
             .bind_group;
 
+        let sort_particles_bind_group = sort_particles_resource
+            .as_bind_group(
+                &pipelines.sort_particles.bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
         commands
             .entity(entity)
             .insert(DistributeParticlesToGridBindGroups {
                 count_particles_bind_group,
                 prefix_sum_bind_group,
+                sort_particles_bind_group,
             });
     }
 }
@@ -391,7 +429,7 @@ pub(crate) fn dispatch(
 
     pass.set_pipeline(&count_particles_pipeline);
     pass.set_bind_group(0, &bind_groups.count_particles_bind_group, &[]);
-    pass.dispatch_workgroups(size.element_product() / PREFIX_SUM_BLOCK_SIZE as u32, 1, 1);
+    pass.dispatch_workgroups(size.element_product() / 256, 1, 1);
 
     pass.push_debug_group("Prefix-sum particles");
     {
@@ -416,6 +454,14 @@ pub(crate) fn dispatch(
         pass.dispatch_workgroups(size.element_product() / PREFIX_SUM_BLOCK_SIZE as u32, 1, 1);
     }
     pass.pop_debug_group();
+
+    let sort_particles_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.sort_particles.pipeline)
+        .unwrap();
+
+    pass.set_pipeline(sort_particles_pipeline);
+    pass.set_bind_group(0, &bind_groups.sort_particles_bind_group, &[]);
+    pass.dispatch_workgroups(size.element_product() / 256, 1, 1);
 
     pass.pop_debug_group();
 }
