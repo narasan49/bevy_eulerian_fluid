@@ -1,7 +1,8 @@
 #import bevy_fluid::coordinate::{interp2d_center, interp2d_center_rg32float}
+#import bevy_fluid::particle_levelset::particle::Particle;
 
 @group(0) @binding(0) var<storage, read_write> count: atomic<u32>;
-@group(0) @binding(1) var<storage, read_write> particles: array<vec2<f32>>;
+@group(0) @binding(1) var<storage, read_write> particles: array<Particle>;
 @group(0) @binding(2) var levelset_air: texture_storage_2d<r32float, read>;
 @group(0) @binding(3) var grad_levelset_air: texture_storage_2d<rg32float, read>;
 @group(0) @binding(4) var near_interface: texture_storage_2d<r8uint, read>;
@@ -24,7 +25,7 @@ fn initialize_particles(
         for (var i = 0; i < 4; i++) {
             let pos = attraction(levelset_air, grad_levelset_air, vec2<f32>(tex_idx) + offsets[i]);
             let idx = atomicAdd(&count, 1);
-            particles[idx] = pos;
+            particles[idx].position = pos;
         }
     }
 }

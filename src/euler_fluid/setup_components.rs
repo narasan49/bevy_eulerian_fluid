@@ -25,7 +25,7 @@ use crate::{
     particle_levelset::{
         advect_particles::AdvectParticlesResource, distribute_particles_to_grid,
         initialize_interface_indices::InitializeInterfaceIndicesResource,
-        initialize_particles::InitializeParticlesResource,
+        initialize_particles::InitializeParticlesResource, Particle,
     },
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
@@ -95,7 +95,7 @@ pub(crate) fn watch_fluid_component(
         let forces_to_solid_buffer = buffers.add(forces_to_solid_buffer);
 
         let levelset_particles = buffers.add(ShaderStorageBuffer::from(vec![
-            Vec2::ZERO;
+            Particle::default();
             4 * size.element_product()
                 as usize
         ]));
@@ -255,6 +255,7 @@ pub(crate) fn watch_fluid_component(
             levelset_particles: levelset_particles.clone(),
             u0: u0.clone(),
             v0: v0.clone(),
+            levelset_air: levelset_air1.clone(),
         };
 
         let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {

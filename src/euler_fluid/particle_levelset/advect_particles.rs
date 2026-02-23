@@ -22,6 +22,8 @@ pub(crate) struct AdvectParticlesResource {
     pub u0: Handle<Image>,
     #[storage_texture(3, image_format = R32Float, access = ReadOnly)]
     pub v0: Handle<Image>,
+    #[storage_texture(4, image_format = R32Float, access = ReadOnly)]
+    pub levelset_air: Handle<Image>,
 }
 
 #[derive(Resource)]

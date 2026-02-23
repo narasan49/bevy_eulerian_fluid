@@ -2,6 +2,7 @@
 #import bevy_sprite::mesh2d_functions
 #import bevy_sprite::mesh2d_view_bindings::globals
 #import bevy_fluid::fluid_uniform::SimulationUniform;
+#import bevy_fluid::particle_levelset::particle::Particle;
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
@@ -13,14 +14,14 @@ struct VertexOutput {
     @location(0) world_position: vec4<f32>,
 }
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(0) var<storage, read> particles: array<vec2<f32>>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(0) var<storage, read> particles: array<Particle>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(1) var<uniform> fluid_size: vec2<f32>;
 
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
     let idx = mesh2d_functions::get_tag(vertex.instance_index);
-    let particle_position = particles[idx];
+    let particle_position = particles[idx].position;
 
     let world_from_local = mesh2d_functions::get_world_from_local(vertex.instance_index);
 

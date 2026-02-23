@@ -7,11 +7,20 @@ pub mod initialize_particles;
 use bevy::{
     asset::embedded_asset,
     prelude::*,
-    render::{extract_component::ExtractComponentPlugin, Render, RenderApp, RenderSystems},
+    render::{
+        extract_component::ExtractComponentPlugin, render_resource::ShaderType, Render, RenderApp,
+        RenderSystems,
+    },
     shader::load_shader_library,
 };
 
 use crate::particle_levelset::debug_draw_particles::DebugDrawLevelsetParticlesPlugin;
+
+#[derive(ShaderType, Clone, Copy, Default)]
+pub(crate) struct Particle {
+    pub position: Vec2,
+    pub level: f32,
+}
 
 pub(crate) struct ParticleLevelsetPlugin;
 
