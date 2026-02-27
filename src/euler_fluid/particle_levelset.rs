@@ -48,6 +48,10 @@ impl Plugin for ParticleLevelsetPlugin {
             app,
             "particle_levelset/shaders/distribute/distribute_particles.wgsl"
         );
+        embedded_asset!(
+            app,
+            "particle_levelset/shaders/distribute/correct_levelset.wgsl"
+        );
 
         load_shader_library!(app, "particle_levelset/shaders/particle.wgsl");
 
@@ -61,6 +65,7 @@ impl Plugin for ParticleLevelsetPlugin {
             ExtractComponentPlugin::<distribute_particles_to_grid::PrefixSumParticleCountsResource>::default(),
             ExtractComponentPlugin::<distribute_particles_to_grid::SortParticlesResource>::default(),
             ExtractComponentPlugin::<distribute_particles_to_grid::DistributeParticlesResource>::default(),
+            ExtractComponentPlugin::<distribute_particles_to_grid::CorrectLevelsetResource>::default(),
             DebugDrawLevelsetParticlesPlugin,
         ));
         app.add_systems(Update, distribute_particles_to_grid::reset_buffers);

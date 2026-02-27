@@ -14,7 +14,10 @@ use bevy::{
     },
 };
 
-use crate::{pipeline::Pipeline, settings::FluidSettings};
+use crate::{
+    pipeline::{DispatchFluidPass, Pipeline},
+    settings::FluidSettings,
+};
 
 pub(crate) const PREFIX_SUM_BLOCK_SIZE: usize = 512;
 
@@ -32,9 +35,11 @@ pub(crate) struct CountParticlesInCellResource {
 
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
 pub(crate) struct PrefixSumParticleCountsResource {
-    #[storage(0, visibility(compute))]
-    pub cell_offsets: Handle<ShaderStorageBuffer>,
+    #[storage(0, read_only, visibility(compute))]
+    pub cell_particle_counts: Handle<ShaderStorageBuffer>,
     #[storage(1, visibility(compute))]
+    pub cell_offsets: Handle<ShaderStorageBuffer>,
+    #[storage(2, visibility(compute))]
     pub block_scan_sums: Handle<ShaderStorageBuffer>,
 }
 
@@ -57,9 +62,25 @@ pub(crate) struct SortParticlesResource {
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
 pub(crate) struct DistributeParticlesResource {
     #[storage(0, read_only, visibility(compute))]
-    pub particles: Handle<ShaderStorageBuffer>,
-    #[storage(2, visibility(compute))]
+    pub cell_offsets: Handle<ShaderStorageBuffer>,
+    #[storage(1, read_only, visibility(compute))]
     pub sorted_particles: Handle<ShaderStorageBuffer>,
+    #[storage(2, visibility(compute))]
+    pub levelset_correction: Handle<ShaderStorageBuffer>,
+    #[storage(3, visibility(compute))]
+    pub weight: Handle<ShaderStorageBuffer>,
+    #[uniform(4)]
+    pub grid_size: UVec2,
+}
+
+#[derive(Component, ExtractComponent, Clone, AsBindGroup)]
+pub(crate) struct CorrectLevelsetResource {
+    #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
+    pub levelset_air: Handle<Image>,
+    #[storage(1, read_only, visibility(compute))]
+    pub levelset_correction: Handle<ShaderStorageBuffer>,
+    #[storage(2, read_only, visibility(compute))]
+    pub weight: Handle<ShaderStorageBuffer>,
 }
 
 #[derive(Component)]
@@ -67,7 +88,8 @@ pub(crate) struct DistributeParticlesToGridBindGroups {
     pub count_particles_bind_group: BindGroup,
     pub prefix_sum_bind_group: BindGroup,
     pub sort_particles_bind_group: BindGroup,
-    // pub distribute_paarticles_bind_group: BindGroup,
+    pub distribute_particles_bind_group: BindGroup,
+    pub correct_levelset_bind_group: BindGroup,
 }
 
 pub(crate) fn create_buffers(
@@ -78,10 +100,14 @@ pub(crate) fn create_buffers(
     Handle<ShaderStorageBuffer>,
     Handle<ShaderStorageBuffer>,
     Handle<ShaderStorageBuffer>,
+    Handle<ShaderStorageBuffer>,
+    Handle<ShaderStorageBuffer>,
+    Handle<ShaderStorageBuffer>,
 ) {
     let size_grid = size.element_product() as usize;
 
     let cell_particle_counts = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid]));
+    let cell_offsets = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid]));
     let sorted_particles = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid * 4]));
 
     let block_scan_sums = buffers.add(ShaderStorageBuffer::from(vec![
@@ -91,12 +117,17 @@ pub(crate) fn create_buffers(
     ]));
 
     let cell_cursor = buffers.add(ShaderStorageBuffer::from(vec![0u32; size_grid]));
+    let levelset_correction = buffers.add(ShaderStorageBuffer::from(vec![0i32; size_grid]));
+    let weight = buffers.add(ShaderStorageBuffer::from(vec![0i32; size_grid]));
 
     (
         cell_particle_counts,
+        cell_offsets,
         sorted_particles,
         block_scan_sums,
         cell_cursor,
+        levelset_correction,
+        weight,
     )
 }
 
@@ -106,9 +137,13 @@ pub(crate) fn insert_distribute_particles_resources(
     particles: Handle<ShaderStorageBuffer>,
     particle_count: Handle<ShaderStorageBuffer>,
     cell_particle_counts: Handle<ShaderStorageBuffer>,
+    cell_offsets: Handle<ShaderStorageBuffer>,
     block_scan_sums: Handle<ShaderStorageBuffer>,
     sorted_particles: Handle<ShaderStorageBuffer>,
     cell_cursor: Handle<ShaderStorageBuffer>,
+    levelset_correction: Handle<ShaderStorageBuffer>,
+    weight: Handle<ShaderStorageBuffer>,
+    levelset_air: Handle<Image>,
     grid_size: UVec2,
 ) {
     let count_particle_resource = CountParticlesInCellResource {
@@ -119,22 +154,32 @@ pub(crate) fn insert_distribute_particles_resources(
     };
 
     let prefix_sum_particle_counts_resource = PrefixSumParticleCountsResource {
-        cell_offsets: cell_particle_counts.clone(),
+        cell_particle_counts: cell_particle_counts.clone(),
+        cell_offsets: cell_offsets.clone(),
         block_scan_sums: block_scan_sums.clone(),
     };
 
     let sort_particles_resource = SortParticlesResource {
         particles: particles.clone(),
         particle_count: particle_count.clone(),
-        cell_offsets: cell_particle_counts.clone(),
+        cell_offsets: cell_offsets.clone(),
         sorted_particles: sorted_particles.clone(),
         cell_cursor: cell_cursor.clone(),
         grid_size,
     };
 
     let distribute_particles_resource = DistributeParticlesResource {
-        particles: particles.clone(),
+        cell_offsets: cell_offsets.clone(),
         sorted_particles: sorted_particles.clone(),
+        levelset_correction: levelset_correction.clone(),
+        weight: weight.clone(),
+        grid_size,
+    };
+
+    let correct_levelset_resource = CorrectLevelsetResource {
+        levelset_air: levelset_air.clone(),
+        levelset_correction: levelset_correction.clone(),
+        weight: weight.clone(),
     };
 
     commands.entity(entity).insert((
@@ -142,6 +187,7 @@ pub(crate) fn insert_distribute_particles_resources(
         prefix_sum_particle_counts_resource,
         sort_particles_resource,
         distribute_particles_resource,
+        correct_levelset_resource,
     ));
 }
 
@@ -150,7 +196,8 @@ pub(crate) struct DistributeParticlesToGridPipelines {
     pub count_particles: CountParticlesPipeline,
     pub prefix_sum: PrefixSumParticleCountsPipeline,
     pub sort_particles: SortParticlesPipeline,
-    // pub distribute_particles: DistributeParticlesPipeline,
+    pub distribute_particles: DistributeParticlesPipeline,
+    pub correct_levelset: CorrectLevelsetPipeline,
 }
 
 pub(crate) struct CountParticlesPipeline {
@@ -175,18 +222,25 @@ pub(crate) struct DistributeParticlesPipeline {
     bind_group_layout: BindGroupLayout,
 }
 
+pub(crate) struct CorrectLevelsetPipeline {
+    pub pipeline: CachedComputePipelineId,
+    bind_group_layout: BindGroupLayout,
+}
+
 impl FromWorld for DistributeParticlesToGridPipelines {
     fn from_world(world: &mut World) -> Self {
         let count_particles = CountParticlesPipeline::from_world(world);
         let prefix_sum = PrefixSumParticleCountsPipeline::from_world(world);
         let sort_particles = SortParticlesPipeline::from_world(world);
-        // let distribute_particles = DistributeParticlesPipeline::from_world(world);
+        let distribute_particles = DistributeParticlesPipeline::from_world(world);
+        let correct_levelset = CorrectLevelsetPipeline::from_world(world);
 
         DistributeParticlesToGridPipelines {
             count_particles,
             prefix_sum,
             sort_particles,
-            // distribute_particles,
+            distribute_particles,
+            correct_levelset,
         }
     }
 }
@@ -315,6 +369,32 @@ impl FromWorld for DistributeParticlesPipeline {
     }
 }
 
+impl Pipeline for CorrectLevelsetPipeline {
+    fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
+        Self::is_pipeline_loaded(pipeline_cache, self.pipeline)
+    }
+}
+
+impl FromWorld for CorrectLevelsetPipeline {
+    fn from_world(world: &mut World) -> Self {
+        let render_device = world.resource::<RenderDevice>();
+        let bind_group_layout = CorrectLevelsetResource::bind_group_layout(render_device);
+
+        let pipeline = create_pipeline(
+            world,
+            "CorrectLevelsetPipeline",
+            "shaders/distribute/correct_levelset.wgsl",
+            "correct_levelset",
+            vec![bind_group_layout.clone()],
+        );
+
+        CorrectLevelsetPipeline {
+            pipeline,
+            bind_group_layout,
+        }
+    }
+}
+
 fn create_pipeline(
     world: &mut World,
     label: &'static str,
@@ -341,12 +421,16 @@ pub(super) fn reset_buffers(
     query: Query<(
         &PrefixSumParticleCountsResource,
         &SortParticlesResource,
+        &DistributeParticlesResource,
         &FluidSettings,
     )>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (resource, sort_particles_resource, settings) in &query {
+    for (resource, sort_particles_resource, distribute_particles_resource, settings) in &query {
         let grid_size = settings.size.element_product() as usize;
+
+        let cell_particle_counts = buffers.get_mut(&resource.cell_particle_counts).unwrap();
+        cell_particle_counts.set_data(vec![0u32; grid_size]);
 
         let cell_offsets = buffers.get_mut(&resource.cell_offsets).unwrap();
         cell_offsets.set_data(vec![0u32; grid_size]);
@@ -358,6 +442,11 @@ pub(super) fn reset_buffers(
             .get_mut(&sort_particles_resource.cell_cursor)
             .unwrap();
         cell_cursor.set_data(vec![0u32; grid_size]);
+
+        let levelset_correction = buffers
+            .get_mut(&distribute_particles_resource.levelset_correction)
+            .unwrap();
+        levelset_correction.set_data(vec![0i32; grid_size]);
     }
 }
 
@@ -369,6 +458,8 @@ pub(super) fn prepare_bind_groups<'a>(
         &CountParticlesInCellResource,
         &PrefixSumParticleCountsResource,
         &SortParticlesResource,
+        &DistributeParticlesResource,
+        &CorrectLevelsetResource,
     )>,
     render_device: Res<RenderDevice>,
     mut param: (
@@ -377,7 +468,15 @@ pub(super) fn prepare_bind_groups<'a>(
         Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
     ),
 ) {
-    for (entity, count_particles_resource, prefix_sum_resource, sort_particles_resource) in &query {
+    for (
+        entity,
+        count_particles_resource,
+        prefix_sum_resource,
+        sort_particles_resource,
+        distribute_particles_resource,
+        correct_levelset_resource,
+    ) in &query
+    {
         let count_particles_bind_group = count_particles_resource
             .as_bind_group(
                 &pipelines.count_particles.bind_group_layout,
@@ -405,12 +504,32 @@ pub(super) fn prepare_bind_groups<'a>(
             .unwrap()
             .bind_group;
 
+        let distribute_particles_bind_group = distribute_particles_resource
+            .as_bind_group(
+                &pipelines.distribute_particles.bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        let correct_levelset_bind_group = correct_levelset_resource
+            .as_bind_group(
+                &pipelines.correct_levelset.bind_group_layout,
+                &render_device,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
         commands
             .entity(entity)
             .insert(DistributeParticlesToGridBindGroups {
                 count_particles_bind_group,
                 prefix_sum_bind_group,
                 sort_particles_bind_group,
+                distribute_particles_bind_group,
+                correct_levelset_bind_group,
             });
     }
 }
@@ -443,7 +562,6 @@ pub(crate) fn dispatch(
         let prefix_sum_local_scans_pipeline = pipeline_cache
             .get_compute_pipeline(pipelines.prefix_sum.prefix_sum_local_scans_pipeline)
             .unwrap();
-        // let size_scan_block = size.element_product() / PREFIX_SUM_BLOCK_SIZE as u32;
         pass.set_pipeline(&prefix_sum_local_scans_pipeline);
         pass.dispatch_workgroups(1, 1, 1);
 
@@ -462,6 +580,20 @@ pub(crate) fn dispatch(
     pass.set_pipeline(sort_particles_pipeline);
     pass.set_bind_group(0, &bind_groups.sort_particles_bind_group, &[]);
     pass.dispatch_workgroups(size.element_product() / 256, 1, 1);
+
+    let distribute_particles_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.distribute_particles.pipeline)
+        .unwrap();
+    pass.set_pipeline(distribute_particles_pipeline);
+    pass.set_bind_group(0, &bind_groups.distribute_particles_bind_group, &[]);
+    pass.dispatch_center(size);
+
+    let correct_levelset_pipeline = pipeline_cache
+        .get_compute_pipeline(pipelines.correct_levelset.pipeline)
+        .unwrap();
+    pass.set_pipeline(correct_levelset_pipeline);
+    pass.set_bind_group(0, &bind_groups.correct_levelset_bind_group, &[]);
+    pass.dispatch_center(size);
 
     pass.pop_debug_group();
 }

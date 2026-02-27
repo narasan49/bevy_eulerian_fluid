@@ -101,8 +101,15 @@ pub(crate) fn watch_fluid_component(
         ]));
         let near_interface = images.new_texture_storage(size, TextureFormat::R8Uint);
 
-        let (cell_particle_counts, sorted_particles, block_scan_sums, cell_cursor) =
-            distribute_particles_to_grid::create_buffers(&mut buffers, size);
+        let (
+            cell_particle_counts,
+            cell_offsets,
+            sorted_particles,
+            block_scan_sums,
+            cell_cursor,
+            levelset_correction,
+            weight,
+        ) = distribute_particles_to_grid::create_buffers(&mut buffers, size);
 
         let fluid_transform = match transform {
             Some(t) => t.to_matrix(),
@@ -339,9 +346,13 @@ pub(crate) fn watch_fluid_component(
             levelset_particles,
             count,
             cell_particle_counts,
+            cell_offsets,
             block_scan_sums,
             sorted_particles,
             cell_cursor,
+            levelset_correction,
+            weight,
+            levelset_air1,
             settings.size,
         );
     }

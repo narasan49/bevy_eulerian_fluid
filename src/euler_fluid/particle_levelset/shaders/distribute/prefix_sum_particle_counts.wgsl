@@ -2,8 +2,9 @@
 // https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
 
 // cell_offsets must be padded with 0 to be a multiple of BLOCK_SIZE.
-@group(0) @binding(0) var<storage, read_write> cell_offsets: array<u32>;
-@group(0) @binding(1) var<storage, read_write> sums: array<u32>;
+@group(0) @binding(0) var<storage, read> cell_particle_counts: array<u32>;
+@group(0) @binding(1) var<storage, read_write> cell_offsets: array<u32>;
+@group(0) @binding(2) var<storage, read_write> sums: array<u32>;
 
 // BLOCK_SIZE should be a power of 2.
 const BLOCK_SIZE: u32 = 512;
@@ -26,8 +27,8 @@ fn prefix_sum_particle_counts_per_workgroup(
     let depth = i32(log2(f32(BLOCK_SIZE)));
     let offset = i32(workgroup_idx * BLOCK_SIZE);
 
-    cell_offsets_local[2 * idx] = cell_offsets[offset + 2 * idx];
-    cell_offsets_local[2 * idx + 1] = cell_offsets[offset + 2 * idx + 1];
+    cell_offsets_local[2 * idx] = cell_particle_counts[offset + 2 * idx];
+    cell_offsets_local[2 * idx + 1] = cell_particle_counts[offset + 2 * idx + 1];
     workgroupBarrier();
 
     // Up-sweep
