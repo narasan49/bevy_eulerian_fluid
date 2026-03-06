@@ -29,6 +29,7 @@ use crate::{
             InitializeInterfaceIndicesBindGroups, InitializeInterfaceIndicesPipeline,
         },
         initialize_particles::{InitializeParticlesBindGroups, InitializeParticlesPipeline},
+        reseed_particles::{self, ReseedParticlesBindGroups, ReseedParticlesPipelines},
     },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{DispatchFluidPass, Pipeline},
@@ -68,6 +69,7 @@ struct FluidBindGroupsQueryData {
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
     distribute_particles_to_grid_bind_groups: &'static DistributeParticlesToGridBindGroups,
+    reseed_particles_bind_groups: Option<&'static ReseedParticlesBindGroups>,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -121,6 +123,8 @@ impl render_graph::Node for EulerFluidNode {
                 let distribute_particles_to_grid_pipeline =
                     world.resource::<DistributeParticlesToGridPipelines>();
 
+                let reseed_particles_pipelines = world.get_resource::<ReseedParticlesPipelines>();
+
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && initialize_interface_indices_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && initialize_particles_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -141,6 +145,9 @@ impl render_graph::Node for EulerFluidNode {
                     && distribute_particles_to_grid_pipeline
                         .prefix_sum
                         .is_pipeline_state_ready(pipeline_cache)
+                    && reseed_particles_pipelines.map_or(true, |pipelines| {
+                        pipelines.is_pipeline_state_ready(pipeline_cache)
+                    })
                 {
                     self.state = State::Init;
                 }
@@ -347,6 +354,31 @@ impl render_graph::Node for EulerFluidNode {
                                 &mut pass,
                                 bind_groups.reinit_levelset_bind_groups,
                                 reinit_levelset_pipeline,
+                                fluid_settings.size,
+                            );
+
+                            if let Some(reseed_particles_bind_groups) =
+                                bind_groups.reseed_particles_bind_groups
+                            {
+                                let reseed_particles_pipelines =
+                                    world.resource::<ReseedParticlesPipelines>();
+                                reseed_particles::dispatch(
+                                    pipeline_cache,
+                                    &mut pass,
+                                    reseed_particles_bind_groups,
+                                    reseed_particles_pipelines,
+                                    fluid_settings.size,
+                                );
+                            }
+
+                            let initialize_interface_indices_pipeline =
+                                world.resource::<InitializeInterfaceIndicesPipeline>();
+                            initialize_interface_indices(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.initialize_interface_indices_bind_groups,
+                                bind_groups.simulation_uniform,
+                                initialize_interface_indices_pipeline,
                                 fluid_settings.size,
                             );
 

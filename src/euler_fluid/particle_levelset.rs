@@ -3,6 +3,7 @@ pub mod debug_draw_particles;
 pub mod distribute_particles_to_grid;
 pub mod initialize_interface_indices;
 pub mod initialize_particles;
+pub mod reseed_particles;
 
 use bevy::{
     asset::embedded_asset,
@@ -14,7 +15,9 @@ use bevy::{
     shader::load_shader_library,
 };
 
-use crate::particle_levelset::debug_draw_particles::DebugDrawLevelsetParticlesPlugin;
+use crate::particle_levelset::{
+    debug_draw_particles::DebugDrawLevelsetParticlesPlugin, reseed_particles::ReseedParticlesPlugin,
+};
 
 #[derive(ShaderType, Clone, Copy, Default)]
 pub(crate) struct Particle {
@@ -67,6 +70,7 @@ impl Plugin for ParticleLevelsetPlugin {
             ExtractComponentPlugin::<distribute_particles_to_grid::DistributeParticlesResource>::default(),
             ExtractComponentPlugin::<distribute_particles_to_grid::CorrectLevelsetResource>::default(),
             DebugDrawLevelsetParticlesPlugin,
+            ReseedParticlesPlugin,
         ));
         app.add_systems(Update, distribute_particles_to_grid::reset_buffers);
 

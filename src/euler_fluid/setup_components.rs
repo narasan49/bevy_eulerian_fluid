@@ -23,9 +23,12 @@ use crate::{
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
     obstacle::SolidEntities,
     particle_levelset::{
-        advect_particles::AdvectParticlesResource, distribute_particles_to_grid,
+        advect_particles::AdvectParticlesResource,
+        distribute_particles_to_grid,
         initialize_interface_indices::InitializeInterfaceIndicesResource,
-        initialize_particles::InitializeParticlesResource, Particle,
+        initialize_particles::InitializeParticlesResource,
+        reseed_particles::{self, ReseedParticlesBundle},
+        Particle,
     },
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
@@ -303,6 +306,23 @@ pub(crate) fn watch_fluid_component(
             entities: Vec::new(),
         };
 
+        let (alive_particles_mask, alive_particles_mask_scan, sums) =
+            reseed_particles::create_buffers(&mut buffers, size);
+
+        let reseed_particles_bundle = ReseedParticlesBundle::new(
+            &sorted_particles,
+            &alive_particles_mask,
+            &alive_particles_mask_scan,
+            &sums,
+            &levelset_particles,
+            &count,
+            &cell_particle_counts,
+            &cell_offsets,
+            &near_interface,
+            &levelset_air1,
+            &grad_levelset_air,
+        );
+
         commands
             .entity(entity)
             .insert((
@@ -335,6 +355,7 @@ pub(crate) fn watch_fluid_component(
                 extrapolate_u_resource,
                 extrapolate_v_resource,
             ))
+            .insert(reseed_particles_bundle)
             .insert(uniform)
             .insert(solid_entites)
             .insert(Readback::buffer(forces_to_solid_buffer.clone()))
