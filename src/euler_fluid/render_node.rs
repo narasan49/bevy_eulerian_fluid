@@ -773,17 +773,26 @@ fn reinitialize_levelset(
 
     pass.set_pipeline(init_seeds_pipeline);
     pass.set_bind_group(0, &bind_groups.init_seeds_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.write_only_seeds_bind_groups[0], &[]);
     pass.dispatch_center(size);
 
     pass.set_pipeline(&iterate_pipeline);
-    pass.set_bind_group(0, &bind_groups.iterate_bind_group, &[]);
+    let mut src_idx = 0;
+    let mut dst_idx = 1;
+
     for bind_group in &bind_groups.jump_flooding_step_bind_groups {
-        pass.set_bind_group(1, bind_group, &[]);
+        pass.set_bind_group(0, &bind_groups.read_only_seeds_bind_groups[src_idx], &[]);
+        pass.set_bind_group(1, &bind_groups.write_only_seeds_bind_groups[dst_idx], &[]);
+        pass.set_bind_group(2, bind_group, &[]);
         pass.dispatch_center(size);
+
+        std::mem::swap(&mut src_idx, &mut dst_idx);
     }
 
     pass.set_pipeline(&sdf_pipeline);
     pass.set_bind_group(0, &bind_groups.sdf_bind_group, &[]);
+    pass.set_bind_group(1, &bind_groups.read_only_seeds_bind_groups[src_idx], &[]);
+
     pass.dispatch_center(size);
     pass.pop_debug_group();
 }

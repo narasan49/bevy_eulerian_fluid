@@ -32,7 +32,7 @@ use crate::{
     },
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
-        ReinitLevelsetIterateResource,
+        ReinitLevelsetSeedsTextures,
     },
     settings::{FluidGridLength, FluidSettings, FluidTextures},
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
@@ -82,8 +82,8 @@ pub(crate) fn watch_fluid_component(
         let grad_levelset_air = images.new_texture_storage(size, TextureFormat::Rg32Float);
         let levelset_solid = images.new_texture_storage(size, TextureFormat::R32Float);
 
-        let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
-        let jump_flooding_seeds_y = images.new_texture_storage(size, TextureFormat::R32Float);
+        let jump_flooding_seeds0 = images.new_texture_storage(size, TextureFormat::Rg32Float);
+        let jump_flooding_seeds1 = images.new_texture_storage(size, TextureFormat::Rg32Float);
 
         let forces_to_fluid =
             buffers.add(ShaderStorageBuffer::from(vec![ForceToFluid::default(); 0]));
@@ -270,21 +270,15 @@ pub(crate) fn watch_fluid_component(
 
         let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {
             levelset_air1: levelset_air1.clone(),
-            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
-            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
-        };
-
-        let reinit_levelset_iterate_resource = ReinitLevelsetIterateResource {
-            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
-            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
         };
 
         let reinit_levelset_calculate_sdf_resource = ReinitLevelsetCalculateSdfResource {
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
-            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
-            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
         };
+
+        let reinit_levelset_seeds_textures =
+            ReinitLevelsetSeedsTextures([jump_flooding_seeds0, jump_flooding_seeds1]);
 
         let sample_forces_resource = SampleForcesResource {
             bins_force_x: bins_force_x.clone(),
@@ -344,8 +338,8 @@ pub(crate) fn watch_fluid_component(
                 advect_levelset_resource,
                 advect_levelset_particles_resource,
                 reinit_levelset_initialize_seeds_resource,
-                reinit_levelset_iterate_resource,
                 reinit_levelset_calculate_sdf_resource,
+                reinit_levelset_seeds_textures,
                 sample_forces_resource,
                 accumulate_forces_resource,
             ))
