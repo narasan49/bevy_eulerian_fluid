@@ -84,6 +84,7 @@ impl Plugin for FluidPlugin {
         load_shader_library!(app, "euler_fluid/shaders/utils/area_fraction.wgsl");
         load_shader_library!(app, "euler_fluid/shaders/utils/coordinate.wgsl");
         load_shader_library!(app, "euler_fluid/shaders/utils/levelset_utils.wgsl");
+        load_shader_library!(app, "euler_fluid/shaders/utils/hash.wgsl");
         load_shader_library!(
             app,
             "euler_fluid/shaders/fluid_to_solid/fixed_point_conversion.wgsl"

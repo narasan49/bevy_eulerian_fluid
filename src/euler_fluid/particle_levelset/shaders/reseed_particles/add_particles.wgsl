@@ -1,5 +1,6 @@
 #import bevy_fluid::coordinate::{interp2d_center, interp2d_center_rg32float}
 #import bevy_fluid::particle_levelset::particle::Particle;
+#import bevy_fluid::hash::hash22;
 
 @group(0) @binding(0) var<storage, read_write> particles: array<Particle>;
 @group(0) @binding(1) var<storage, read_write> particle_count: atomic<u32>;
@@ -21,15 +22,11 @@ fn add_particles(
         let num_particles_in_cell = cell_particle_counts[idx_1d];
         for (var i = num_particles_in_cell; i < 4; i++) {
             let p_idx = atomicAdd(&particle_count, 1);
-            let position = vec2<f32>(idx) + rnd_vec2(vec2<f32>(idx) + vec2<f32>(i));
+            let position = vec2<f32>(idx) + hash22(vec2<f32>(idx) + vec2<f32>(i));
             let pos = attraction(levelset_air, grad_levelset_air, position);
             particles[p_idx] = Particle(pos, 0.0);
         }
     }
-}
-
-fn rnd_vec2(x: vec2<f32>) -> vec2<f32> {
-    return fract(sin(x * 1000.0));
 }
 
 fn attraction(
