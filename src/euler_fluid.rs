@@ -10,7 +10,6 @@ pub mod fluid_uniform;
 pub mod initialize;
 pub mod levelset_gradient;
 pub mod obstacle;
-pub mod particle_levelset;
 pub mod particle_levelset_two_layers;
 pub mod physics_time;
 pub mod reinitialize_levelset;

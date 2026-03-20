@@ -100,5 +100,4 @@ pub struct FluidTextures {
     pub v_solid: Handle<Image>,
     pub levelset_air: Handle<Image>,
     pub levelset_solid: Handle<Image>,
-    pub levelset_particles: Handle<ShaderStorageBuffer>,
 }

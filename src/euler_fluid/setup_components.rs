@@ -23,14 +23,6 @@ use crate::{
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
     levelset_gradient::LevelSetGradientResource,
     obstacle::SolidEntities,
-    particle_levelset::{
-        advect_particles::AdvectParticlesResource,
-        distribute_particles_to_grid,
-        initialize_interface_indices::InitializeInterfaceIndicesResource,
-        initialize_particles::InitializeParticlesResource,
-        reseed_particles::{self, ReseedParticlesBundle},
-        Particle,
-    },
     particle_levelset_two_layers,
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
@@ -99,23 +91,6 @@ pub(crate) fn watch_fluid_component(
         forces_to_solid_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
         let forces_to_solid_buffer = buffers.add(forces_to_solid_buffer);
 
-        let levelset_particles = buffers.add(ShaderStorageBuffer::from(vec![
-            Particle::default();
-            4 * size.element_product()
-                as usize
-        ]));
-        let near_interface = images.new_texture_storage(size, TextureFormat::R8Uint);
-
-        let (
-            cell_particle_counts,
-            cell_offsets,
-            sorted_particles,
-            block_scan_sums,
-            cell_cursor,
-            levelset_correction,
-            weight,
-        ) = distribute_particles_to_grid::create_buffers(&mut buffers, size);
-
         let fluid_transform = match transform {
             Some(t) => t.to_matrix(),
             None => Mat4::IDENTITY,
@@ -138,7 +113,6 @@ pub(crate) fn watch_fluid_component(
             v_solid: v_solid.clone(),
             levelset_air: levelset_air0.clone(),
             levelset_solid: levelset_solid.clone(),
-            levelset_particles: levelset_particles.clone(),
         };
 
         let initialize_resource = InitializeVelocityResource {
@@ -152,21 +126,6 @@ pub(crate) fn watch_fluid_component(
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
             grad_levelset_air: grad_levelset_air.clone(),
-        };
-
-        let initialize_interface_indices_resource = InitializeInterfaceIndicesResource {
-            levelset: levelset_air0.clone(),
-            near_interface: near_interface.clone(),
-        };
-
-        let count = buffers.add(ShaderStorageBuffer::from(0u32));
-
-        let initialize_particles_resource = InitializeParticlesResource {
-            count: count.clone(),
-            levelset_particles: levelset_particles.clone(),
-            levelset_air: levelset_air0.clone(),
-            grad_levelset_air: grad_levelset_air.clone(),
-            near_interface: near_interface.clone(),
         };
 
         let update_solid_resource = UpdateSolidResource {
@@ -262,14 +221,6 @@ pub(crate) fn watch_fluid_component(
             levelset_air1: levelset_air1.clone(),
         };
 
-        let advect_levelset_particles_resource = AdvectParticlesResource {
-            count: count.clone(),
-            levelset_particles: levelset_particles.clone(),
-            u0: u0.clone(),
-            v0: v0.clone(),
-            levelset_air: levelset_air1.clone(),
-        };
-
         let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {
             levelset_air1: levelset_air1.clone(),
         };
@@ -305,31 +256,12 @@ pub(crate) fn watch_fluid_component(
             entities: Vec::new(),
         };
 
-        let (alive_particles_mask, alive_particles_mask_scan, sums) =
-            reseed_particles::create_buffers(&mut buffers, size);
-
-        let reseed_particles_bundle = ReseedParticlesBundle::new(
-            &sorted_particles,
-            &alive_particles_mask,
-            &alive_particles_mask_scan,
-            &sums,
-            &levelset_particles,
-            &count,
-            &cell_particle_counts,
-            &cell_offsets,
-            &near_interface,
-            &levelset_air1,
-            &grad_levelset_air,
-        );
-
         commands
             .entity(entity)
             .insert((
                 fluid_textures,
                 initialize_resource,
                 initialize_grid_center_resource,
-                initialize_interface_indices_resource,
-                initialize_particles_resource,
                 update_solid_resource,
                 advection_resource,
                 apply_forces_resource,
@@ -341,7 +273,6 @@ pub(crate) fn watch_fluid_component(
                 solve_u_resource,
                 solve_v_resource,
                 advect_levelset_resource,
-                advect_levelset_particles_resource,
                 reinit_levelset_initialize_seeds_resource,
                 reinit_levelset_calculate_sdf_resource,
                 reinit_levelset_seeds_textures,
@@ -355,27 +286,10 @@ pub(crate) fn watch_fluid_component(
                 extrapolate_u_resource,
                 extrapolate_v_resource,
             ))
-            .insert(reseed_particles_bundle)
             .insert(uniform)
             .insert(solid_entites)
             .insert(Readback::buffer(forces_to_solid_buffer.clone()))
             .observe(forces_to_solid_readback);
-
-        distribute_particles_to_grid::insert_distribute_particles_resources(
-            &mut commands,
-            entity,
-            levelset_particles,
-            count,
-            cell_particle_counts,
-            cell_offsets,
-            block_scan_sums,
-            sorted_particles,
-            cell_cursor,
-            levelset_correction,
-            weight,
-            &levelset_air1,
-            settings.size,
-        );
 
         particle_levelset_two_layers::plugin::setup(
             &mut commands,
