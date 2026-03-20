@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    render::{extract_component::ExtractComponent, storage::ShaderStorageBuffer},
-};
+use bevy::{prelude::*, render::extract_component::ExtractComponent};
 
 use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
 

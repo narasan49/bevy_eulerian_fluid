@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    common_pass::prefix_sum::PREFIX_SUM_BLOCK_SIZE,
+    common_pass::prefix_sum::{PrefixSumPipeline, PREFIX_SUM_BLOCK_SIZE},
     diagnostics::debug_draw_particles::DebugDrawLevelsetParticlesPlugin,
     fluid_uniform::SimulationUniformBindGroup,
     particle_levelset_two_layers::{
@@ -24,37 +24,52 @@ use crate::{
         },
         levelset_correction::{
             accumulate_phi_correction::{
-                AccumulateLevelSetCorrectionMinusResource, AccumulateLevelSetCorrectionPlusResource,
+                AccumulateLevelSetCorrectionMinusResource, AccumulateLevelSetCorrectionPipeline,
+                AccumulateLevelSetCorrectionPlusResource,
             },
             accumulate_phi_correction_second::{
                 AccumulateLevelSetCorrectionMinusSecondResource,
                 AccumulateLevelSetCorrectionPlusSecondResource,
             },
-            correct_levelset::CorrectLevelSetResource,
+            correct_levelset::{CorrectLevelSetPipeline, CorrectLevelSetResource},
             correct_levelset_second::CorrectLevelSetSecondResource,
-            mark_escaped_particles::MarkEscapedParticlesResource,
+            mark_escaped_particles::{MarkEscapedParticlesPipeline, MarkEscapedParticlesResource},
             mark_escaped_particles_second::MarkEscapedParticlesSecondResource,
-            reset_levelset_correction::ResetLevelSetCorrectionResource,
+            reset_levelset_correction::{
+                ResetLevelSetCorrectionPipeline, ResetLevelSetCorrectionResource,
+            },
             reset_levelset_correction_second::ResetLevelSetCorrectionSecondResource,
             LevelsetCorrectionPlugin,
         },
         particle::{Particle, MAX_PARTICLES_PER_CELL},
         reseed::{
-            add_particles::{AddNegativeParticlesResource, AddPositiveParticlesResource},
-            count_particles_in_cell::{
-                CountNegativeParticlesInCellResource, CountPositiveParticlesInCellResource,
+            add_particles::{
+                AddNegativeParticlesResource, AddParticlesPipeline, AddPositiveParticlesResource,
             },
-            delete_particles::{DeleteNegativeParticlesResource, DeletePositiveParticlesResource},
+            count_particles_in_cell::{
+                CountNegativeParticlesInCellResource, CountParticlesInCellPipeline,
+                CountPositiveParticlesInCellResource,
+            },
+            delete_particles::{
+                DeleteNegativeParticlesResource, DeleteParticlesPipeline,
+                DeletePositiveParticlesResource,
+            },
             prefix_sum_alive_particles::{
                 PrefixSumAliveNegativeParticlesResource, PrefixSumAlivePositiveParticlesResource,
             },
             prefix_sum_particle_counts::{
                 PrefixSumNegativeParticlesCountResource, PrefixSumPositiveParticlesCountResource,
             },
-            reseed_particles::{ReseedNegativeParticlesResource, ReseedPositiveParticlesResource},
-            sort_particles::{SortNegativeParticlesResource, SortPositiveParticlesResource},
+            reseed_particles::{
+                ReseedNegativeParticlesResource, ReseedParticlesPipeline,
+                ReseedPositiveParticlesResource,
+            },
+            sort_particles::{
+                SortNegativeParticlesResource, SortParticlesPipeline, SortPositiveParticlesResource,
+            },
             update_particles_count::{
-                UpdateNegativeParticlesCountResource, UpdatePositiveParticlesCountResource,
+                UpdateNegativeParticlesCountResource, UpdateParticlesCountPipeline,
+                UpdatePositiveParticlesCountResource,
             },
             ReseedPlugin,
         },
@@ -396,4 +411,41 @@ fn reset_buffers(
             .unwrap();
         negative_cell_cursor.set_data(grid_data.clone());
     }
+}
+
+pub(crate) fn are_pls_pipelines_ready(world: &World, pipeline_cache: &PipelineCache) -> bool {
+    let initialize_particles = world.resource::<InitializeParticlesPipeline>();
+    let advect_particles = world.resource::<AdvectParticlesPipeline>();
+
+    // levelset correction
+    let reset_levelset_correction = world.resource::<ResetLevelSetCorrectionPipeline>();
+    let mark_escaped_particles = world.resource::<MarkEscapedParticlesPipeline>();
+    let accumulate_phi_correction = world.resource::<AccumulateLevelSetCorrectionPipeline>();
+    let correct_levelset = world.resource::<CorrectLevelSetPipeline>();
+
+    // reseed
+    let count_particles_in_cell = world.resource::<CountParticlesInCellPipeline>();
+    let sort_particles = world.resource::<SortParticlesPipeline>();
+    let reseed_particles = world.resource::<ReseedParticlesPipeline>();
+    let delete_particles = world.resource::<DeleteParticlesPipeline>();
+    let update_particles_count = world.resource::<UpdateParticlesCountPipeline>();
+    let add_particles = world.resource::<AddParticlesPipeline>();
+    let reseed_pipelines_ready = count_particles_in_cell.pipeline.is_ready(pipeline_cache)
+        && sort_particles.pipeline.is_ready(pipeline_cache)
+        && reseed_particles.pipeline.is_ready(pipeline_cache)
+        && delete_particles.pipeline.is_ready(pipeline_cache)
+        && update_particles_count.pipeline.is_ready(pipeline_cache)
+        && add_particles.pipeline.is_ready(pipeline_cache);
+
+    // prefix sum
+    let prefix_sum = world.resource::<PrefixSumPipeline>();
+
+    initialize_particles.pipeline.is_ready(pipeline_cache)
+        && advect_particles.pipeline.is_ready(pipeline_cache)
+        && reset_levelset_correction.pipeline.is_ready(pipeline_cache)
+        && mark_escaped_particles.pipeline.is_ready(pipeline_cache)
+        && accumulate_phi_correction.pipeline.is_ready(pipeline_cache)
+        && correct_levelset.pipeline.is_ready(pipeline_cache)
+        && reseed_pipelines_ready
+        && prefix_sum.is_ready(pipeline_cache)
 }

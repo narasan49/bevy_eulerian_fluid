@@ -3,11 +3,10 @@ use crate::{
         levelset_correction::reset_levelset_correction::ResetLevelSetCorrectionPipeline,
         plugin::PLSResources,
     },
-    pipeline::SingleComputePipeline,
     plugin::FluidComputePass,
 };
 use bevy::{
-    asset::{embedded_asset, embedded_path},
+    asset::embedded_asset,
     ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{

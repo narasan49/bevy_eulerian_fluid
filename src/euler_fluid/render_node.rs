@@ -23,9 +23,10 @@ use crate::{
     levelset_gradient::{LevelSetGradientBindGroup, LevelSetGradientPipeline},
     particle_levelset_two_layers::{
         self,
-        initialize_particles::InitializeParticlesPipeline,
         levelset_correction::{PLSLevelsetCorrectionQuery, PLSLevelsetCorrectionSecondQuery},
-        plugin::{PLSAdvectionBindGroupsQuery, PLSInitializeBindGroupsQuery},
+        plugin::{
+            are_pls_pipelines_ready, PLSAdvectionBindGroupsQuery, PLSInitializeBindGroupsQuery,
+        },
         reseed::PLSReseedBindGroupsQuery,
     },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
@@ -114,8 +115,6 @@ impl render_graph::Node for EulerFluidNode {
                 let reinit_levelset_pipeline = world.resource::<ReinitLevelsetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
-                let pls_init_pipeline = world.resource::<InitializeParticlesPipeline>();
-
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && update_solid_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advection_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -127,7 +126,7 @@ impl render_graph::Node for EulerFluidNode {
                     && advect_scalar_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && reinit_levelset_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && pls_init_pipeline.pipeline.is_ready(pipeline_cache)
+                    && are_pls_pipelines_ready(world, pipeline_cache)
                 {
                     self.state = State::Init;
                 }

@@ -50,7 +50,7 @@ pub(crate) struct PrefixSumResource {
 
 #[derive(Component)]
 pub(crate) struct PrefixSumBindGroup {
-    pub bind_group: BindGroup,
+    pub _bind_group: BindGroup,
 }
 
 #[derive(Resource)]
@@ -150,13 +150,13 @@ fn prepare_bind_groups<'a>(
     ),
 ) {
     for (entity, resource) in &query {
-        let bind_group = resource
+        let _bind_group = resource
             .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
             .unwrap()
             .bind_group;
 
         commands
             .entity(entity)
-            .insert(PrefixSumBindGroup { bind_group });
+            .insert(PrefixSumBindGroup { _bind_group });
     }
 }

@@ -125,54 +125,9 @@ pub(crate) struct AccumulateLevelSetCorrectionPlusBindGroup {
     pub bind_group: BindGroup,
 }
 
-impl FluidSingleBindGroup for AccumulateLevelSetCorrectionPlusBindGroup {
-    fn new(bind_group: BindGroup) -> Self {
-        Self { bind_group }
-    }
-}
-
 #[derive(Component)]
 pub(crate) struct AccumulateLevelSetCorrectionMinusBindGroup {
     pub bind_group: BindGroup,
-}
-
-trait FluidSingleBindGroup: Component + Sized {
-    fn new(bind_group: BindGroup) -> Self;
-}
-
-fn prepare_bind_groups<
-    'a,
-    A: AsBindGroup<
-            Param = (
-                Res<'a, RenderAssets<GpuImage>>,
-                Res<'a, FallbackImage>,
-                Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-            ),
-        > + Component,
-    B: FluidSingleBindGroup,
->(
-    mut commands: Commands,
-    pipeline: Res<AccumulateLevelSetCorrectionPipeline>,
-    query: Query<(Entity, &A)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands.entity(entity).insert(B::new(bind_group));
-    }
 }
 
 pub(super) fn prepare_bind_groups_plus<'a>(

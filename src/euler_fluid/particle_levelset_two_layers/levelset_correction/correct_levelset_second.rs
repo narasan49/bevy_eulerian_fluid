@@ -2,11 +2,10 @@ use crate::{
     particle_levelset_two_layers::{
         levelset_correction::correct_levelset::CorrectLevelSetPipeline, plugin::PLSResources,
     },
-    pipeline::SingleComputePipeline,
     plugin::FluidComputePass,
 };
 use bevy::{
-    asset::{embedded_asset, embedded_path},
+    asset::embedded_asset,
     ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
