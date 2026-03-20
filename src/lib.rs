@@ -4,5 +4,6 @@ pub use euler_fluid::*;
 pub mod euler_fluid;
 pub mod material;
 pub mod pipeline;
+pub mod plugin;
 pub mod texture;
 pub mod velocity_overlay;

@@ -1,14 +1,17 @@
 pub mod advect_scalar;
 pub mod advection;
 pub mod apply_forces;
+pub mod common_pass;
 pub mod divergence;
 pub mod extrapolate_velocity;
 pub mod fluid_status;
 pub mod fluid_to_solid;
 pub mod fluid_uniform;
 pub mod initialize;
+pub mod levelset_gradient;
 pub mod obstacle;
 pub mod particle_levelset;
+pub mod particle_levelset_two_layers;
 pub mod physics_time;
 pub mod reinitialize_levelset;
 pub mod render_node;
@@ -27,7 +30,10 @@ use bevy::{
     shader::load_shader_library,
 };
 
-use crate::material::FluidMaterialPlugin;
+use crate::{
+    common_pass::CommonPassPlugin, material::FluidMaterialPlugin,
+    particle_levelset_two_layers::ParticleLevelsetTwoLayersPlugin, plugin::FluidComputePassPlugin,
+};
 use render_node::{EulerFluidNode, FluidLabel};
 use settings::{FluidGridLength, FluidSettings};
 use setup_components::watch_fluid_component;
@@ -61,8 +67,10 @@ impl Plugin for FluidPlugin {
                 advect_scalar::AdvectScalarPlugin,
                 reinitialize_levelset::ReinitializeLevelsetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
-                particle_levelset::ParticleLevelsetPlugin,
+                FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),
+                // particle_levelset::ParticleLevelsetPlugin,
             ))
+            .add_plugins((ParticleLevelsetTwoLayersPlugin, CommonPassPlugin))
             .add_plugins(FluidMaterialPlugin)
             .add_plugins((
                 fluid_status::FluidStatusPlugin,

@@ -21,6 +21,7 @@ use crate::{
     },
     fluid_uniform::SimulationUniform,
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
+    levelset_gradient::LevelSetGradientResource,
     obstacle::SolidEntities,
     particle_levelset::{
         advect_particles::AdvectParticlesResource,
@@ -30,6 +31,7 @@ use crate::{
         reseed_particles::{self, ReseedParticlesBundle},
         Particle,
     },
+    particle_levelset_two_layers,
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
         ReinitLevelsetSeedsTextures,
@@ -280,6 +282,9 @@ pub(crate) fn watch_fluid_component(
         let reinit_levelset_seeds_textures =
             ReinitLevelsetSeedsTextures([jump_flooding_seeds0, jump_flooding_seeds1]);
 
+        let levelset_gradient_resource =
+            LevelSetGradientResource::new(&levelset_air0, &grad_levelset_air);
+
         let sample_forces_resource = SampleForcesResource {
             bins_force_x: bins_force_x.clone(),
             bins_force_y: bins_force_y.clone(),
@@ -340,6 +345,7 @@ pub(crate) fn watch_fluid_component(
                 reinit_levelset_initialize_seeds_resource,
                 reinit_levelset_calculate_sdf_resource,
                 reinit_levelset_seeds_textures,
+                levelset_gradient_resource,
                 sample_forces_resource,
                 accumulate_forces_resource,
             ))
@@ -367,8 +373,21 @@ pub(crate) fn watch_fluid_component(
             cell_cursor,
             levelset_correction,
             weight,
-            levelset_air1,
+            &levelset_air1,
             settings.size,
+        );
+
+        particle_levelset_two_layers::plugin::setup(
+            &mut commands,
+            entity,
+            &mut images,
+            &mut buffers,
+            settings.size,
+            &u0,
+            &v0,
+            &levelset_air0,
+            &levelset_air1,
+            &grad_levelset_air,
         );
     }
 }
