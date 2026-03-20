@@ -11,8 +11,8 @@ use bevy::{
 
 use crate::{
     common_pass::prefix_sum::PREFIX_SUM_BLOCK_SIZE,
+    diagnostics::debug_draw_particles::DebugDrawLevelsetParticlesPlugin,
     fluid_uniform::SimulationUniformBindGroup,
-    particle_levelset::debug_draw_particles::DebugDrawLevelsetParticlesPlugin,
     particle_levelset_two_layers::{
         advect_particles::{
             AdvectParticlesBindGroup, AdvectParticlesPass, AdvectParticlesPipeline,
