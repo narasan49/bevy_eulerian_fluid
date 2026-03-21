@@ -54,11 +54,9 @@ fn reseed_particles(
         if heap_idx < heap_capacity {
             // insert a particle to heap.
             alive_particles_mask[p_idx] = 1u;
-            // heap[heap_idx] = heap[0];
-            // heap[0] = Node(p_idx, eval_priority(p, levelset_air));
             heap[heap_idx] = Node(p_idx, eval_priority(p, levelset_air));
             heap_idx += 1u;
-            construct_heap(&heap, heap_idx);
+            sift_up(&heap, heap_idx);
         } else {
             let incoming = eval_priority(p, levelset_air);
             if incoming < heap[0].value {
@@ -126,4 +124,25 @@ fn correct_heap(heap: ptr<function, array<Node, MAX_PARTICLES_PER_CELL>>, capaci
 
 fn construct_heap(heap: ptr<function, array<Node, MAX_PARTICLES_PER_CELL>>, capacity: u32) {
     correct_heap(heap, capacity, 0);
+}
+
+fn sift_up(heap: ptr<function, array<Node, MAX_PARTICLES_PER_CELL>>, capacity: u32) {
+    var i = capacity - 1;
+    loop {
+        let p = (i - 1) / 2;
+        var largest = i;
+        if ((*heap)[p].value > (*heap)[i].value) {
+            return;
+        }
+        
+        let tmp = (*heap)[p];
+        (*heap)[p] = (*heap)[i];
+        (*heap)[i] = tmp;
+
+        i = p;
+
+        if i == 0 {
+            return;
+        }
+    }
 }

@@ -16,40 +16,45 @@ use bevy::{
 use crate::{
     common_pass::prefix_sum::PrefixSumPipeline,
     fluid_uniform::SimulationUniformBindGroup,
-    particle_levelset_two_layers::reseed::{
-        add_particles::{
-            AddNegativeParticlesBindGroup, AddNegativeParticlesPass, AddParticlesPipeline,
-            AddPositiveParticlesBindGroup, AddPositiveParticlesPass,
-        },
-        count_particles_in_cell::{
-            CountNegativeParticlesInCellBindGroup, CountNegativeParticlesInCellPass,
-            CountParticlesInCellPipeline, CountPositiveParticlesInCellBindGroup,
-            CountPositiveParticlesInCellPass,
-        },
-        delete_particles::{
-            DeleteNegativeParticlesBindGroup, DeleteNegativeParticlesPass, DeleteParticlesPipeline,
-            DeletePositiveParticlesBindGroup, DeletePositiveParticlesPass,
-        },
-        prefix_sum_alive_particles::{
-            PrefixSumAliveNegativeParticlesBindGroup, PrefixSumAliveNegativeParticlesPass,
-            PrefixSumAlivePositiveParticlesBindGroup, PrefixSumAlivePositiveParticlesPass,
-        },
-        prefix_sum_particle_counts::{
-            PrefixSumNegativeParticlesCountBindGroup, PrefixSumNegativeParticlesCountPass,
-            PrefixSumPositiveParticlesCountBindGroup, PrefixSumPositiveParticlesCountPass,
-        },
-        reseed_particles::{
-            ReseedNegativeParticlesBindGroup, ReseedNegativeParticlesPass, ReseedParticlesPipeline,
-            ReseedPositiveParticlesBindGroup, ReseedPositiveParticlesPass,
-        },
-        sort_particles::{
-            SortNegativeParticlesBindGroup, SortNegativeParticlesPass, SortParticlesPipeline,
-            SortPositiveParticlesBindGroup, SortPositiveParticlesPass,
-        },
-        update_particles_count::{
-            UpdateNegativeParticlesCountBindGroup, UpdateNegativeParticlesCountPass,
-            UpdateParticlesCountPipeline, UpdatePositiveParticlesCountBindGroup,
-            UpdatePositiveParticlesCountPass,
+    particle_levelset_two_layers::{
+        particle::MAX_PARTICLES_PER_CELL,
+        reseed::{
+            add_particles::{
+                AddNegativeParticlesBindGroup, AddNegativeParticlesPass, AddParticlesPipeline,
+                AddPositiveParticlesBindGroup, AddPositiveParticlesPass,
+            },
+            count_particles_in_cell::{
+                CountNegativeParticlesInCellBindGroup, CountNegativeParticlesInCellPass,
+                CountParticlesInCellPipeline, CountPositiveParticlesInCellBindGroup,
+                CountPositiveParticlesInCellPass,
+            },
+            delete_particles::{
+                DeleteNegativeParticlesBindGroup, DeleteNegativeParticlesPass,
+                DeleteParticlesPipeline, DeletePositiveParticlesBindGroup,
+                DeletePositiveParticlesPass,
+            },
+            prefix_sum_alive_particles::{
+                PrefixSumAliveNegativeParticlesBindGroup, PrefixSumAliveNegativeParticlesPass,
+                PrefixSumAlivePositiveParticlesBindGroup, PrefixSumAlivePositiveParticlesPass,
+            },
+            prefix_sum_particle_counts::{
+                PrefixSumNegativeParticlesCountBindGroup, PrefixSumNegativeParticlesCountPass,
+                PrefixSumPositiveParticlesCountBindGroup, PrefixSumPositiveParticlesCountPass,
+            },
+            reseed_particles::{
+                ReseedNegativeParticlesBindGroup, ReseedNegativeParticlesPass,
+                ReseedParticlesPipeline, ReseedPositiveParticlesBindGroup,
+                ReseedPositiveParticlesPass,
+            },
+            sort_particles::{
+                SortNegativeParticlesBindGroup, SortNegativeParticlesPass, SortParticlesPipeline,
+                SortPositiveParticlesBindGroup, SortPositiveParticlesPass,
+            },
+            update_particles_count::{
+                UpdateNegativeParticlesCountBindGroup, UpdateNegativeParticlesCountPass,
+                UpdateParticlesCountPipeline, UpdatePositiveParticlesCountBindGroup,
+                UpdatePositiveParticlesCountPass,
+            },
         },
     },
     plugin::FluidComputePassPlugin,
@@ -125,7 +130,11 @@ pub(crate) fn dispatch(
     grid_size: UVec2,
 ) {
     let num_workgroups_grid = (grid_size / 8).extend(1);
-    let num_workgroups_particle = UVec3::new(grid_size.element_product() / 256, 1, 1);
+    let num_workgroups_particle = UVec3::new(
+        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / 256,
+        1,
+        1,
+    );
 
     pass.push_debug_group("Reseed particles");
     pass.push_debug_group("Sort particles");

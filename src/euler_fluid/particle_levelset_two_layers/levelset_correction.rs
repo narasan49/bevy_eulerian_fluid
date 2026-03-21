@@ -14,35 +14,39 @@ use bevy::{
 };
 
 use crate::{
-    particle_levelset_two_layers::levelset_correction::{
-        accumulate_phi_correction::{
-            AccumulateLevelSetCorrectionMinusBindGroup, AccumulateLevelSetCorrectionMinusPass,
-            AccumulateLevelSetCorrectionPipeline, AccumulateLevelSetCorrectionPlusBindGroup,
-            AccumulateLevelSetCorrectionPlusPass,
+    particle_levelset_two_layers::{
+        levelset_correction::{
+            accumulate_phi_correction::{
+                AccumulateLevelSetCorrectionMinusBindGroup, AccumulateLevelSetCorrectionMinusPass,
+                AccumulateLevelSetCorrectionPipeline, AccumulateLevelSetCorrectionPlusBindGroup,
+                AccumulateLevelSetCorrectionPlusPass,
+            },
+            accumulate_phi_correction_second::{
+                AccumulateLevelSetCorrectionMinusSecondBindGroup,
+                AccumulateLevelSetCorrectionMinusSecondPass,
+                AccumulateLevelSetCorrectionPlusSecondBindGroup,
+                AccumulateLevelSetCorrectionPlusSecondPass,
+            },
+            correct_levelset::{
+                CorrectLevelSetBindGroup, CorrectLevelSetPass, CorrectLevelSetPipeline,
+            },
+            correct_levelset_second::{CorrectLevelSetSecondBindGroup, CorrectLevelSetSecondPass},
+            mark_escaped_particles::{
+                MarkEscapedParticlesBindGroup, MarkEscapedParticlesPass,
+                MarkEscapedParticlesPipeline,
+            },
+            mark_escaped_particles_second::{
+                MarkEscapedParticlesSecondBindGroup, MarkEscapedParticlesSecondPass,
+            },
+            reset_levelset_correction::{
+                ResetLevelSetCorrectionBindGroup, ResetLevelSetCorrectionPass,
+                ResetLevelSetCorrectionPipeline,
+            },
+            reset_levelset_correction_second::{
+                ResetLevelSetCorrectionSecondBindGroup, ResetLevelSetCorrectionSecondPass,
+            },
         },
-        accumulate_phi_correction_second::{
-            AccumulateLevelSetCorrectionMinusSecondBindGroup,
-            AccumulateLevelSetCorrectionMinusSecondPass,
-            AccumulateLevelSetCorrectionPlusSecondBindGroup,
-            AccumulateLevelSetCorrectionPlusSecondPass,
-        },
-        correct_levelset::{
-            CorrectLevelSetBindGroup, CorrectLevelSetPass, CorrectLevelSetPipeline,
-        },
-        correct_levelset_second::{CorrectLevelSetSecondBindGroup, CorrectLevelSetSecondPass},
-        mark_escaped_particles::{
-            MarkEscapedParticlesBindGroup, MarkEscapedParticlesPass, MarkEscapedParticlesPipeline,
-        },
-        mark_escaped_particles_second::{
-            MarkEscapedParticlesSecondBindGroup, MarkEscapedParticlesSecondPass,
-        },
-        reset_levelset_correction::{
-            ResetLevelSetCorrectionBindGroup, ResetLevelSetCorrectionPass,
-            ResetLevelSetCorrectionPipeline,
-        },
-        reset_levelset_correction_second::{
-            ResetLevelSetCorrectionSecondBindGroup, ResetLevelSetCorrectionSecondPass,
-        },
+        particle::MAX_PARTICLES_PER_CELL,
     },
     plugin::FluidComputePassPlugin,
 };
@@ -154,7 +158,11 @@ pub(crate) fn dispatch_second(
     grid_size: UVec2,
 ) {
     let num_workgroups_grid = (grid_size / 8).extend(1);
-    let num_workgroups_particle = UVec3::new(grid_size.element_product() / 256, 1, 1);
+    let num_workgroups_particle = UVec3::new(
+        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / 256,
+        1,
+        1,
+    );
 
     pass.push_debug_group("Level set correction (second)");
     let mark_escaped_particles_pipeline = world.resource::<MarkEscapedParticlesPipeline>();

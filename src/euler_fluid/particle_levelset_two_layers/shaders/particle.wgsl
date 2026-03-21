@@ -68,26 +68,12 @@ fn spawn_and_attract_particle(
 
     x_new = attract(x_new, lambda, phi_goal, levelset_air, grad_levelset_air);
     var acceptable = false;
-    if all(vec2<f32>(0.0) < x_new) || all(x_new < fdim - vec2<f32>(1.0)) {
+    if all(vec2<f32>(0.0) < x_new) && all(x_new < fdim - vec2<f32>(1.0)) {
         phi_new = interp2d_center(levelset_air, x_new);
         if bmin <= phi_new && phi_new <= bmax {
             acceptable = true;
         }
     }
-    // for (var j = 0u; j < MAX_ITER; j++) {
-    //     while (any(x_new < vec2<f32>(0.0)) || any(fdim - vec2<f32>(1.0) < x_new)) {
-    //         lambda *= 0.5;
-    //         x_new = attract(x_new, lambda, phi_goal, levelset_air, grad_levelset_air);
-    //     }
-
-    //     phi_new = interp2d_center(levelset_air, x_new);
-    //     if bmin <= phi_new && phi_new <= bmax {
-    //         acceptable = true;
-    //         break;
-    //     } else {
-    //         lambda = 1.0;
-    //     }
-    // }
 
     if acceptable {
         return Particle(x_new, particle_radius(phi_new), sign, 0);

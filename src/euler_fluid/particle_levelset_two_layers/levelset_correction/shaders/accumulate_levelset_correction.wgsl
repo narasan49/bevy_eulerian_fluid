@@ -24,6 +24,9 @@ fn accumulate_levelset_correction(
     for (var i = 0u; i < 2u; i++) {
         for (var j = 0u; j < 2u; j++) {
             let cell_idx = cell_idx_base + vec2<u32>(i, j);
+            if any(dim <= cell_idx) {
+                continue;
+            }
             let cell_idx_1d = cell_idx.x + dim.x * cell_idx.y;
             let phi_p = p.sign * (p.radius - distance(p.position, vec2<f32>(cell_idx)));
             if p.sign > 0.0 {
