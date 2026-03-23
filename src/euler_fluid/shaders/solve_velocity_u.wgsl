@@ -6,7 +6,7 @@
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, write>;
 @group(0) @binding(1) var u1: texture_storage_2d<r32float, read>;
 @group(0) @binding(2) var u_solid: texture_storage_2d<r32float, read>;
-@group(0) @binding(3) var p1: texture_storage_2d<r32float, read>;
+@group(0) @binding(3) var p0: texture_storage_2d<r32float, read>;
 @group(0) @binding(4) var levelset_air0: texture_storage_2d<r32float, read>;
 @group(0) @binding(5) var levelset_solid: texture_storage_2d<r32float, read>;
 
@@ -39,8 +39,8 @@ fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         return;
     }
 
-    var p_ij = textureLoad(p1, x).r;
-    var p_iminusj = textureLoad(p1, x - vec2<i32>(1, 0)).r;
+    var p_ij = textureLoad(p0, x).r;
+    var p_iminusj = textureLoad(p0, x - vec2<i32>(1, 0)).r;
 
     let level_plus = textureLoad(levelset_air0, x).r;
     let level_minus = textureLoad(levelset_air0, x - vec2<i32>(1, 0)).r;

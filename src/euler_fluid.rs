@@ -12,12 +12,14 @@ pub mod levelset_gradient;
 pub mod obstacle;
 pub mod particle_levelset_two_layers;
 pub mod physics_time;
+pub mod projection;
 pub mod reinitialize_levelset;
 pub mod render_node;
 pub mod settings;
 pub mod setup_components;
 pub mod solve_pressure;
 pub mod solve_velocity;
+pub mod update_area_fraction;
 pub mod update_solid;
 
 use bevy::{
@@ -32,6 +34,7 @@ use bevy::{
 use crate::{
     common_pass::CommonPassPlugin, material::FluidMaterialPlugin,
     particle_levelset_two_layers::ParticleLevelsetTwoLayersPlugin, plugin::FluidComputePassPlugin,
+    projection::PressureProjectionPlugin,
 };
 use render_node::{EulerFluidNode, FluidLabel};
 use settings::{FluidGridLength, FluidSettings};
@@ -60,6 +63,7 @@ impl Plugin for FluidPlugin {
                 apply_forces::ApplyForcesPlugin,
                 divergence::DivergencePlugin,
                 fluid_uniform::SimulationUniformPlugin,
+                PressureProjectionPlugin,
                 solve_pressure::SolvePressurePlugin,
                 solve_velocity::SolveVelocityPlugin,
                 extrapolate_velocity::ExtrapolateVelocityPlugin,
@@ -67,7 +71,7 @@ impl Plugin for FluidPlugin {
                 reinitialize_levelset::ReinitializeLevelsetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
                 FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),
-                // particle_levelset::ParticleLevelsetPlugin,
+                FluidComputePassPlugin::<update_area_fraction::UpdateAreaFractionPass>::default(),
             ))
             .add_plugins((ParticleLevelsetTwoLayersPlugin, CommonPassPlugin))
             .add_plugins(FluidMaterialPlugin)

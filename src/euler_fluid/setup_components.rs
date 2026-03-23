@@ -24,6 +24,7 @@ use crate::{
     levelset_gradient::LevelSetGradientResource,
     obstacle::SolidEntities,
     particle_levelset_two_layers,
+    projection::gauss_seidel::GaussSeidelResource,
     reinitialize_levelset::{
         ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
         ReinitLevelsetSeedsTextures,
@@ -32,6 +33,7 @@ use crate::{
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
     solve_velocity::{SolveUResource, SolveVResource},
     texture::NewTexture,
+    update_area_fraction::UpdateAreaFractionResource,
     update_solid::UpdateSolidResource,
 };
 
@@ -75,6 +77,8 @@ pub(crate) fn watch_fluid_component(
         let levelset_air1 = images.new_texture_storage(size, TextureFormat::R32Float);
         let grad_levelset_air = images.new_texture_storage(size, TextureFormat::Rg32Float);
         let levelset_solid = images.new_texture_storage(size, TextureFormat::R32Float);
+
+        let area_fraction_solid = images.new_texture_storage(size, TextureFormat::Rgba32Float);
 
         let jump_flooding_seeds0 = images.new_texture_storage(size, TextureFormat::Rg32Float);
         let jump_flooding_seeds1 = images.new_texture_storage(size, TextureFormat::Rg32Float);
@@ -135,6 +139,9 @@ pub(crate) fn watch_fluid_component(
             solid_id: solid_id.clone(),
         };
 
+        let update_area_fraction_resource =
+            UpdateAreaFractionResource::new(&levelset_solid, &area_fraction_solid);
+
         let advection_resource = AdvectionResource {
             u0: u0.clone(),
             v0: v0.clone(),
@@ -174,11 +181,14 @@ pub(crate) fn watch_fluid_component(
             levelset_solid: levelset_solid.clone(),
         };
 
+        let gauss_seidel_resource =
+            GaussSeidelResource::new(&p0, &div, &levelset_air0, &area_fraction_solid);
+
         let solve_u_resource = SolveUResource {
             u0: u0.clone(),
             u1: u1.clone(),
             u_solid: u_solid.clone(),
-            p1: p1.clone(),
+            p0: p0.clone(),
             levelset_air0: levelset_air0.clone(),
             levelset_solid: levelset_solid.clone(),
         };
@@ -187,7 +197,7 @@ pub(crate) fn watch_fluid_component(
             v0: v0.clone(),
             v1: v1.clone(),
             v_solid: v_solid.clone(),
-            p1: p1.clone(),
+            p0: p0.clone(),
             levelset_air0: levelset_air0.clone(),
             levelset_solid: levelset_solid.clone(),
         };
@@ -242,7 +252,7 @@ pub(crate) fn watch_fluid_component(
             bins_torque: bins_torque.clone(),
             levelset_solid: levelset_solid.clone(),
             solid_id: solid_id.clone(),
-            p1: p1.clone(),
+            p0: p0.clone(),
         };
 
         let accumulate_forces_resource = AccumulateForcesResource {
@@ -263,11 +273,13 @@ pub(crate) fn watch_fluid_component(
                 initialize_resource,
                 initialize_grid_center_resource,
                 update_solid_resource,
+                update_area_fraction_resource,
                 advection_resource,
                 apply_forces_resource,
                 divergence_resource,
                 jacobi_iter_resource,
                 jacobi_iter_rev_resource,
+                gauss_seidel_resource,
             ))
             .insert((
                 solve_u_resource,

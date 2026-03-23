@@ -28,7 +28,7 @@ pub(crate) struct SolveUResource {
     #[storage_texture(2, image_format = R32Float, access = ReadOnly)]
     pub u_solid: Handle<Image>,
     #[storage_texture(3, image_format = R32Float, access = ReadOnly)]
-    pub p1: Handle<Image>,
+    pub p0: Handle<Image>,
     #[storage_texture(4, image_format = R32Float, access = ReadOnly)]
     pub levelset_air0: Handle<Image>,
     #[storage_texture(5, image_format = R32Float, access = ReadOnly)]
@@ -44,7 +44,7 @@ pub(crate) struct SolveVResource {
     #[storage_texture(2, image_format = R32Float, access = ReadOnly)]
     pub v_solid: Handle<Image>,
     #[storage_texture(3, image_format = R32Float, access = ReadOnly)]
-    pub p1: Handle<Image>,
+    pub p0: Handle<Image>,
     #[storage_texture(4, image_format = R32Float, access = ReadOnly)]
     pub levelset_air0: Handle<Image>,
     #[storage_texture(5, image_format = R32Float, access = ReadOnly)]

@@ -31,10 +31,14 @@ use crate::{
     },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{DispatchFluidPass, Pipeline},
+    projection::{
+        self, gauss_seidel::GaussSeidelPipeline, ProjectionBindGroupsQuery, ProjectionMethod,
+    },
     reinitialize_levelset::{ReinitLevelsetBindGroups, ReinitLevelsetPipeline},
     settings::FluidSettings,
-    solve_pressure::{SolvePressureBindGroups, SolvePressurePipeline},
+    solve_pressure::SolvePressurePipeline,
     solve_velocity::{SolveVelocityBindGroups, SolveVelocityPipeline},
+    update_area_fraction::{UpdateAreaFractionBindGroup, UpdateAreaFractionPipeline},
     update_solid::{UpdateSolidBindGroups, UpdateSolidPipeline},
 };
 
@@ -53,10 +57,10 @@ enum State {
 struct FluidBindGroupsQueryData {
     initialize_bind_groups: &'static InitializeBindGroups,
     update_solid_bind_groups: &'static UpdateSolidBindGroups,
+    update_area_fraction_bind_group: &'static UpdateAreaFractionBindGroup,
     advection_bind_groups: &'static AdvectionBindGroups,
     apply_forces_bind_groups: &'static ApplyForcesBindGroups,
     divergence_bind_groups: &'static DivergenceBindGroups,
-    solve_pressure_bind_groups: &'static SolvePressureBindGroups,
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
     advect_scalar_bind_groups: &'static AdvectScalarBindGroups,
@@ -64,6 +68,7 @@ struct FluidBindGroupsQueryData {
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
     levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
+    prijection_bind_groups: ProjectionBindGroupsQuery,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -79,6 +84,7 @@ pub(crate) struct EulerFluidNode {
         Option<PLSReseedBindGroupsQuery>,
         &'static FluidStatus,
         &'static FluidSettings,
+        &'static ProjectionMethod,
     )>,
     query_fluid_status: QueryState<
         (Entity, Option<&'static mut FluidStatus>),
@@ -105,10 +111,12 @@ impl render_graph::Node for EulerFluidNode {
                 let initialize_pipeline = world.resource::<InitializePipeline>();
 
                 let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
+                let update_area_fraction_pipeline = world.resource::<UpdateAreaFractionPipeline>();
                 let advection_pipeline = world.resource::<AdvectionPipeline>();
                 let divergence_pipeline = world.resource::<DivergencePipeline>();
                 let apply_forcces_pipeline = world.resource::<ApplyForcesPipeline>();
                 let solve_pressure_pipeline = world.resource::<SolvePressurePipeline>();
+                let gauss_seidel_pipeline = world.resource::<GaussSeidelPipeline>();
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
@@ -117,10 +125,14 @@ impl render_graph::Node for EulerFluidNode {
 
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && update_solid_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && update_area_fraction_pipeline
+                        .pipeline
+                        .is_ready(pipeline_cache)
                     && advection_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && apply_forcces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && divergence_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && solve_pressure_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && gauss_seidel_pipeline.is_ready(pipeline_cache)
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advect_scalar_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -183,6 +195,7 @@ impl render_graph::Node for EulerFluidNode {
                     pls_reseed_bind_groups,
                     fluid_status,
                     fluid_settings,
+                    projection_method,
                 ) in self.fluid_query.iter_manual(world)
                 {
                     match fluid_status {
@@ -221,6 +234,7 @@ impl render_graph::Node for EulerFluidNode {
                                     ..default()
                                 },
                             );
+                            let num_workgroups_grid = (fluid_settings.size / 8).extend(1);
                             let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                             let obstacles_bind_groups =
                                 world.resource::<SolidObstaclesBindGroups>();
@@ -232,6 +246,15 @@ impl render_graph::Node for EulerFluidNode {
                                 bind_groups.simulation_uniform,
                                 update_solid_pipeline,
                                 fluid_settings.size,
+                            );
+
+                            let update_area_fraction_pipeline =
+                                world.resource::<UpdateAreaFractionPipeline>();
+                            update_area_fraction_pipeline.pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.update_area_fraction_bind_group.bind_group,
+                                num_workgroups_grid,
                             );
 
                             let advection_pipeline = world.resource::<AdvectionPipeline>();
@@ -263,13 +286,13 @@ impl render_graph::Node for EulerFluidNode {
                                 fluid_settings.size,
                             );
 
-                            let solve_pressure_pipeline = world.resource::<SolvePressurePipeline>();
-                            solve_pressure(
+                            projection::dispatch(
+                                world,
+                                projection_method,
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.solve_pressure_bind_groups,
+                                bind_groups.prijection_bind_groups,
                                 bind_groups.simulation_uniform,
-                                solve_pressure_pipeline,
                                 fluid_settings.size,
                             );
 
@@ -498,47 +521,6 @@ fn divergence(
     pass.set_pipeline(&divergence_pipeline);
     pass.set_bind_group(0, &divergence_bind_groups.divergence_bind_group, &[]);
     pass.dispatch_center(size);
-    pass.pop_debug_group();
-}
-
-fn solve_pressure(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    solve_pressure_bind_groups: &SolvePressureBindGroups,
-    uniform_bind_group: &SimulationUniformBindGroup,
-    solve_pressure_pipeline: &SolvePressurePipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Solve pressure");
-    let jacobi_iteration_pipeline = pipeline_cache
-        .get_compute_pipeline(solve_pressure_pipeline.jacobi_iteration_pipeline)
-        .unwrap();
-    let jacobi_iteration_reverse_pipeline = pipeline_cache
-        .get_compute_pipeline(solve_pressure_pipeline.jacobi_iteration_reverse_pipeline)
-        .unwrap();
-
-    pass.set_bind_group(
-        1,
-        &uniform_bind_group.bind_group,
-        &[uniform_bind_group.index],
-    );
-    for _ in 0..50 {
-        pass.set_pipeline(&jacobi_iteration_pipeline);
-        pass.set_bind_group(
-            0,
-            &solve_pressure_bind_groups.jacobi_iteration_bind_group,
-            &[],
-        );
-        pass.dispatch_center(size);
-
-        pass.set_pipeline(&jacobi_iteration_reverse_pipeline);
-        pass.set_bind_group(
-            0,
-            &solve_pressure_bind_groups.jacobi_iteration_reverse_bind_group,
-            &[],
-        );
-        pass.dispatch_center(size);
-    }
     pass.pop_debug_group();
 }
 

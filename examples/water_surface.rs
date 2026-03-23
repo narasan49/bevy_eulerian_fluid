@@ -3,6 +3,7 @@ extern crate bevy_eulerian_fluid;
 use avian2d::PhysicsPlugins;
 use bevy::{
     asset::AssetMetaCheck,
+    camera::ScalingMode,
     prelude::*,
     render::{
         render_resource::AsBindGroup,
@@ -15,6 +16,7 @@ use bevy::{
 
 use bevy_eulerian_fluid::{
     material::VelocityMaterial,
+    projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -70,7 +72,15 @@ fn main() {
 }
 
 fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    commands.spawn(Camera2d);
+    commands.spawn((
+        Camera2d,
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::FixedHorizontal {
+                viewport_width: WIDTH as f32,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+    ));
 
     let mesh = meshes.add(Rectangle::from_size(SIZE.as_vec2()));
     commands.spawn((
@@ -80,6 +90,7 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             size: SIZE,
             initial_fluid_level: 0.6,
         },
+        ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
         Mesh2d(mesh),
         Transform::default().with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
     ));
@@ -103,8 +114,8 @@ fn on_fluid_setup(
         commands.entity(entity).insert(MeshMaterial2d(material));
 
         let material_velocity = velocity_materials.add(VelocityMaterial {
-            u_range: Vec2::new(-10.0, 10.0),
-            v_range: Vec2::new(-10.0, 10.0),
+            u_range: Vec2::new(-20.0, 20.0),
+            v_range: Vec2::new(-20.0, 20.0),
             u: fluid_textures.u.clone(),
             v: fluid_textures.v.clone(),
         });
