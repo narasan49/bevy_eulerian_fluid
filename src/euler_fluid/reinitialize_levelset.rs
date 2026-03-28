@@ -1,277 +1,98 @@
+pub mod jump_flooding;
+
 use bevy::{
-    asset::{embedded_asset, load_embedded_asset},
+    ecs::query::QueryData,
     prelude::*,
     render::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
-        render_asset::RenderAssets,
-        render_resource::{
-            binding_types::{texture_storage_2d, uniform_buffer},
-            AsBindGroup, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries,
-            CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages,
-            ShaderType, StorageTextureAccess, TextureFormat, UniformBuffer,
-        },
-        renderer::{RenderDevice, RenderQueue},
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
-        Render, RenderApp, RenderSystems,
+        render_resource::{ComputePass, PipelineCache},
     },
 };
 
-use crate::{pipeline::Pipeline, settings::FluidSettings};
+use crate::{
+    pipeline::{is_pipeline_loaded, DispatchFluidPass},
+    reinitialize_levelset::jump_flooding::{
+        JumpFloodingBindGroups, JumpFloodingPipeline, JumpFloodingPlugin,
+    },
+};
 
-pub(crate) struct ReinitializeLevelsetPlugin;
-
-#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub(crate) struct ReinitLevelsetInitializeSeedsResource {
-    #[storage_texture(0, image_format = R32Float, access = ReadOnly)]
-    pub levelset_air1: Handle<Image>,
+#[derive(Component, ExtractComponent, Clone, Default, Debug)]
+pub enum ReinitializeMethod {
+    #[default]
+    JumpFlooding,
 }
 
-#[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub(crate) struct ReinitLevelsetCalculateSdfResource {
-    #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
-    pub levelset_air0: Handle<Image>,
-    #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
-    pub levelset_air1: Handle<Image>,
+#[derive(QueryData)]
+pub(crate) struct ReinitializeLevelSetBindGroupQuery {
+    pub jump_flooding_bind_groups: Option<&'static JumpFloodingBindGroups>,
 }
 
-#[derive(Component, Clone, ExtractComponent)]
-pub(crate) struct ReinitLevelsetSeedsTextures(pub [Handle<Image>; 2]);
+pub(crate) struct ReinitializeLevelSetPlugin;
 
-#[derive(Component, Clone, ExtractComponent, ShaderType)]
-pub(crate) struct JumpFloodingUniform {
-    pub step: u32,
-}
-
-#[derive(Resource)]
-pub(crate) struct ReinitLevelsetPipeline {
-    pub init_seeds_pipeline: CachedComputePipelineId,
-    pub iterate_pipeline: CachedComputePipelineId,
-    pub sdf_pipeline: CachedComputePipelineId,
-    init_seeds_bind_group_layout: BindGroupLayout,
-    jump_flooding_step_bind_group_layout: BindGroupLayout,
-    sdf_bind_group_layout: BindGroupLayout,
-    read_only_seeds_bind_group_layout: BindGroupLayout,
-    write_only_seeds_bind_group_layout: BindGroupLayout,
-}
-
-#[derive(Component)]
-pub(crate) struct ReinitLevelsetBindGroups {
-    pub init_seeds_bind_group: BindGroup,
-    pub jump_flooding_step_bind_groups: Box<[BindGroup]>,
-    pub sdf_bind_group: BindGroup,
-    pub read_only_seeds_bind_groups: Box<[BindGroup]>,
-    pub write_only_seeds_bind_groups: Box<[BindGroup]>,
-}
-
-impl Plugin for ReinitializeLevelsetPlugin {
+impl Plugin for ReinitializeLevelSetPlugin {
     fn build(&self, app: &mut App) {
-        embedded_asset!(app, "shaders/recompute_levelset/initialize.wgsl");
-        embedded_asset!(app, "shaders/recompute_levelset/iterate.wgsl");
-        embedded_asset!(app, "shaders/recompute_levelset/calculate_sdf.wgsl");
-
         app.add_plugins((
-            ExtractComponentPlugin::<ReinitLevelsetInitializeSeedsResource>::default(),
-            ExtractComponentPlugin::<ReinitLevelsetSeedsTextures>::default(),
-            ExtractComponentPlugin::<ReinitLevelsetCalculateSdfResource>::default(),
+            JumpFloodingPlugin,
+            ExtractComponentPlugin::<ReinitializeMethod>::default(),
         ));
-
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_groups.in_set(RenderSystems::PrepareBindGroups),
-        );
-    }
-
-    fn finish(&self, app: &mut App) {
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<ReinitLevelsetPipeline>();
     }
 }
 
-impl Pipeline for ReinitLevelsetPipeline {
-    fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
-        Self::is_pipeline_loaded(pipeline_cache, self.init_seeds_pipeline)
-            && Self::is_pipeline_loaded(pipeline_cache, self.iterate_pipeline)
-            && Self::is_pipeline_loaded(pipeline_cache, self.sdf_pipeline)
-    }
+pub(crate) fn is_pipeline_ready(world: &World, pipeline_cache: &PipelineCache) -> bool {
+    let pipeline = world.resource::<JumpFloodingPipeline>();
+    is_pipeline_loaded(pipeline_cache, pipeline.init_seeds_pipeline)
+        && is_pipeline_loaded(pipeline_cache, pipeline.iterate_pipeline)
+        && is_pipeline_loaded(pipeline_cache, pipeline.sdf_pipeline)
 }
 
-impl FromWorld for ReinitLevelsetPipeline {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-        let pipeline_cache = world.resource::<PipelineCache>();
-        let asset_server = world.resource::<AssetServer>();
-
-        let jump_flooding_step_bind_group_layout = render_device.create_bind_group_layout(
-            Some("JumpFloodingStepBindGroupLayout"),
-            &BindGroupLayoutEntries::single(
-                ShaderStages::COMPUTE,
-                uniform_buffer::<JumpFloodingUniform>(false),
-            ),
-        );
-        let read_only_seeds_bind_group_layout = render_device.create_bind_group_layout(
-            Some("ReadOnlySeedsBindGroupLayout"),
-            &BindGroupLayoutEntries::single(
-                ShaderStages::COMPUTE,
-                texture_storage_2d(TextureFormat::Rg32Float, StorageTextureAccess::ReadOnly),
-            ),
-        );
-        let write_only_seeds_bind_group_layout = render_device.create_bind_group_layout(
-            Some("WriteOnlySeedsBindGroupLayout"),
-            &BindGroupLayoutEntries::single(
-                ShaderStages::COMPUTE,
-                texture_storage_2d(TextureFormat::Rg32Float, StorageTextureAccess::WriteOnly),
-            ),
-        );
-        let init_seeds_bind_group_layout =
-            ReinitLevelsetInitializeSeedsResource::bind_group_layout(render_device);
-        let sdf_bind_group_layout =
-            ReinitLevelsetCalculateSdfResource::bind_group_layout(render_device);
-
-        let init_seeds_pipeline =
-            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("ReinitializeLevelset_InitializeSeeds".into()),
-                layout: vec![
-                    init_seeds_bind_group_layout.clone(),
-                    write_only_seeds_bind_group_layout.clone(),
-                ],
-                shader: load_embedded_asset!(
-                    asset_server,
-                    "shaders/recompute_levelset/initialize.wgsl"
-                ),
-                entry_point: Some("initialize".into()),
-                ..default()
-            });
-
-        let iterate_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some("ReinitializeLevelset_Iterate".into()),
-            layout: vec![
-                read_only_seeds_bind_group_layout.clone(),
-                write_only_seeds_bind_group_layout.clone(),
-                jump_flooding_step_bind_group_layout.clone(),
-            ],
-            shader: load_embedded_asset!(asset_server, "shaders/recompute_levelset/iterate.wgsl"),
-            entry_point: Some("iterate".into()),
-            ..default()
-        });
-
-        let sdf_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-            label: Some("ReinitializeLevelset_Sdf".into()),
-            layout: vec![
-                sdf_bind_group_layout.clone(),
-                read_only_seeds_bind_group_layout.clone(),
-            ],
-            shader: load_embedded_asset!(
-                asset_server,
-                "shaders/recompute_levelset/calculate_sdf.wgsl"
-            ),
-            entry_point: Some("calculate_sdf".into()),
-            ..default()
-        });
-
-        ReinitLevelsetPipeline {
-            init_seeds_pipeline,
-            iterate_pipeline,
-            sdf_pipeline,
-            init_seeds_bind_group_layout,
-            jump_flooding_step_bind_group_layout,
-            sdf_bind_group_layout,
-            read_only_seeds_bind_group_layout,
-            write_only_seeds_bind_group_layout,
-        }
-    }
-}
-
-fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<ReinitLevelsetPipeline>,
-    render_device: Res<RenderDevice>,
-    render_queue: Res<RenderQueue>,
-    query: Query<(
-        Entity,
-        &FluidSettings,
-        &ReinitLevelsetInitializeSeedsResource,
-        &ReinitLevelsetCalculateSdfResource,
-        &ReinitLevelsetSeedsTextures,
-    )>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
+pub(crate) fn dispatch(
+    world: &World,
+    method: &ReinitializeMethod,
+    pipeline_cache: &PipelineCache,
+    pass: &mut ComputePass,
+    bind_groups: ReinitializeLevelSetBindGroupQueryItem,
+    size: UVec2,
 ) {
-    for (entity, settings, init_seeds_resource, sdf_resource, seeds_textures) in &query {
-        // steps for jump flooding algorithm: 1, 2, ..., 2^k, where: 2^k < max(size.0, size.1) <= 2^(k+1)
-        let max_power = ((settings.size.max_element() as f32).log2() - 1.0).floor() as usize;
-        let mut step = 2_u32.pow((max_power + 1) as u32);
-        let mut jump_flooding_buffer =
-            Vec::<UniformBuffer<JumpFloodingUniform>>::with_capacity(max_power + 1);
-        for _ in 0..max_power + 1 {
-            step /= 2;
-            jump_flooding_buffer.push(UniformBuffer::from(JumpFloodingUniform { step }));
+    match method {
+        ReinitializeMethod::JumpFlooding => {
+            pass.push_debug_group("Reinitialize levelset");
+
+            let pipeline = world.resource::<JumpFloodingPipeline>();
+            let bind_groups = bind_groups.jump_flooding_bind_groups.unwrap();
+            let init_seeds_pipeline = pipeline_cache
+                .get_compute_pipeline(pipeline.init_seeds_pipeline)
+                .unwrap();
+            let iterate_pipeline = pipeline_cache
+                .get_compute_pipeline(pipeline.iterate_pipeline)
+                .unwrap();
+            let sdf_pipeline = pipeline_cache
+                .get_compute_pipeline(pipeline.sdf_pipeline)
+                .unwrap();
+
+            pass.set_pipeline(init_seeds_pipeline);
+            pass.set_bind_group(0, &bind_groups.init_seeds_bind_group, &[]);
+            pass.set_bind_group(1, &bind_groups.write_only_seeds_bind_groups[0], &[]);
+            pass.dispatch_center(size);
+
+            pass.set_pipeline(&iterate_pipeline);
+            let mut src_idx = 0;
+            let mut dst_idx = 1;
+
+            for bind_group in &bind_groups.jump_flooding_step_bind_groups {
+                pass.set_bind_group(0, &bind_groups.read_only_seeds_bind_groups[src_idx], &[]);
+                pass.set_bind_group(1, &bind_groups.write_only_seeds_bind_groups[dst_idx], &[]);
+                pass.set_bind_group(2, bind_group, &[]);
+                pass.dispatch_center(size);
+
+                std::mem::swap(&mut src_idx, &mut dst_idx);
+            }
+
+            pass.set_pipeline(&sdf_pipeline);
+            pass.set_bind_group(0, &bind_groups.sdf_bind_group, &[]);
+            pass.set_bind_group(1, &bind_groups.read_only_seeds_bind_groups[src_idx], &[]);
+
+            pass.dispatch_center(size);
+            pass.pop_debug_group();
         }
-
-        for buffer in &mut jump_flooding_buffer {
-            buffer.write_buffer(&render_device, &render_queue);
-        }
-
-        let mut jump_flooding_step_bind_groups = Vec::with_capacity(jump_flooding_buffer.len());
-        for buffer in &jump_flooding_buffer {
-            jump_flooding_step_bind_groups.push(render_device.create_bind_group(
-                Some("JumpFloodingStepBindGroup"),
-                &pipeline.jump_flooding_step_bind_group_layout,
-                &BindGroupEntries::single(buffer.binding().unwrap()),
-            ));
-        }
-
-        let init_seeds_bind_group = init_seeds_resource
-            .as_bind_group(
-                &pipeline.init_seeds_bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        let sdf_bind_group = sdf_resource
-            .as_bind_group(&pipeline.sdf_bind_group_layout, &render_device, &mut param)
-            .unwrap()
-            .bind_group;
-
-        let seeds0 = param.0.get(&seeds_textures.0[0]).unwrap();
-        let seeds1 = param.0.get(&seeds_textures.0[1]).unwrap();
-
-        let mut read_only_seeds_bind_groups = Vec::with_capacity(2);
-        read_only_seeds_bind_groups.push(render_device.create_bind_group(
-            Some("ReadOnlySeedsBindGroup0"),
-            &pipeline.read_only_seeds_bind_group_layout,
-            &BindGroupEntries::single(&seeds0.texture_view),
-        ));
-        read_only_seeds_bind_groups.push(render_device.create_bind_group(
-            Some("ReadOnlySeedsBindGroup1"),
-            &pipeline.read_only_seeds_bind_group_layout,
-            &BindGroupEntries::single(&seeds1.texture_view),
-        ));
-
-        let mut write_only_seeds_bind_groups = Vec::with_capacity(2);
-        write_only_seeds_bind_groups.push(render_device.create_bind_group(
-            Some("WriteOnlySeedsBindGroup0"),
-            &pipeline.write_only_seeds_bind_group_layout,
-            &BindGroupEntries::single(&seeds0.texture_view),
-        ));
-        write_only_seeds_bind_groups.push(render_device.create_bind_group(
-            Some("WriteOnlySeedsBindGroup1"),
-            &pipeline.write_only_seeds_bind_group_layout,
-            &BindGroupEntries::single(&seeds1.texture_view),
-        ));
-
-        commands.entity(entity).insert(ReinitLevelsetBindGroups {
-            init_seeds_bind_group,
-            jump_flooding_step_bind_groups: jump_flooding_step_bind_groups.into_boxed_slice(),
-            sdf_bind_group,
-            read_only_seeds_bind_groups: read_only_seeds_bind_groups.into_boxed_slice(),
-            write_only_seeds_bind_groups: write_only_seeds_bind_groups.into_boxed_slice(),
-        });
     }
 }

@@ -34,7 +34,7 @@ use crate::{
     projection::{
         self, gauss_seidel::GaussSeidelPipeline, ProjectionBindGroupsQuery, ProjectionMethod,
     },
-    reinitialize_levelset::{ReinitLevelsetBindGroups, ReinitLevelsetPipeline},
+    reinitialize_levelset::{self, ReinitializeLevelSetBindGroupQuery, ReinitializeMethod},
     settings::FluidSettings,
     solve_pressure::SolvePressurePipeline,
     solve_velocity::{SolveVelocityBindGroups, SolveVelocityPipeline},
@@ -64,7 +64,7 @@ struct FluidBindGroupsQueryData {
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
     advect_scalar_bind_groups: &'static AdvectScalarBindGroups,
-    reinit_levelset_bind_groups: &'static ReinitLevelsetBindGroups,
+    reinit_levelset_bind_groups: ReinitializeLevelSetBindGroupQuery,
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
     levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
@@ -85,6 +85,7 @@ pub(crate) struct EulerFluidNode {
         &'static FluidStatus,
         &'static FluidSettings,
         &'static ProjectionMethod,
+        &'static ReinitializeMethod,
     )>,
     query_fluid_status: QueryState<
         (Entity, Option<&'static mut FluidStatus>),
@@ -120,7 +121,6 @@ impl render_graph::Node for EulerFluidNode {
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
-                let reinit_levelset_pipeline = world.resource::<ReinitLevelsetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -136,7 +136,7 @@ impl render_graph::Node for EulerFluidNode {
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advect_scalar_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && reinit_levelset_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && reinitialize_levelset::is_pipeline_ready(world, pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && are_pls_pipelines_ready(world, pipeline_cache)
                 {
@@ -196,6 +196,7 @@ impl render_graph::Node for EulerFluidNode {
                     fluid_status,
                     fluid_settings,
                     projection_method,
+                    reinitialize_method,
                 ) in self.fluid_query.iter_manual(world)
                 {
                     match fluid_status {
@@ -349,13 +350,12 @@ impl render_graph::Node for EulerFluidNode {
                                 );
                             }
 
-                            let reinit_levelset_pipeline =
-                                world.resource::<ReinitLevelsetPipeline>();
-                            reinitialize_levelset(
+                            reinitialize_levelset::dispatch(
+                                world,
+                                reinitialize_method,
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.reinit_levelset_bind_groups,
-                                reinit_levelset_pipeline,
                                 fluid_settings.size,
                             );
 
@@ -650,50 +650,6 @@ fn advect_scalar(
     );
 
     pass.set_pipeline(&advect_levelset_pipeline);
-    pass.dispatch_center(size);
-    pass.pop_debug_group();
-}
-
-fn reinitialize_levelset(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    bind_groups: &ReinitLevelsetBindGroups,
-    pipeline: &ReinitLevelsetPipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Reinitialize levelset");
-    let init_seeds_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.init_seeds_pipeline)
-        .unwrap();
-    let iterate_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.iterate_pipeline)
-        .unwrap();
-    let sdf_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.sdf_pipeline)
-        .unwrap();
-
-    pass.set_pipeline(init_seeds_pipeline);
-    pass.set_bind_group(0, &bind_groups.init_seeds_bind_group, &[]);
-    pass.set_bind_group(1, &bind_groups.write_only_seeds_bind_groups[0], &[]);
-    pass.dispatch_center(size);
-
-    pass.set_pipeline(&iterate_pipeline);
-    let mut src_idx = 0;
-    let mut dst_idx = 1;
-
-    for bind_group in &bind_groups.jump_flooding_step_bind_groups {
-        pass.set_bind_group(0, &bind_groups.read_only_seeds_bind_groups[src_idx], &[]);
-        pass.set_bind_group(1, &bind_groups.write_only_seeds_bind_groups[dst_idx], &[]);
-        pass.set_bind_group(2, bind_group, &[]);
-        pass.dispatch_center(size);
-
-        std::mem::swap(&mut src_idx, &mut dst_idx);
-    }
-
-    pass.set_pipeline(&sdf_pipeline);
-    pass.set_bind_group(0, &bind_groups.sdf_bind_group, &[]);
-    pass.set_bind_group(1, &bind_groups.read_only_seeds_bind_groups[src_idx], &[]);
-
     pass.dispatch_center(size);
     pass.pop_debug_group();
 }

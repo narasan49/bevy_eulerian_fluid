@@ -25,9 +25,9 @@ use crate::{
     obstacle::SolidEntities,
     particle_levelset_two_layers,
     projection::gauss_seidel::GaussSeidelResource,
-    reinitialize_levelset::{
-        ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
-        ReinitLevelsetSeedsTextures,
+    reinitialize_levelset::jump_flooding::{
+        JumpFloodingCalculateSdfResource, JumpFloodingInitializeSeedsResource,
+        JumpFloodingSeedsTextures,
     },
     settings::{FluidGridLength, FluidSettings, FluidTextures},
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
@@ -231,17 +231,17 @@ pub(crate) fn watch_fluid_component(
             levelset_air1: levelset_air1.clone(),
         };
 
-        let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {
+        let reinit_levelset_initialize_seeds_resource = JumpFloodingInitializeSeedsResource {
             levelset_air1: levelset_air1.clone(),
         };
 
-        let reinit_levelset_calculate_sdf_resource = ReinitLevelsetCalculateSdfResource {
+        let reinit_levelset_calculate_sdf_resource = JumpFloodingCalculateSdfResource {
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
         };
 
         let reinit_levelset_seeds_textures =
-            ReinitLevelsetSeedsTextures([jump_flooding_seeds0, jump_flooding_seeds1]);
+            JumpFloodingSeedsTextures([jump_flooding_seeds0, jump_flooding_seeds1]);
 
         let levelset_gradient_resource =
             LevelSetGradientResource::new(&levelset_air0, &grad_levelset_air);
