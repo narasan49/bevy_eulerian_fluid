@@ -39,6 +39,9 @@ use crate::{
                 ResetLevelSetCorrectionPipeline, ResetLevelSetCorrectionResource,
             },
             reset_levelset_correction_second::ResetLevelSetCorrectionSecondResource,
+            update_particle_radii::{
+                UpdateNegativeParticleRadiiResource, UpdatePositiveParticleRadiiResource,
+            },
             LevelsetCorrectionPlugin,
         },
         particle::{Particle, MAX_PARTICLES_PER_CELL},
@@ -313,6 +316,10 @@ pub(crate) fn setup(
     let accumulate_levelset_correction_minus_second =
         AccumulateLevelSetCorrectionMinusSecondResource::new(&pls_resources, levelset_air0);
     let correct_levelset_second = CorrectLevelSetSecondResource::new(&pls_resources, levelset_air0);
+    let uodate_positive_particle_radii =
+        UpdatePositiveParticleRadiiResource::new(&pls_resources, levelset_air0);
+    let uodate_negative_particle_radii =
+        UpdateNegativeParticleRadiiResource::new(&pls_resources, levelset_air0);
 
     // reseed particles
     let count_positive_particles_in_cell =
@@ -361,6 +368,8 @@ pub(crate) fn setup(
             accumulate_levelset_correction_plus_second,
             accumulate_levelset_correction_minus_second,
             correct_levelset_second,
+            uodate_positive_particle_radii,
+            uodate_negative_particle_radii,
         ))
         .insert((
             count_positive_particles_in_cell,

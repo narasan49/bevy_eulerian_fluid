@@ -6,6 +6,7 @@ pub mod mark_escaped_particles;
 pub mod mark_escaped_particles_second;
 pub mod reset_levelset_correction;
 pub mod reset_levelset_correction_second;
+pub mod update_particle_radii;
 
 use bevy::{
     ecs::query::QueryData,
@@ -45,6 +46,11 @@ use crate::{
             reset_levelset_correction_second::{
                 ResetLevelSetCorrectionSecondBindGroup, ResetLevelSetCorrectionSecondPass,
             },
+            update_particle_radii::{
+                UpdateNegativeParticleRadiiBindGroup, UpdateNegativeParticleRadiiPass,
+                UpdateParticleRadiiPipeline, UpdatePositiveParticleRadiiBindGroup,
+                UpdatePositiveParticleRadiiPass,
+            },
         },
         particle::MAX_PARTICLES_PER_CELL,
     },
@@ -66,6 +72,8 @@ impl Plugin for LevelsetCorrectionPlugin {
             FluidComputePassPlugin::<AccumulateLevelSetCorrectionPlusSecondPass>::default(),
             FluidComputePassPlugin::<AccumulateLevelSetCorrectionMinusSecondPass>::default(),
             FluidComputePassPlugin::<CorrectLevelSetSecondPass>::default(),
+            FluidComputePassPlugin::<UpdatePositiveParticleRadiiPass>::default(),
+            FluidComputePassPlugin::<UpdateNegativeParticleRadiiPass>::default(),
         ));
     }
 }
@@ -90,6 +98,8 @@ pub(crate) struct PLSLevelsetCorrectionSecondQuery {
     pub accumulate_levelset_correction_minus_bind_group:
         &'static AccumulateLevelSetCorrectionMinusSecondBindGroup,
     pub correct_levelset_bind_group: &'static CorrectLevelSetSecondBindGroup,
+    pub update_positive_particle_radii_bind_group: &'static UpdatePositiveParticleRadiiBindGroup,
+    pub update_negative_particle_radii_bind_group: &'static UpdateNegativeParticleRadiiBindGroup,
 }
 
 pub(crate) fn dispatch(
@@ -100,7 +110,11 @@ pub(crate) fn dispatch(
     grid_size: UVec2,
 ) {
     let num_workgroups_grid = (grid_size / 8).extend(1);
-    let num_workgroups_particle = UVec3::new(grid_size.element_product() / 256, 1, 1);
+    let num_workgroups_particle = UVec3::new(
+        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / 256,
+        1,
+        1,
+    );
 
     pass.push_debug_group("Level set correction");
     let mark_escaped_particles_pipeline = world.resource::<MarkEscapedParticlesPipeline>();
@@ -207,6 +221,26 @@ pub(crate) fn dispatch_second(
         pass,
         &bind_groups.correct_levelset_bind_group.bind_group,
         num_workgroups_grid,
+    );
+
+    let update_particle_radii_pipeline = world.resource::<UpdateParticleRadiiPipeline>();
+    update_particle_radii_pipeline.pipeline.dispatch(
+        pipeline_cache,
+        pass,
+        &bind_groups
+            .update_positive_particle_radii_bind_group
+            .bind_group,
+        num_workgroups_particle,
+    );
+
+    let update_particle_radii_pipeline = world.resource::<UpdateParticleRadiiPipeline>();
+    update_particle_radii_pipeline.pipeline.dispatch(
+        pipeline_cache,
+        pass,
+        &bind_groups
+            .update_negative_particle_radii_bind_group
+            .bind_group,
+        num_workgroups_particle,
     );
 
     pass.pop_debug_group();
