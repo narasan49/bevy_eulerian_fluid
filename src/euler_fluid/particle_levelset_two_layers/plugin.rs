@@ -5,6 +5,7 @@ use bevy::{
     render::{
         render_resource::{ComputePass, PipelineCache, TextureFormat},
         storage::ShaderStorageBuffer,
+        RenderApp,
     },
     shader::load_shader_library,
 };
@@ -86,7 +87,10 @@ use crate::{
     texture::NewTexture,
 };
 
-pub(crate) struct ParticleLevelsetTwoLayersPlugin;
+pub struct ParticleLevelsetTwoLayersPlugin;
+
+#[derive(Resource)]
+struct PluginEnabledMarker;
 
 impl Plugin for ParticleLevelsetTwoLayersPlugin {
     fn build(&self, app: &mut App) {
@@ -105,6 +109,9 @@ impl Plugin for ParticleLevelsetTwoLayersPlugin {
             FluidComputePassPlugin::<AdvectParticlesPass>::default(),
         ))
         .add_systems(Update, reset_buffers);
+
+        let render_app = app.sub_app_mut(RenderApp);
+        render_app.insert_resource(PluginEnabledMarker);
     }
 }
 
@@ -423,6 +430,11 @@ fn reset_buffers(
 }
 
 pub(crate) fn are_pls_pipelines_ready(world: &World, pipeline_cache: &PipelineCache) -> bool {
+    let is_pls_enabled = world.get_resource::<PluginEnabledMarker>();
+    if is_pls_enabled.is_none() {
+        return true;
+    }
+
     let initialize_particles = world.resource::<InitializeParticlesPipeline>();
     let advect_particles = world.resource::<AdvectParticlesPipeline>();
 

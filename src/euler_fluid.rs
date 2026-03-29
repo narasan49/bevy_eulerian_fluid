@@ -32,8 +32,7 @@ use bevy::{
 };
 
 use crate::{
-    common_pass::CommonPassPlugin, material::FluidMaterialPlugin,
-    particle_levelset_two_layers::ParticleLevelsetTwoLayersPlugin, plugin::FluidComputePassPlugin,
+    material::FluidMaterialPlugin, plugin::FluidComputePassPlugin,
     projection::PressureProjectionPlugin,
 };
 use render_node::{EulerFluidNode, FluidLabel};
@@ -73,7 +72,10 @@ impl Plugin for FluidPlugin {
                 FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),
                 FluidComputePassPlugin::<update_area_fraction::UpdateAreaFractionPass>::default(),
             ))
-            .add_plugins((ParticleLevelsetTwoLayersPlugin, CommonPassPlugin))
+            .add_plugins((
+                // particle_levelset_two_layers::ParticleLevelsetTwoLayersPlugin,
+                common_pass::CommonPassPlugin,
+            ))
             .add_plugins(FluidMaterialPlugin)
             .add_plugins((
                 fluid_status::FluidStatusPlugin,

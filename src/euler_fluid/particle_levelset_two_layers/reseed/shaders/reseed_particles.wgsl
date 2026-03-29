@@ -1,5 +1,5 @@
 #import bevy_fluid::coordinate::{interp2d_center, interp2d_center_rg32float}
-#import bevy_fluid::particle_levelset::particle::{Particle, is_particle_escaped};
+#import bevy_fluid::particle_levelset::particle::{Particle, is_particle_escaped_u32};
 #import bevy_fluid::particle_levelset::constants::{MAX_PARTICLES_PER_CELL, BAND_WIDTH};
 
 @group(0) @binding(0) var<storage, read> sorted_particles: array<Particle>;
@@ -19,7 +19,7 @@ fn reseed_particles(
     let n = num_particles_in_cell[cell_id_1d];
     let cell_offset = cell_offsets[cell_id_1d];
 
-    let cell_center = vec2<f32>(cell_id) + vec2<f32>(0.5);
+    let cell_center = vec2<f32>(cell_id) + vec2<f32>(0.0);
     let is_near_interface = abs(interp2d_center(levelset_air, cell_center)) < BAND_WIDTH;
     var heap: array<Node, MAX_PARTICLES_PER_CELL>;
     var heap_capacity = MAX_PARTICLES_PER_CELL;
@@ -34,10 +34,9 @@ fn reseed_particles(
             continue;
         }
 
-        if is_particle_escaped(p) {
-            alive_particles_mask[p_idx] = 1u;
-
+        if is_particle_escaped_u32(p, levelset_air) == 1 {
             if heap_capacity != 0u {
+                alive_particles_mask[p_idx] = 1u;
                 heap_capacity -= 1u;
                 if heap_idx > heap_capacity {
                     // delete the particle on top of the heap.
@@ -47,6 +46,8 @@ fn reseed_particles(
                     heap_idx -=1u;
                     construct_heap(&heap, heap_capacity);
                 }
+            } else {
+                alive_particles_mask[p_idx] = 0u;
             }
             continue;
         }
