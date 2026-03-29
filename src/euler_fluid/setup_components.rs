@@ -25,10 +25,7 @@ use crate::{
     obstacle::SolidEntities,
     particle_levelset_two_layers,
     projection::gauss_seidel::GaussSeidelResource,
-    reinitialize_levelset::jump_flooding::{
-        JumpFloodingCalculateSdfResource, JumpFloodingInitializeSeedsResource,
-        JumpFloodingSeedsTextures,
-    },
+    reinitialize_levelset::{self, ReinitializeMethod},
     settings::{FluidGridLength, FluidSettings, FluidTextures},
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
     solve_velocity::{SolveUResource, SolveVResource},
@@ -39,12 +36,20 @@ use crate::{
 
 pub(crate) fn watch_fluid_component(
     mut commands: Commands,
-    query: Query<(Entity, &FluidSettings, Option<&Transform>), Added<FluidSettings>>,
+    query: Query<
+        (
+            Entity,
+            &FluidSettings,
+            &ReinitializeMethod,
+            Option<&Transform>,
+        ),
+        Added<FluidSettings>,
+    >,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     grid_length: Res<FluidGridLength>,
 ) {
-    for (entity, settings, transform) in &query {
+    for (entity, settings, reinit_method, transform) in &query {
         let size = settings.size;
 
         if size.x % 64 != 0 || size.y % 64 != 0 {
@@ -79,9 +84,6 @@ pub(crate) fn watch_fluid_component(
         let levelset_solid = images.new_texture_storage(size, TextureFormat::R32Float);
 
         let area_fraction_solid = images.new_texture_storage(size, TextureFormat::Rgba32Float);
-
-        let jump_flooding_seeds0 = images.new_texture_storage(size, TextureFormat::Rg32Float);
-        let jump_flooding_seeds1 = images.new_texture_storage(size, TextureFormat::Rg32Float);
 
         let forces_to_fluid =
             buffers.add(ShaderStorageBuffer::from(vec![ForceToFluid::default(); 0]));
@@ -230,19 +232,6 @@ pub(crate) fn watch_fluid_component(
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
         };
-
-        let reinit_levelset_initialize_seeds_resource = JumpFloodingInitializeSeedsResource {
-            levelset_air1: levelset_air1.clone(),
-        };
-
-        let reinit_levelset_calculate_sdf_resource = JumpFloodingCalculateSdfResource {
-            levelset_air0: levelset_air0.clone(),
-            levelset_air1: levelset_air1.clone(),
-        };
-
-        let reinit_levelset_seeds_textures =
-            JumpFloodingSeedsTextures([jump_flooding_seeds0, jump_flooding_seeds1]);
-
         let levelset_gradient_resource =
             LevelSetGradientResource::new(&levelset_air0, &grad_levelset_air);
 
@@ -285,9 +274,6 @@ pub(crate) fn watch_fluid_component(
                 solve_u_resource,
                 solve_v_resource,
                 advect_levelset_resource,
-                reinit_levelset_initialize_seeds_resource,
-                reinit_levelset_calculate_sdf_resource,
-                reinit_levelset_seeds_textures,
                 levelset_gradient_resource,
                 sample_forces_resource,
                 accumulate_forces_resource,
@@ -302,6 +288,16 @@ pub(crate) fn watch_fluid_component(
             .insert(solid_entites)
             .insert(Readback::buffer(forces_to_solid_buffer.clone()))
             .observe(forces_to_solid_readback);
+
+        reinitialize_levelset::setup(
+            &mut commands,
+            entity,
+            &mut images,
+            settings.size,
+            &levelset_air0,
+            &levelset_air1,
+            reinit_method,
+        );
 
         particle_levelset_two_layers::plugin::setup(
             &mut commands,

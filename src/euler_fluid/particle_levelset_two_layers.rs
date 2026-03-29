@@ -6,4 +6,4 @@ pub mod plugin;
 pub mod reseed;
 pub mod update_interface_band_mask;
 
-pub(crate) use plugin::ParticleLevelsetTwoLayersPlugin;
+pub use plugin::ParticleLevelsetTwoLayersPlugin;

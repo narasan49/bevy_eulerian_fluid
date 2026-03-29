@@ -28,7 +28,9 @@ fn advect_levelset(
     let new_level = interp2d_center(levelset_air0, x_new);
 #endif
     
-    textureStore(levelset_air1, idx, vec4<f32>(new_level, 0.0, 0.0, 0.0));
+    if abs(new_level) < 1000.0 {
+        textureStore(levelset_air1, idx, vec4<f32>(new_level, 0.0, 0.0, 0.0));
+    } 
 }
 
 fn cubuc1d_x(
