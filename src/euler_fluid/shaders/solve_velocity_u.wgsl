@@ -16,10 +16,10 @@
 fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
     let x = vec2<i32>(invocation_id.xy);
-    if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(u0)) - 1)) {
-        textureStore(u0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
-        return;
-    }
+//  if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(u0)) - 1)) {
+//      textureStore(u0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+//      return;
+//  }
 
     let level_solid_centers = array<f32, 6>(
         textureLoad(levelset_solid, x + vec2<i32>(-1, -1)).r,
