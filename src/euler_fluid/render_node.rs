@@ -388,7 +388,7 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.levelset_gradient_bind_group.bind_group,
-                                UVec3::new(8, 8, 1),
+                                num_workgroups_grid,
                             );
 
                             let fluid_to_solid_forces_pipeline =
