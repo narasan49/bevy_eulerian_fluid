@@ -156,6 +156,7 @@ pub(crate) fn watch_fluid_component(
             v1: v1.clone(),
             levelset_air0: levelset_air0.clone(),
             forces_to_fluid: forces_to_fluid.clone(),
+            area_fraction_solid: area_fraction_solid.clone(),
         };
 
         let divergence_resource = DivergenceResource {
@@ -192,7 +193,7 @@ pub(crate) fn watch_fluid_component(
             u_solid: u_solid.clone(),
             p0: p0.clone(),
             levelset_air0: levelset_air0.clone(),
-            levelset_solid: levelset_solid.clone(),
+            area_fraction_solid: area_fraction_solid.clone(),
         };
 
         let solve_v_resource = SolveVResource {
@@ -201,7 +202,7 @@ pub(crate) fn watch_fluid_component(
             v_solid: v_solid.clone(),
             p0: p0.clone(),
             levelset_air0: levelset_air0.clone(),
-            levelset_solid: levelset_solid.clone(),
+            area_fraction_solid: area_fraction_solid.clone(),
         };
 
         let init_u_valid = InitializeUValid {

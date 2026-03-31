@@ -31,8 +31,8 @@ pub(crate) struct SolveUResource {
     pub p0: Handle<Image>,
     #[storage_texture(4, image_format = R32Float, access = ReadOnly)]
     pub levelset_air0: Handle<Image>,
-    #[storage_texture(5, image_format = R32Float, access = ReadOnly)]
-    pub levelset_solid: Handle<Image>,
+    #[storage_texture(5, image_format = Rgba32Float, access = ReadOnly)]
+    pub area_fraction_solid: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -47,8 +47,8 @@ pub(crate) struct SolveVResource {
     pub p0: Handle<Image>,
     #[storage_texture(4, image_format = R32Float, access = ReadOnly)]
     pub levelset_air0: Handle<Image>,
-    #[storage_texture(5, image_format = R32Float, access = ReadOnly)]
-    pub levelset_solid: Handle<Image>,
+    #[storage_texture(5, image_format = Rgba32Float, access = ReadOnly)]
+    pub area_fraction_solid: Handle<Image>,
 }
 
 #[derive(Resource)]

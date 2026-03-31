@@ -1,5 +1,5 @@
 #import bevy_fluid::fluid_uniform::SimulationUniform;
-#import bevy_fluid::area_fraction::area_fraction;
+#import bevy_fluid::area_fraction::area_fractions;
 
 struct Force {
     force: vec2<f32>,
@@ -10,6 +10,7 @@ struct Force {
 @group(0) @binding(1) var v1: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(2) var levelset_air0: texture_storage_2d<r32float, read>;
 @group(0) @binding(3) var<storage, read> forces: array<Force>;
+@group(0) @binding(4) var area_fraction_solid: texture_storage_2d<rgba32float, read>;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
@@ -18,26 +19,15 @@ fn apply_forces_u(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let idx = vec2<i32>(invocation_id.xy);
-    
-    let level_centers = array<f32, 6>(
-        textureLoad(levelset_air0, idx + vec2<i32>(-1, -1)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(0, -1)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(-1, 0)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(0, 0)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(-1, 1)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(0, 1)).r,
-    );
 
-    let level_air_vertex_minus = 0.25 * (level_centers[0] + level_centers[1] + level_centers[2] + level_centers[3]);
-    let level_air_vertex_plus = 0.25 * (level_centers[2] + level_centers[3] + level_centers[4] + level_centers[5]);
-    let area_fraction = area_fraction(level_air_vertex_minus, level_air_vertex_plus);
-    if area_fraction == 1.0 {
+    let f = area_fractions(levelset_air0, idx);
+    let f_solid = textureLoad(area_fraction_solid, idx).x;
+    if f.iminusj == 1.0 || f_solid == 0.0 {
         textureStore(u1, idx, vec4<f32>(0.0));
         return;
     }
 
     var net_force = constants.gravity.x;
-
     var n = arrayLength(&forces);
     loop {
         if (n == 0) {
@@ -57,25 +47,15 @@ fn apply_forces_v(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let idx = vec2<i32>(invocation_id.xy);
-    let level_centers = array<f32, 6>(
-        textureLoad(levelset_air0, idx + vec2<i32>(-1, -1)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(-1, 0)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(0, -1)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(0, 0)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(1, -1)).r,
-        textureLoad(levelset_air0, idx + vec2<i32>(1, 0)).r,
-    );
 
-    let level_air_vertex_minus = 0.25 * (level_centers[0] + level_centers[1] + level_centers[2] + level_centers[3]);
-    let level_air_vertex_plus = 0.25 * (level_centers[2] + level_centers[3] + level_centers[4] + level_centers[5]);
-    let area_fraction = area_fraction(level_air_vertex_minus, level_air_vertex_plus);
-    if area_fraction == 1.0 {
+    let f = area_fractions(levelset_air0, idx);
+    let f_solid = textureLoad(area_fraction_solid, idx).z;
+    if f.ijminus == 1.0 || f_solid == 0.0 {
         textureStore(v1, idx, vec4<f32>(0.0));
         return;
     }
 
     var net_force = constants.gravity.y;
-
     var n = arrayLength(&forces);
     loop {
         if (n == 0) {
