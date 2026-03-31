@@ -42,7 +42,7 @@ fn update_pressure(idx: vec2<i32>) -> f32 {
     let fully_solid = all(f == vec4<f32>(0.0));
     let p_old = textureLoad(p, idx).r;
     if (fully_solid) {
-        return p_old;
+        return 0.0;
     }
 
     var denom = 0.0;
