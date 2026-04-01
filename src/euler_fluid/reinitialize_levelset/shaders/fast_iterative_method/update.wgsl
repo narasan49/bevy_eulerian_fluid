@@ -1,7 +1,5 @@
-
-@group(0) @binding(0) var labels: texture_storage_2d<r8uint, read_write>;
+@group(0) @binding(0) var labels: texture_storage_2d<r32uint, read_write>;
 @group(0) @binding(1) var phi: texture_storage_2d<r32float, read_write>;
-// @group(0) @binding(2) var phi_sign: texture_storage_2d<r8sint, read_write>;
 
 
 const LABEL_NONE: u32 = 0;
@@ -48,7 +46,6 @@ fn update(
                 let q_nb = solve_quadratic_2d(phi, idx_nb);
                 if p_nb > q_nb {
                     textureStore(phi, idx_nb, vec4f(q_nb * sign(p), 0.0, 0.0, 0.0));
-                    // ToDo: Double buffering labels
                     textureStore(labels, idx_nb, vec4u(LABEL_ACTIVE, 0, 0, 0));
                 }
             }

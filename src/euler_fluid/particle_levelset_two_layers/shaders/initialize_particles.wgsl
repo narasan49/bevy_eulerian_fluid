@@ -9,7 +9,7 @@
 @group(0) @binding(3) var<storage, read_write> negative_particles: array<Particle>;
 @group(0) @binding(4) var levelset_air: texture_storage_2d<r32float, read>;
 @group(0) @binding(5) var grad_levelset_air: texture_storage_2d<rg32float, read>;
-@group(0) @binding(6) var interface_band_mask: texture_storage_2d<r8uint, read>;
+@group(0) @binding(6) var interface_band_mask: texture_storage_2d<r32uint, read>;
 
 // const MAX_ITER: u32 = 15;
 

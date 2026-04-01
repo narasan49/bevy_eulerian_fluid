@@ -36,7 +36,7 @@ impl FluidComputePass for UpdateInterfaceBandMaskPass {
 pub(crate) struct UpdateInterfaceBandMaskResource {
     #[storage_texture(0, image_format = R32Float, access = ReadOnly)]
     pub levelset_air: Handle<Image>,
-    #[storage_texture(1, image_format = R8Uint, access = WriteOnly)]
+    #[storage_texture(1, image_format = R32Uint, access = WriteOnly)]
     pub interface_band_mask: Handle<Image>,
 }
 

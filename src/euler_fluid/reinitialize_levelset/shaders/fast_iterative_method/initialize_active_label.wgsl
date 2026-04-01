@@ -1,4 +1,4 @@
-@group(0) @binding(0) var labels: texture_storage_2d<r8uint, read_write>;
+@group(0) @binding(0) var labels: texture_storage_2d<r32uint, read_write>;
 
 const LABEL_SOURCE: u32 = 1;
 const LABEL_ACTIVE: u32 = 2;

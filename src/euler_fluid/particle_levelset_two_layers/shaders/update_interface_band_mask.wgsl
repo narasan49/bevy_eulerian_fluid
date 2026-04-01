@@ -1,7 +1,7 @@
 #import bevy_fluid::particle_levelset::constants::BAND_WIDTH;
 
 @group(0) @binding(0) var levelset_air: texture_storage_2d<r32float, read>;
-@group(0) @binding(1) var interface_band_mask: texture_storage_2d<r8uint, write>;
+@group(0) @binding(1) var interface_band_mask: texture_storage_2d<r32uint, write>;
 
 @compute @workgroup_size(8, 8, 1)
 fn update_interface_band_mask(

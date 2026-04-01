@@ -230,7 +230,7 @@ impl PLSResources {
         let positive_particles_count = buffers.add(single_data.clone());
         let negative_particles = buffers.add(particles_data.clone());
         let negative_particles_count = buffers.add(single_data.clone());
-        let interface_band_mask = images.new_texture_storage(grid_size, TextureFormat::R8Uint);
+        let interface_band_mask = images.new_texture_storage(grid_size, TextureFormat::R32Uint);
         let phi_plus = buffers.add(grid_data.clone());
         let phi_minus = buffers.add(grid_data.clone());
         let num_positive_particles_in_cell = buffers.add(grid_data_u32.clone());

@@ -47,7 +47,7 @@ pub(crate) struct InitializeParticlesResource {
     pub levelset_air: Handle<Image>,
     #[storage_texture(5, image_format = Rg32Float, access = ReadOnly)]
     pub grad_levelset_air: Handle<Image>,
-    #[storage_texture(6, image_format = R8Uint, access = ReadOnly)]
+    #[storage_texture(6, image_format = R32Uint, access = ReadOnly)]
     pub interface_band_mask: Handle<Image>,
 }
 

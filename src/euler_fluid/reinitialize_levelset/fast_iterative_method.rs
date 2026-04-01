@@ -46,7 +46,7 @@ pub(crate) struct FastIterativeInitializeResource {
     pub levelset_air: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = WriteOnly)]
     pub phi: Handle<Image>,
-    #[storage_texture(2, image_format = R8Uint, access = WriteOnly)]
+    #[storage_texture(2, image_format = R32Uint, access = WriteOnly)]
     pub labels: Handle<Image>,
 }
 
@@ -131,7 +131,7 @@ impl FluidComputePass for FastIterativeInitializeActiveLabelPass {
 
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
 pub(crate) struct FastIterativeInitializeActiveLabelResource {
-    #[storage_texture(0, image_format = R8Uint, access = ReadWrite)]
+    #[storage_texture(0, image_format = R32Uint, access = ReadWrite)]
     pub labels: Handle<Image>,
 }
 
@@ -212,7 +212,7 @@ impl FluidComputePass for FastIterativeUpdatePass {
 
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
 pub(crate) struct FastIterativeUpdateResource {
-    #[storage_texture(0, image_format = R8Uint, access = ReadWrite)]
+    #[storage_texture(0, image_format = R32Uint, access = ReadWrite)]
     pub labels: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadWrite)]
     pub phi: Handle<Image>,

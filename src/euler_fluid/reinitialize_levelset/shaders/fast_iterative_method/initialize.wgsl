@@ -1,6 +1,6 @@
 @group(0) @binding(0) var levelset_air: texture_storage_2d<r32float, read>;
 @group(0) @binding(1) var phi: texture_storage_2d<r32float, write>;
-@group(0) @binding(2) var label: texture_storage_2d<r8uint, write>;
+@group(0) @binding(2) var label: texture_storage_2d<r32uint, write>;
 
 const LARGE_FLOAT: f32 = 1e30;
 const LABEL_NONE: u32 = 0;
