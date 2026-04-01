@@ -69,9 +69,20 @@ impl Plugin for ReinitializeLevelSetPlugin {
 
 pub(crate) fn is_pipeline_ready(world: &World, pipeline_cache: &PipelineCache) -> bool {
     let pipeline = world.resource::<JumpFloodingPipeline>();
+
+    let fim_init_pipeline = world.resource::<FastIterativeInitializePipeline>();
+    let fim_init_active_label_pipeline =
+        world.resource::<FastIterativeInitializeActiveLabelPipeline>();
+    let fim_update_pipeline = world.resource::<FastIterativeUpdatePipeline>();
+
     is_pipeline_loaded(pipeline_cache, pipeline.init_seeds_pipeline)
         && is_pipeline_loaded(pipeline_cache, pipeline.iterate_pipeline)
         && is_pipeline_loaded(pipeline_cache, pipeline.sdf_pipeline)
+        && fim_init_pipeline.pipeline.is_ready(pipeline_cache)
+        && fim_init_active_label_pipeline
+            .pipeline
+            .is_ready(pipeline_cache)
+        && fim_update_pipeline.pipeline.is_ready(pipeline_cache)
 }
 
 pub(crate) fn setup(
