@@ -37,6 +37,8 @@ pub(crate) struct InitializeGridCenterResource {
     pub levelset_air0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = WriteOnly)]
     pub levelset_air1: Handle<Image>,
+    #[storage_texture(2, image_format = Rg32Float, access = WriteOnly)]
+    pub grad_levelset_air: Handle<Image>,
 }
 
 #[derive(Resource)]

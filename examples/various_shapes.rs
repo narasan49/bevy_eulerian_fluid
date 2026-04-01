@@ -20,6 +20,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
+    projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -119,6 +120,7 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
             size: SIZE,
             initial_fluid_level: 0.7,
         },
+        ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
         Mesh2d(meshes.add(fluid_domain_rectangle)),
         Transform::default(),
     ));

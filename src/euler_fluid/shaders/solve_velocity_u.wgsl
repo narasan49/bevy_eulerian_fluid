@@ -6,9 +6,9 @@
 @group(0) @binding(0) var u0: texture_storage_2d<r32float, write>;
 @group(0) @binding(1) var u1: texture_storage_2d<r32float, read>;
 @group(0) @binding(2) var u_solid: texture_storage_2d<r32float, read>;
-@group(0) @binding(3) var p1: texture_storage_2d<r32float, read>;
+@group(0) @binding(3) var p0: texture_storage_2d<r32float, read>;
 @group(0) @binding(4) var levelset_air0: texture_storage_2d<r32float, read>;
-@group(0) @binding(5) var levelset_solid: texture_storage_2d<r32float, read>;
+@group(0) @binding(5) var area_fraction_solid: texture_storage_2d<rgba32float, read>;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
@@ -16,31 +16,19 @@
 fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
     let x = vec2<i32>(invocation_id.xy);
-    if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(u0)) - 1)) {
-        textureStore(u0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
-        return;
-    }
+//  if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(u0)) - 1)) {
+//      textureStore(u0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
+//      return;
+//  }
 
-    let level_solid_centers = array<f32, 6>(
-        textureLoad(levelset_solid, x + vec2<i32>(-1, -1)).r,
-        textureLoad(levelset_solid, x + vec2<i32>(0, -1)).r,
-        textureLoad(levelset_solid, x + vec2<i32>(-1, 0)).r,
-        textureLoad(levelset_solid, x + vec2<i32>(0, 0)).r,
-        textureLoad(levelset_solid, x + vec2<i32>(-1, 1)).r,
-        textureLoad(levelset_solid, x + vec2<i32>(0, 1)).r
-    );
-
-    let level_solid_vertex_iminusjminus = 0.25 * (level_solid_centers[0] + level_solid_centers[1] + level_solid_centers[2] + level_solid_centers[3]);
-    let level_solid_vertex_iminusjplus = 0.25 * (level_solid_centers[2] + level_solid_centers[3] + level_solid_centers[4] + level_solid_centers[5]);
-
-    let fraction = area_fraction(level_solid_vertex_iminusjminus, level_solid_vertex_iminusjplus);
+    let fraction = textureLoad(area_fraction_solid, x).x;
     if (fraction == 0.0) {
         textureStore(u0, x, textureLoad(u_solid, x));
         return;
     }
 
-    var p_ij = textureLoad(p1, x).r;
-    var p_iminusj = textureLoad(p1, x - vec2<i32>(1, 0)).r;
+    var p_ij = textureLoad(p0, x).r;
+    var p_iminusj = textureLoad(p0, x - vec2<i32>(1, 0)).r;
 
     let level_plus = textureLoad(levelset_air0, x).r;
     let level_minus = textureLoad(levelset_air0, x - vec2<i32>(1, 0)).r;
@@ -48,6 +36,9 @@ fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
         p_iminusj = level_minus / level_plus * p_ij;
     } else if (level_minus < 0.0 && level_plus >= 0.0) {
         p_ij = level_plus / level_minus * p_iminusj;
+    } else if (level_minus >= 0.0 && level_plus >= 0.0) {
+        textureStore(u0, x, vec4f(0.0));
+        return;
     }
 
     let u = textureLoad(u1, x);
