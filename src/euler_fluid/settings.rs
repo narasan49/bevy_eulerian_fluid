@@ -1,6 +1,9 @@
 use bevy::{prelude::*, render::extract_component::ExtractComponent};
 
-use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
+use crate::{
+    apply_forces::ForcesToFluid, fluid_status::FluidStatus, projection::ProjectionMethod,
+    reinitialize_levelset::ReinitializeMethod,
+};
 
 /// Setting for fluid simulation. By spawning fluid settings, components required to the simulation will be spawned and the simulation will start.
 /// Simulation result can be found on [`FluidTextures`].
@@ -58,7 +61,13 @@ use crate::{apply_forces::ForcesToFluid, fluid_status::FluidStatus};
 /// }
 /// ```
 #[derive(Component, Clone, ExtractComponent)]
-#[require(Transform, FluidStatus, ForcesToFluid)]
+#[require(
+    Transform,
+    FluidStatus,
+    ForcesToFluid,
+    ProjectionMethod,
+    ReinitializeMethod
+)]
 pub struct FluidSettings {
     pub rho: f32,
     pub gravity: Vec2,

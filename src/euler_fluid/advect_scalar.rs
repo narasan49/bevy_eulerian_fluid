@@ -85,6 +85,7 @@ impl FromWorld for AdvectScalarPipeline {
                     uniform_bind_group_layout.clone(),
                 ],
                 shader: load_embedded_asset!(asset_server, "shaders/advect_levelset.wgsl"),
+                shader_defs: vec!["CUBIC".into()],
                 entry_point: Some("advect_levelset".into()),
                 ..default()
             });

@@ -20,12 +20,25 @@ use crate::{
     },
     fluid_uniform::SimulationUniformBindGroup,
     initialize::{InitializeBindGroups, InitializePipeline},
+    levelset_gradient::{LevelSetGradientBindGroup, LevelSetGradientPipeline},
+    particle_levelset_two_layers::{
+        self,
+        levelset_correction::{PLSLevelsetCorrectionQuery, PLSLevelsetCorrectionSecondQuery},
+        plugin::{
+            are_pls_pipelines_ready, PLSAdvectionBindGroupsQuery, PLSInitializeBindGroupsQuery,
+        },
+        reseed::PLSReseedBindGroupsQuery,
+    },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{DispatchFluidPass, Pipeline},
-    reinitialize_levelset::{ReinitLevelsetBindGroups, ReinitLevelsetPipeline},
+    projection::{
+        self, gauss_seidel::GaussSeidelPipeline, ProjectionBindGroupsQuery, ProjectionMethod,
+    },
+    reinitialize_levelset::{self, ReinitializeLevelSetBindGroupQuery, ReinitializeMethod},
     settings::FluidSettings,
-    solve_pressure::{SolvePressureBindGroups, SolvePressurePipeline},
+    solve_pressure::SolvePressurePipeline,
     solve_velocity::{SolveVelocityBindGroups, SolveVelocityPipeline},
+    update_area_fraction::{UpdateAreaFractionBindGroup, UpdateAreaFractionPipeline},
     update_solid::{UpdateSolidBindGroups, UpdateSolidPipeline},
 };
 
@@ -44,16 +57,18 @@ enum State {
 struct FluidBindGroupsQueryData {
     initialize_bind_groups: &'static InitializeBindGroups,
     update_solid_bind_groups: &'static UpdateSolidBindGroups,
+    update_area_fraction_bind_group: &'static UpdateAreaFractionBindGroup,
     advection_bind_groups: &'static AdvectionBindGroups,
     apply_forces_bind_groups: &'static ApplyForcesBindGroups,
     divergence_bind_groups: &'static DivergenceBindGroups,
-    solve_pressure_bind_groups: &'static SolvePressureBindGroups,
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
     advect_scalar_bind_groups: &'static AdvectScalarBindGroups,
-    reinit_levelset_bind_groups: &'static ReinitLevelsetBindGroups,
+    reinit_levelset_bind_groups: ReinitializeLevelSetBindGroupQuery,
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
+    levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
+    prijection_bind_groups: ProjectionBindGroupsQuery,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -62,8 +77,15 @@ pub(crate) struct EulerFluidNode {
     // Reference: bevy\crates\bevy_ui\src\render\render_pass.rs
     fluid_query: QueryState<(
         FluidBindGroupsQueryData,
+        Option<PLSInitializeBindGroupsQuery>,
+        Option<PLSAdvectionBindGroupsQuery>,
+        Option<PLSLevelsetCorrectionQuery>,
+        Option<PLSLevelsetCorrectionSecondQuery>,
+        Option<PLSReseedBindGroupsQuery>,
         &'static FluidStatus,
         &'static FluidSettings,
+        &'static ProjectionMethod,
+        &'static ReinitializeMethod,
     )>,
     query_fluid_status: QueryState<
         (Entity, Option<&'static mut FluidStatus>),
@@ -88,28 +110,35 @@ impl render_graph::Node for EulerFluidNode {
         match self.state {
             State::Loading => {
                 let initialize_pipeline = world.resource::<InitializePipeline>();
+
                 let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
+                let update_area_fraction_pipeline = world.resource::<UpdateAreaFractionPipeline>();
                 let advection_pipeline = world.resource::<AdvectionPipeline>();
                 let divergence_pipeline = world.resource::<DivergencePipeline>();
                 let apply_forcces_pipeline = world.resource::<ApplyForcesPipeline>();
                 let solve_pressure_pipeline = world.resource::<SolvePressurePipeline>();
+                let gauss_seidel_pipeline = world.resource::<GaussSeidelPipeline>();
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
-                let reinit_levelset_pipeline = world.resource::<ReinitLevelsetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && update_solid_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && update_area_fraction_pipeline
+                        .pipeline
+                        .is_ready(pipeline_cache)
                     && advection_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && apply_forcces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && divergence_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && solve_pressure_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && gauss_seidel_pipeline.is_ready(pipeline_cache)
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advect_scalar_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && reinit_levelset_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && reinitialize_levelset::is_pipeline_ready(world, pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && are_pls_pipelines_ready(world, pipeline_cache)
                 {
                     self.state = State::Init;
                 }
@@ -157,8 +186,18 @@ impl render_graph::Node for EulerFluidNode {
             State::Loading => {}
             State::Init => {}
             State::Update => {
-                for (bind_groups, fluid_status, fluid_settings) in
-                    self.fluid_query.iter_manual(world)
+                for (
+                    bind_groups,
+                    pls_init_bind_groups,
+                    pls_update_bind_groups,
+                    pls_correct_levelset_bind_groups,
+                    pls_correct_levelset_second_bind_groups,
+                    pls_reseed_bind_groups,
+                    fluid_status,
+                    fluid_settings,
+                    projection_method,
+                    reinitialize_method,
+                ) in self.fluid_query.iter_manual(world)
                 {
                     match fluid_status {
                         FluidStatus::Uninitialized => {
@@ -178,6 +217,16 @@ impl render_graph::Node for EulerFluidNode {
                                 initialize_pipeline,
                                 fluid_settings.size,
                             );
+
+                            if let Some(pls_init_bind_groups) = pls_init_bind_groups {
+                                particle_levelset_two_layers::plugin::dispatch_initialize(
+                                    world,
+                                    pipeline_cache,
+                                    &mut pass,
+                                    pls_init_bind_groups,
+                                    fluid_settings.size,
+                                );
+                            }
                         }
                         FluidStatus::Initialized => {
                             let mut pass = render_context.command_encoder().begin_compute_pass(
@@ -186,6 +235,7 @@ impl render_graph::Node for EulerFluidNode {
                                     ..default()
                                 },
                             );
+                            let num_workgroups_grid = (fluid_settings.size / 8).extend(1);
                             let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                             let obstacles_bind_groups =
                                 world.resource::<SolidObstaclesBindGroups>();
@@ -197,6 +247,15 @@ impl render_graph::Node for EulerFluidNode {
                                 bind_groups.simulation_uniform,
                                 update_solid_pipeline,
                                 fluid_settings.size,
+                            );
+
+                            let update_area_fraction_pipeline =
+                                world.resource::<UpdateAreaFractionPipeline>();
+                            update_area_fraction_pipeline.pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.update_area_fraction_bind_group.bind_group,
+                                num_workgroups_grid,
                             );
 
                             let advection_pipeline = world.resource::<AdvectionPipeline>();
@@ -228,13 +287,13 @@ impl render_graph::Node for EulerFluidNode {
                                 fluid_settings.size,
                             );
 
-                            let solve_pressure_pipeline = world.resource::<SolvePressurePipeline>();
-                            solve_pressure(
+                            projection::dispatch(
+                                world,
+                                projection_method,
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.solve_pressure_bind_groups,
+                                bind_groups.prijection_bind_groups,
                                 bind_groups.simulation_uniform,
-                                solve_pressure_pipeline,
                                 fluid_settings.size,
                             );
 
@@ -268,14 +327,68 @@ impl render_graph::Node for EulerFluidNode {
                                 fluid_settings.size,
                             );
 
-                            let reinit_levelset_pipeline =
-                                world.resource::<ReinitLevelsetPipeline>();
-                            reinitialize_levelset(
+                            if let Some(pls_update_bind_groups) = pls_update_bind_groups {
+                                particle_levelset_two_layers::plugin::dispatch_update(
+                                    world,
+                                    pipeline_cache,
+                                    &mut pass,
+                                    pls_update_bind_groups,
+                                    bind_groups.simulation_uniform,
+                                    fluid_settings.size,
+                                );
+                            }
+
+                            if let Some(correct_levelset_bind_groups) =
+                                pls_correct_levelset_bind_groups
+                            {
+                                particle_levelset_two_layers::levelset_correction::dispatch(
+                                    world,
+                                    pipeline_cache,
+                                    &mut pass,
+                                    correct_levelset_bind_groups,
+                                    fluid_settings.size,
+                                );
+                            }
+
+                            reinitialize_levelset::dispatch(
+                                world,
+                                reinitialize_method,
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.reinit_levelset_bind_groups,
-                                reinit_levelset_pipeline,
                                 fluid_settings.size,
+                            );
+
+                            if let Some(correct_levelset_second_bind_groups) =
+                                pls_correct_levelset_second_bind_groups
+                            {
+                                particle_levelset_two_layers::levelset_correction::dispatch_second(
+                                    world,
+                                    pipeline_cache,
+                                    &mut pass,
+                                    correct_levelset_second_bind_groups,
+                                    fluid_settings.size,
+                                );
+                            }
+
+                            if let Some(reseed_bind_groups) = pls_reseed_bind_groups {
+                                particle_levelset_two_layers::reseed::dispatch(
+                                    world,
+                                    pipeline_cache,
+                                    &mut pass,
+                                    reseed_bind_groups,
+                                    bind_groups.simulation_uniform,
+                                    fluid_settings.size,
+                                );
+                            }
+
+                            let levelset_gradient_pipeline =
+                                world.resource::<LevelSetGradientPipeline>();
+                            levelset_gradient_pipeline.pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.levelset_gradient_bind_group.bind_group,
+                                num_workgroups_grid,
                             );
 
                             let fluid_to_solid_forces_pipeline =
@@ -411,47 +524,6 @@ fn divergence(
     pass.pop_debug_group();
 }
 
-fn solve_pressure(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    solve_pressure_bind_groups: &SolvePressureBindGroups,
-    uniform_bind_group: &SimulationUniformBindGroup,
-    solve_pressure_pipeline: &SolvePressurePipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Solve pressure");
-    let jacobi_iteration_pipeline = pipeline_cache
-        .get_compute_pipeline(solve_pressure_pipeline.jacobi_iteration_pipeline)
-        .unwrap();
-    let jacobi_iteration_reverse_pipeline = pipeline_cache
-        .get_compute_pipeline(solve_pressure_pipeline.jacobi_iteration_reverse_pipeline)
-        .unwrap();
-
-    pass.set_bind_group(
-        1,
-        &uniform_bind_group.bind_group,
-        &[uniform_bind_group.index],
-    );
-    for _ in 0..50 {
-        pass.set_pipeline(&jacobi_iteration_pipeline);
-        pass.set_bind_group(
-            0,
-            &solve_pressure_bind_groups.jacobi_iteration_bind_group,
-            &[],
-        );
-        pass.dispatch_center(size);
-
-        pass.set_pipeline(&jacobi_iteration_reverse_pipeline);
-        pass.set_bind_group(
-            0,
-            &solve_pressure_bind_groups.jacobi_iteration_reverse_bind_group,
-            &[],
-        );
-        pass.dispatch_center(size);
-    }
-    pass.pop_debug_group();
-}
-
 fn solve_velocity(
     pipeline_cache: &PipelineCache,
     pass: &mut ComputePass,
@@ -491,6 +563,12 @@ fn extrapolate_velocity(
     size: UVec2,
 ) {
     pass.push_debug_group("Extrapolate velocity");
+    let initialize_u_valid_pipeline = pipeline_cache
+        .get_compute_pipeline(extrapolate_velocity_pipeline.initialize_u_valid_pipeline)
+        .unwrap();
+    let initialize_v_valid_pipeline = pipeline_cache
+        .get_compute_pipeline(extrapolate_velocity_pipeline.initialize_v_valid_pipeline)
+        .unwrap();
     let extrapolate_u_pipeline = pipeline_cache
         .get_compute_pipeline(extrapolate_velocity_pipeline.extrapolate_u_pipeline)
         .unwrap();
@@ -498,16 +576,52 @@ fn extrapolate_velocity(
         .get_compute_pipeline(extrapolate_velocity_pipeline.extrapolate_v_pipeline)
         .unwrap();
 
+    pass.set_pipeline(&initialize_u_valid_pipeline);
     pass.set_bind_group(
         0,
-        &extrapolate_velocity_bind_groups.extrapolate_velocity_bind_group,
+        &extrapolate_velocity_bind_groups.initialize_u_valid_bind_group,
         &[],
     );
-
-    pass.set_pipeline(&extrapolate_u_pipeline);
     pass.dispatch_x_major(size);
-    pass.set_pipeline(&extrapolate_v_pipeline);
+
+    pass.set_pipeline(&initialize_v_valid_pipeline);
+    pass.set_bind_group(
+        0,
+        &extrapolate_velocity_bind_groups.initialize_v_valid_bind_group,
+        &[],
+    );
     pass.dispatch_y_major(size);
+
+    for _ in 0..(10 / 2) {
+        pass.set_pipeline(&extrapolate_u_pipeline);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_u_bind_group,
+            &[],
+        );
+        pass.dispatch_x_major(size);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_u_reverse_bind_group,
+            &[],
+        );
+        pass.dispatch_x_major(size);
+
+        pass.set_pipeline(&extrapolate_v_pipeline);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_v_bind_group,
+            &[],
+        );
+        pass.dispatch_y_major(size);
+        pass.set_bind_group(
+            0,
+            &extrapolate_velocity_bind_groups.extrapolate_v_reverse_bind_group,
+            &[],
+        );
+        pass.dispatch_y_major(size);
+    }
+
     pass.pop_debug_group();
 }
 
@@ -536,41 +650,6 @@ fn advect_scalar(
     );
 
     pass.set_pipeline(&advect_levelset_pipeline);
-    pass.dispatch_center(size);
-    pass.pop_debug_group();
-}
-
-fn reinitialize_levelset(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    bind_groups: &ReinitLevelsetBindGroups,
-    pipeline: &ReinitLevelsetPipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Reinitialize levelset");
-    let init_seeds_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.init_seeds_pipeline)
-        .unwrap();
-    let iterate_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.iterate_pipeline)
-        .unwrap();
-    let sdf_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.sdf_pipeline)
-        .unwrap();
-
-    pass.set_pipeline(init_seeds_pipeline);
-    pass.set_bind_group(0, &bind_groups.init_seeds_bind_group, &[]);
-    pass.dispatch_center(size);
-
-    pass.set_pipeline(&iterate_pipeline);
-    pass.set_bind_group(0, &bind_groups.iterate_bind_group, &[]);
-    for bind_group in &bind_groups.jump_flooding_step_bind_groups {
-        pass.set_bind_group(1, bind_group, &[]);
-        pass.dispatch_center(size);
-    }
-
-    pass.set_pipeline(&sdf_pipeline);
-    pass.set_bind_group(0, &bind_groups.sdf_bind_group, &[]);
     pass.dispatch_center(size);
     pass.pop_debug_group();
 }
@@ -621,9 +700,6 @@ fn update_solid(
     let update_solid_pipeline = pipeline_cache
         .get_compute_pipeline(pipeline.update_solid_pipeline)
         .unwrap();
-    let update_solid_pressure_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.update_solid_pressure_pipeline)
-        .unwrap();
 
     pass.set_pipeline(&update_solid_pipeline);
     pass.set_bind_group(0, &bind_groups.update_solid_bind_group, &[]);
@@ -635,8 +711,5 @@ fn update_solid(
     );
     pass.dispatch_center(size);
 
-    pass.set_pipeline(&update_solid_pressure_pipeline);
-    pass.set_bind_group(0, &bind_groups.update_solid_pressure_bind_group, &[]);
-    pass.dispatch_center(size);
     pass.pop_debug_group();
 }
