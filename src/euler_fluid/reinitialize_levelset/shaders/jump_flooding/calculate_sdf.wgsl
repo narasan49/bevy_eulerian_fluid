@@ -1,10 +1,9 @@
 @group(0) @binding(0) var levelset_air0: texture_storage_2d<r32float, write>;
 @group(0) @binding(1) var levelset_air1: texture_storage_2d<r32float, read>;
-@group(0) @binding(2) var seeds_x: texture_storage_2d<r32float, read>;
-@group(0) @binding(3) var seeds_y: texture_storage_2d<r32float, read>;
+@group(1) @binding(0) var seeds: texture_storage_2d<rg32float, read>;
 
 fn get_seed(x: vec2<i32>) -> vec2<f32> {
-    return vec2<f32>(textureLoad(seeds_x, x).r, textureLoad(seeds_y, x).r);
+    return textureLoad(seeds, x).rg;
 }
 
 @compute @workgroup_size(8, 8, 1)

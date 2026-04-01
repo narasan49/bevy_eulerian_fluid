@@ -42,7 +42,7 @@ pub(crate) struct SampleForcesResource {
     #[storage_texture(4, image_format = R32Sint, access = ReadOnly)]
     pub solid_id: Handle<Image>,
     #[storage_texture(5, image_format = R32Float, access = ReadOnly)]
-    pub p1: Handle<Image>,
+    pub p0: Handle<Image>,
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]

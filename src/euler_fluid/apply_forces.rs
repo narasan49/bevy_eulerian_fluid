@@ -30,6 +30,8 @@ pub(crate) struct ApplyForcesResource {
     pub levelset_air0: Handle<Image>,
     #[storage(3, read_only, visibility(compute))]
     pub forces_to_fluid: Handle<ShaderStorageBuffer>,
+    #[storage_texture(4, image_format = Rgba32Float, access = ReadOnly)]
+    pub area_fraction_solid: Handle<Image>,
 }
 
 #[derive(Clone, Copy, Default, ShaderType)]

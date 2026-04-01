@@ -12,33 +12,44 @@ use crate::{
     advection::AdvectionResource,
     apply_forces::{ApplyForcesResource, ForceToFluid},
     divergence::DivergenceResource,
-    extrapolate_velocity::ExtrapolateVelocityResource,
+    extrapolate_velocity::{
+        ExtrapolateUResource, ExtrapolateVResource, InitializeUValid, InitializeVValid,
+    },
     fluid_to_solid::{
         forces_to_solid_readback, AccumulateForcesResource, FluidToSolidForce,
         SampleForcesResource, MAX_SOLIDS,
     },
     fluid_uniform::SimulationUniform,
     initialize::{InitializeGridCenterResource, InitializeVelocityResource},
+    levelset_gradient::LevelSetGradientResource,
     obstacle::SolidEntities,
-    reinitialize_levelset::{
-        ReinitLevelsetCalculateSdfResource, ReinitLevelsetInitializeSeedsResource,
-        ReinitLevelsetIterateResource,
-    },
+    particle_levelset_two_layers,
+    projection::gauss_seidel::GaussSeidelResource,
+    reinitialize_levelset::{self, ReinitializeMethod},
     settings::{FluidGridLength, FluidSettings, FluidTextures},
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
     solve_velocity::{SolveUResource, SolveVResource},
     texture::NewTexture,
-    update_solid::{UpdateSolidPressureResource, UpdateSolidResource},
+    update_area_fraction::UpdateAreaFractionResource,
+    update_solid::UpdateSolidResource,
 };
 
 pub(crate) fn watch_fluid_component(
     mut commands: Commands,
-    query: Query<(Entity, &FluidSettings, Option<&Transform>), Added<FluidSettings>>,
+    query: Query<
+        (
+            Entity,
+            &FluidSettings,
+            &ReinitializeMethod,
+            Option<&Transform>,
+        ),
+        Added<FluidSettings>,
+    >,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     grid_length: Res<FluidGridLength>,
 ) {
-    for (entity, settings, transform) in &query {
+    for (entity, settings, reinit_method, transform) in &query {
         let size = settings.size;
 
         if size.x % 64 != 0 || size.y % 64 != 0 {
@@ -57,6 +68,11 @@ pub(crate) fn watch_fluid_component(
         let v_solid = images.new_texture_storage(size_v, TextureFormat::R32Float);
         let solid_id = images.new_texture_storage(size, TextureFormat::R32Sint);
 
+        let in_is_u_valid = images.new_texture_storage(size_u, TextureFormat::R32Sint);
+        let out_is_u_valid = images.new_texture_storage(size_u, TextureFormat::R32Sint);
+        let in_is_v_valid = images.new_texture_storage(size_v, TextureFormat::R32Sint);
+        let out_is_v_valid = images.new_texture_storage(size_v, TextureFormat::R32Sint);
+
         let div = images.new_texture_storage(size, TextureFormat::R32Float);
 
         let p0 = images.new_texture_storage(size, TextureFormat::R32Float);
@@ -64,10 +80,10 @@ pub(crate) fn watch_fluid_component(
 
         let levelset_air0 = images.new_texture_storage(size, TextureFormat::R32Float);
         let levelset_air1 = images.new_texture_storage(size, TextureFormat::R32Float);
+        let grad_levelset_air = images.new_texture_storage(size, TextureFormat::Rg32Float);
         let levelset_solid = images.new_texture_storage(size, TextureFormat::R32Float);
 
-        let jump_flooding_seeds_x = images.new_texture_storage(size, TextureFormat::R32Float);
-        let jump_flooding_seeds_y = images.new_texture_storage(size, TextureFormat::R32Float);
+        let area_fraction_solid = images.new_texture_storage(size, TextureFormat::Rgba32Float);
 
         let forces_to_fluid =
             buffers.add(ShaderStorageBuffer::from(vec![ForceToFluid::default(); 0]));
@@ -115,6 +131,7 @@ pub(crate) fn watch_fluid_component(
         let initialize_grid_center_resource = InitializeGridCenterResource {
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
+            grad_levelset_air: grad_levelset_air.clone(),
         };
 
         let update_solid_resource = UpdateSolidResource {
@@ -124,10 +141,8 @@ pub(crate) fn watch_fluid_component(
             solid_id: solid_id.clone(),
         };
 
-        let update_solid_pressure = UpdateSolidPressureResource {
-            p0: p0.clone(),
-            levelset_solid: levelset_solid.clone(),
-        };
+        let update_area_fraction_resource =
+            UpdateAreaFractionResource::new(&levelset_solid, &area_fraction_solid);
 
         let advection_resource = AdvectionResource {
             u0: u0.clone(),
@@ -141,6 +156,7 @@ pub(crate) fn watch_fluid_component(
             v1: v1.clone(),
             levelset_air0: levelset_air0.clone(),
             forces_to_fluid: forces_to_fluid.clone(),
+            area_fraction_solid: area_fraction_solid.clone(),
         };
 
         let divergence_resource = DivergenceResource {
@@ -168,29 +184,47 @@ pub(crate) fn watch_fluid_component(
             levelset_solid: levelset_solid.clone(),
         };
 
+        let gauss_seidel_resource =
+            GaussSeidelResource::new(&p0, &div, &levelset_air0, &area_fraction_solid);
+
         let solve_u_resource = SolveUResource {
             u0: u0.clone(),
             u1: u1.clone(),
             u_solid: u_solid.clone(),
-            p1: p1.clone(),
+            p0: p0.clone(),
             levelset_air0: levelset_air0.clone(),
-            levelset_solid: levelset_solid.clone(),
+            area_fraction_solid: area_fraction_solid.clone(),
         };
 
         let solve_v_resource = SolveVResource {
             v0: v0.clone(),
             v1: v1.clone(),
             v_solid: v_solid.clone(),
-            p1: p1.clone(),
+            p0: p0.clone(),
             levelset_air0: levelset_air0.clone(),
-            levelset_solid: levelset_solid.clone(),
+            area_fraction_solid: area_fraction_solid.clone(),
         };
 
-        let extrapolate_velocity_resource = ExtrapolateVelocityResource {
+        let init_u_valid = InitializeUValid {
+            is_u_valid: in_is_u_valid.clone(),
+            levelset_air: levelset_air0.clone(),
+        };
+
+        let extrapolate_u_resource = ExtrapolateUResource {
             u0: u0.clone(),
+            in_is_u_valid: in_is_u_valid.clone(),
+            out_is_u_valid: out_is_u_valid.clone(),
+        };
+
+        let init_v_valid = InitializeVValid {
+            is_v_valid: in_is_v_valid.clone(),
+            levelset_air: levelset_air0.clone(),
+        };
+
+        let extrapolate_v_resource = ExtrapolateVResource {
             v0: v0.clone(),
-            levelset_air0: levelset_air0.clone(),
-            levelset_solid: levelset_solid.clone(),
+            in_is_v_valid: in_is_v_valid.clone(),
+            out_is_v_valid: out_is_v_valid.clone(),
         };
 
         let advect_levelset_resource = AdvectLevelsetResource {
@@ -199,24 +233,8 @@ pub(crate) fn watch_fluid_component(
             levelset_air0: levelset_air0.clone(),
             levelset_air1: levelset_air1.clone(),
         };
-
-        let reinit_levelset_initialize_seeds_resource = ReinitLevelsetInitializeSeedsResource {
-            levelset_air1: levelset_air1.clone(),
-            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
-            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
-        };
-
-        let reinit_levelset_iterate_resource = ReinitLevelsetIterateResource {
-            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
-            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
-        };
-
-        let reinit_levelset_calculate_sdf_resource = ReinitLevelsetCalculateSdfResource {
-            levelset_air0: levelset_air0.clone(),
-            levelset_air1: levelset_air1.clone(),
-            jump_flooding_seeds_x: jump_flooding_seeds_x.clone(),
-            jump_flooding_seeds_y: jump_flooding_seeds_y.clone(),
-        };
+        let levelset_gradient_resource =
+            LevelSetGradientResource::new(&levelset_air0, &grad_levelset_air);
 
         let sample_forces_resource = SampleForcesResource {
             bins_force_x: bins_force_x.clone(),
@@ -224,7 +242,7 @@ pub(crate) fn watch_fluid_component(
             bins_torque: bins_torque.clone(),
             levelset_solid: levelset_solid.clone(),
             solid_id: solid_id.clone(),
-            p1: p1.clone(),
+            p0: p0.clone(),
         };
 
         let accumulate_forces_resource = AccumulateForcesResource {
@@ -245,27 +263,54 @@ pub(crate) fn watch_fluid_component(
                 initialize_resource,
                 initialize_grid_center_resource,
                 update_solid_resource,
-                update_solid_pressure,
+                update_area_fraction_resource,
                 advection_resource,
                 apply_forces_resource,
                 divergence_resource,
                 jacobi_iter_resource,
                 jacobi_iter_rev_resource,
+                gauss_seidel_resource,
             ))
             .insert((
                 solve_u_resource,
                 solve_v_resource,
-                extrapolate_velocity_resource,
                 advect_levelset_resource,
-                reinit_levelset_initialize_seeds_resource,
-                reinit_levelset_iterate_resource,
-                reinit_levelset_calculate_sdf_resource,
+                levelset_gradient_resource,
                 sample_forces_resource,
                 accumulate_forces_resource,
+            ))
+            .insert((
+                init_u_valid,
+                init_v_valid,
+                extrapolate_u_resource,
+                extrapolate_v_resource,
             ))
             .insert(uniform)
             .insert(solid_entites)
             .insert(Readback::buffer(forces_to_solid_buffer.clone()))
             .observe(forces_to_solid_readback);
+
+        reinitialize_levelset::setup(
+            &mut commands,
+            entity,
+            &mut images,
+            settings.size,
+            &levelset_air0,
+            &levelset_air1,
+            reinit_method,
+        );
+
+        particle_levelset_two_layers::plugin::setup(
+            &mut commands,
+            entity,
+            &mut images,
+            &mut buffers,
+            settings.size,
+            &u0,
+            &v0,
+            &levelset_air0,
+            &levelset_air1,
+            &grad_levelset_air,
+        );
     }
 }

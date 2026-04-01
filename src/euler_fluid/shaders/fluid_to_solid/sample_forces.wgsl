@@ -10,7 +10,7 @@ const MAX_SOLIDS: u32 = 256;
 @group(0) @binding(2) var<storage, read_write> bins_torque: array<atomic<i32>>;
 @group(0) @binding(3) var levelset_solid: texture_storage_2d<r32float, read>;
 @group(0) @binding(4) var solid_id: texture_storage_2d<r32sint, read>;
-@group(0) @binding(5) var p1: texture_storage_2d<r32float, read>;
+@group(0) @binding(5) var p0: texture_storage_2d<r32float, read>;
 
 @group(1) @binding(0) var<storage, read> obstacles: array<SolidObstacle>;
 
@@ -34,7 +34,7 @@ fn sample_forces_to_solid(
         return;
     }
 
-    let p = textureLoad(p1, idx).r;
+    let p = textureLoad(p0, idx).r;
     let force = -vec2<f32>(f.iplusj - f.iminusj, f.ijplus - f.ijminus) * p * simulation_uniform.dx;
 
     let obstacle = obstacles[solid_id];
