@@ -35,7 +35,9 @@ impl<T: FluidComputePass> Plugin for FluidComputePassPlugin<T> {
         T::register_assets(app);
 
         app.add_plugins(ExtractComponentPlugin::<T::Resource>::default());
-        let render_app = app.sub_app_mut(RenderApp);
+        let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
+            return;
+        };
         render_app.add_systems(
             Render,
             T::prepare_bind_groups_system().in_set(RenderSystems::PrepareBindGroups),
@@ -43,7 +45,9 @@ impl<T: FluidComputePass> Plugin for FluidComputePassPlugin<T> {
     }
 
     fn finish(&self, app: &mut App) {
-        let render_app = app.sub_app_mut(RenderApp);
+        let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
+            return;
+        };
         render_app.init_resource::<T::P>();
     }
 }
@@ -59,8 +63,10 @@ mod test {
             render_asset::RenderAssets,
             render_resource::{AsBindGroup, BindGroup, BindGroupLayout},
             renderer::RenderDevice,
+            settings::WgpuSettings,
             storage::GpuShaderStorageBuffer,
             texture::{FallbackImage, GpuImage},
+            RenderPlugin,
         },
     };
 
@@ -131,6 +137,18 @@ mod test {
     #[test]
     fn add_plugins() {
         let mut app = App::new();
+        app.add_plugins((
+            AssetPlugin::default(),
+            TaskPoolPlugin::default(),
+            RenderPlugin {
+                render_creation: WgpuSettings {
+                    backends: None,
+                    ..default()
+                }
+                .into(),
+                ..default()
+            },
+        ));
         app.add_plugins(FluidComputePassPlugin::<TestPlugin>::default());
     }
 }
