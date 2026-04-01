@@ -109,13 +109,14 @@ pub(crate) fn setup(
             ));
         }
         ReinitializeMethod::FastIterative(_config) => {
+            let labels0 = images.new_texture_storage(grid_size, TextureFormat::R32Uint);
             let labels = images.new_texture_storage(grid_size, TextureFormat::R32Uint);
 
             let init_textures =
-                FastIterativeInitializeResource::new(levelset_air1, levelset_air0, &labels);
+                FastIterativeInitializeResource::new(levelset_air1, levelset_air0, &labels0);
 
             let init_active_label_textures =
-                FastIterativeInitializeActiveLabelResource::new(&labels);
+                FastIterativeInitializeActiveLabelResource::new(&labels0, &labels);
 
             let update_textures = FastIterativeUpdateResource::new(levelset_air0, &labels);
 

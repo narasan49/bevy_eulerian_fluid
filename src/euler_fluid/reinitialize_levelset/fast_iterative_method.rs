@@ -131,14 +131,18 @@ impl FluidComputePass for FastIterativeInitializeActiveLabelPass {
 
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
 pub(crate) struct FastIterativeInitializeActiveLabelResource {
-    #[storage_texture(0, image_format = R32Uint, access = ReadWrite)]
-    pub labels: Handle<Image>,
+    // workaround: Avoid DeviceRemoved error on WebGPU+aarch64 when using ReadWrite access.
+    #[storage_texture(0, image_format = R32Uint, access = ReadOnly)]
+    pub labels_in: Handle<Image>,
+    #[storage_texture(1, image_format = R32Uint, access = WriteOnly)]
+    pub labels_out: Handle<Image>,
 }
 
 impl FastIterativeInitializeActiveLabelResource {
-    pub fn new(labels: &Handle<Image>) -> Self {
+    pub fn new(labels_in: &Handle<Image>, labels_out: &Handle<Image>) -> Self {
         Self {
-            labels: labels.clone(),
+            labels_in: labels_in.clone(),
+            labels_out: labels_out.clone(),
         }
     }
 }
