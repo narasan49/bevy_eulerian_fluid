@@ -101,6 +101,8 @@ pub(crate) fn dispatch(
             }
             pass.pop_debug_group();
         }
-        _ => {}
+        ProjectionMethod::MultiGrid => {
+            unimplemented!();
+        }
     }
 }
