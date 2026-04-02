@@ -36,6 +36,30 @@ impl FluidComputePass for InitializeGridEdgePass {
     }
 }
 
+pub(crate) struct InitializeGridCenterPass;
+
+impl FluidComputePass for InitializeGridCenterPass {
+    type Pipeline = InitializeGridCenterPipeline;
+    type Resource = InitializeGridCenterResource;
+    type BG = InitializeGridCenterBindGroup;
+
+    fn register_assets(app: &mut App) {
+        embedded_asset!(app, "shaders/initialize_grid_center.wgsl");
+    }
+}
+
+pub(crate) struct InitializeGridEdgePass;
+
+impl FluidComputePass for InitializeGridEdgePass {
+    type Pipeline = InitializeGridEdgePipeline;
+    type Resource = InitializeGridEdgeResource;
+    type BG = InitializeGridEdgeBindGroup;
+
+    fn register_assets(app: &mut App) {
+        embedded_asset!(app, "shaders/initialize_grid_edge.wgsl");
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct InitializeGridEdgeResource {
     #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
