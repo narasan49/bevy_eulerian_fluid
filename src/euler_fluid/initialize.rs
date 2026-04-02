@@ -1,26 +1,43 @@
 use bevy::{
-    asset::{embedded_asset, load_embedded_asset},
+    asset::{embedded_asset, embedded_path},
     prelude::*,
     render::{
-        extract_component::{ExtractComponent, ExtractComponentPlugin},
-        render_asset::RenderAssets,
-        render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
-            ComputePipelineDescriptor, PipelineCache,
-        },
-        renderer::RenderDevice,
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
-        Render, RenderApp, RenderSystems,
+        extract_component::ExtractComponent,
+        render_resource::{AsBindGroup, BindGroup, BindGroupLayoutDescriptor},
     },
 };
 
-use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
+use crate::{
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
+    plugin::FluidComputePass,
+};
 
-pub(crate) struct InitializePlugin;
+pub(crate) struct InitializeGridCenterPass;
+
+impl FluidComputePass for InitializeGridCenterPass {
+    type Pipeline = InitializeGridCenterPipeline;
+    type Resource = InitializeGridCenterResource;
+    type BG = InitializeGridCenterBindGroup;
+
+    fn register_assets(app: &mut App) {
+        embedded_asset!(app, "shaders/initialize_grid_center.wgsl");
+    }
+}
+
+pub(crate) struct InitializeGridEdgePass;
+
+impl FluidComputePass for InitializeGridEdgePass {
+    type Pipeline = InitializeGridEdgePipeline;
+    type Resource = InitializeGridEdgeResource;
+    type BG = InitializeGridEdgeBindGroup;
+
+    fn register_assets(app: &mut App) {
+        embedded_asset!(app, "shaders/initialize_grid_edge.wgsl");
+    }
+}
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub(crate) struct InitializeVelocityResource {
+pub(crate) struct InitializeGridEdgeResource {
     #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
     pub u0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = WriteOnly)]
@@ -42,131 +59,71 @@ pub(crate) struct InitializeGridCenterResource {
 }
 
 #[derive(Resource)]
-pub(crate) struct InitializePipeline {
-    pub init_velocity_pipeline: CachedComputePipelineId,
-    pub init_grid_center_pipeline: CachedComputePipelineId,
-    init_velocity_bind_group_layout: BindGroupLayoutDescriptor,
-    init_grid_center_bind_group_layout: BindGroupLayoutDescriptor,
+pub(crate) struct InitializeGridCenterPipeline {
+    pub pipeline: SingleComputePipeline,
+}
+
+impl FromWorld for InitializeGridCenterPipeline {
+    fn from_world(world: &mut World) -> Self {
+        let pipeline = SingleComputePipeline::new_with_uniform::<InitializeGridCenterResource>(
+            world,
+            "InitializeGridCenterPipeline",
+            embedded_path!("shaders/initialize_grid_center.wgsl"),
+            "initialize_grid_center",
+        );
+
+        Self { pipeline }
+    }
+}
+
+impl HasBindGroupLayout for InitializeGridCenterPipeline {
+    fn bind_group_layout(&self) -> &BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
+
+#[derive(Resource)]
+pub(crate) struct InitializeGridEdgePipeline {
+    pub pipeline: SingleComputePipeline,
+}
+
+impl FromWorld for InitializeGridEdgePipeline {
+    fn from_world(world: &mut World) -> Self {
+        let pipeline = SingleComputePipeline::new::<InitializeGridEdgeResource>(
+            world,
+            "InitializeGridEdgePipeline",
+            embedded_path!("shaders/initialize_grid_edge.wgsl"),
+            "initialize_grid_edge",
+        );
+
+        Self { pipeline }
+    }
+}
+
+impl HasBindGroupLayout for InitializeGridEdgePipeline {
+    fn bind_group_layout(&self) -> &BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
 }
 
 #[derive(Component)]
-pub(crate) struct InitializeBindGroups {
-    pub init_velocity_bind_group: BindGroup,
-    pub init_grid_center_bind_group: BindGroup,
+pub(crate) struct InitializeGridCenterBindGroup {
+    pub bind_group: BindGroup,
 }
 
-impl Plugin for InitializePlugin {
-    fn build(&self, app: &mut App) {
-        embedded_asset!(app, "shaders/initialize_velocity.wgsl");
-        embedded_asset!(app, "shaders/initialize_grid_center.wgsl");
-
-        app.add_plugins((
-            ExtractComponentPlugin::<InitializeVelocityResource>::default(),
-            ExtractComponentPlugin::<InitializeGridCenterResource>::default(),
-        ));
-
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_groups.in_set(RenderSystems::PrepareBindGroups),
-        );
-    }
-
-    fn finish(&self, app: &mut App) {
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<InitializePipeline>();
+impl From<BindGroup> for InitializeGridCenterBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
 
-impl Pipeline for InitializePipeline {
-    fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
-        Self::is_pipeline_loaded(pipeline_cache, self.init_velocity_pipeline)
-            && Self::is_pipeline_loaded(pipeline_cache, self.init_grid_center_pipeline)
-    }
+#[derive(Component)]
+pub(crate) struct InitializeGridEdgeBindGroup {
+    pub bind_group: BindGroup,
 }
 
-impl FromWorld for InitializePipeline {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-        let pipeline_cache = world.resource::<PipelineCache>();
-        let asset_server = world.resource::<AssetServer>();
-
-        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
-        let init_velocity_bind_group_layout =
-            InitializeVelocityResource::bind_group_layout_descriptor(render_device);
-        let init_grid_center_bind_group_layout =
-            InitializeGridCenterResource::bind_group_layout_descriptor(render_device);
-
-        let init_velocity_pipeline =
-            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("InitializeVelocityPipeline".into()),
-                layout: vec![init_velocity_bind_group_layout.clone()],
-                shader: load_embedded_asset!(asset_server, "shaders/initialize_velocity.wgsl"),
-                entry_point: Some("initialize_velocity".into()),
-                ..default()
-            });
-
-        let init_grid_center_pipeline =
-            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("InitializeGridCenterPipeline".into()),
-                layout: vec![
-                    init_grid_center_bind_group_layout.clone(),
-                    uniform_bind_group_layout.clone(),
-                ],
-                shader: load_embedded_asset!(asset_server, "shaders/initialize_grid_center.wgsl"),
-                entry_point: Some("initialize_grid_center".into()),
-                ..default()
-            });
-
-        InitializePipeline {
-            init_velocity_pipeline,
-            init_grid_center_pipeline,
-            init_velocity_bind_group_layout,
-            init_grid_center_bind_group_layout,
-        }
-    }
-}
-
-fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<InitializePipeline>,
-    query: Query<(
-        Entity,
-        &InitializeVelocityResource,
-        &InitializeGridCenterResource,
-    )>,
-    render_device: Res<RenderDevice>,
-    pipeline_cache: Res<PipelineCache>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, init_velocity_resource, init_grid_center_resource) in &query {
-        let init_velocity_bind_group = init_velocity_resource
-            .as_bind_group(
-                &pipeline.init_velocity_bind_group_layout,
-                &render_device,
-                &pipeline_cache,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        let init_grid_center_bind_group = init_grid_center_resource
-            .as_bind_group(
-                &pipeline.init_grid_center_bind_group_layout,
-                &render_device,
-                &pipeline_cache,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands.entity(entity).insert(InitializeBindGroups {
-            init_velocity_bind_group,
-            init_grid_center_bind_group,
-        });
+impl From<BindGroup> for InitializeGridEdgeBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
