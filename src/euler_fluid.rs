@@ -66,7 +66,7 @@ impl Plugin for FluidPlugin {
                 solve_pressure::SolvePressurePlugin,
                 solve_velocity::SolveVelocityPlugin,
                 extrapolate_velocity::ExtrapolateVelocityPlugin,
-                advect_scalar::AdvectScalarPlugin,
+                FluidComputePassPlugin::<advect_scalar::AdvectScalarPass>::default(),
                 reinitialize_levelset::ReinitializeLevelSetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
                 FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),

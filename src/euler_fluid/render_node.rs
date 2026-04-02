@@ -135,7 +135,7 @@ impl render_graph::Node for EulerFluidNode {
                     && gauss_seidel_pipeline.is_ready(pipeline_cache)
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && advect_scalar_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && advect_scalar_pipeline.pipeline.is_ready(pipeline_cache)
                     && reinitialize_levelset::is_pipeline_ready(world, pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && are_pls_pipelines_ready(world, pipeline_cache)
@@ -318,13 +318,11 @@ impl render_graph::Node for EulerFluidNode {
                             );
 
                             let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
-                            advect_scalar(
+                            advect_scalar_pipeline.pipeline.dispatch(
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.advect_scalar_bind_groups,
-                                bind_groups.simulation_uniform,
-                                advect_scalar_pipeline,
-                                fluid_settings.size,
+                                &bind_groups.advect_scalar_bind_groups.bind_group,
+                                num_workgroups_grid,
                             );
 
                             if let Some(pls_update_bind_groups) = pls_update_bind_groups {
@@ -622,35 +620,6 @@ fn extrapolate_velocity(
         pass.dispatch_y_major(size);
     }
 
-    pass.pop_debug_group();
-}
-
-fn advect_scalar(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    advect_scalar_bind_groups: &AdvectScalarBindGroups,
-    uniform_bind_group: &SimulationUniformBindGroup,
-    advect_scalar_pipeline: &AdvectScalarPipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Advect scalar");
-    let advect_levelset_pipeline = pipeline_cache
-        .get_compute_pipeline(advect_scalar_pipeline.advect_levelset_pipeline)
-        .unwrap();
-
-    pass.set_bind_group(
-        0,
-        &advect_scalar_bind_groups.advect_levelset_bind_group,
-        &[],
-    );
-    pass.set_bind_group(
-        1,
-        &uniform_bind_group.bind_group,
-        &[uniform_bind_group.index],
-    );
-
-    pass.set_pipeline(&advect_levelset_pipeline);
-    pass.dispatch_center(size);
     pass.pop_debug_group();
 }
 

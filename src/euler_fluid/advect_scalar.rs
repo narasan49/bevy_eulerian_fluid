@@ -2,22 +2,32 @@ use bevy::{
     asset::{embedded_asset, load_embedded_asset},
     prelude::*,
     render::{
-        extract_component::{ExtractComponent, ExtractComponentPlugin},
-        render_asset::RenderAssets,
+        extract_component::ExtractComponent,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
-            ComputePipelineDescriptor, PipelineCache,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, ComputePipelineDescriptor,
+            PipelineCache,
         },
         renderer::RenderDevice,
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
-        Render, RenderApp, RenderSystems,
     },
 };
 
-use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
+use crate::{
+    fluid_uniform::uniform_bind_group_layout_desc,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
+    plugin::FluidComputePass,
+};
 
-pub(crate) struct AdvectScalarPlugin;
+pub(crate) struct AdvectScalarPass;
+
+impl FluidComputePass for AdvectScalarPass {
+    type Pipeline = AdvectScalarPipeline;
+    type Resource = AdvectLevelsetResource;
+    type BG = AdvectScalarBindGroups;
+
+    fn register_assets(app: &mut App) {
+        embedded_asset!(app, "shaders/advect_levelset.wgsl");
+    }
+}
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct AdvectLevelsetResource {
@@ -33,38 +43,7 @@ pub(crate) struct AdvectLevelsetResource {
 
 #[derive(Resource)]
 pub(crate) struct AdvectScalarPipeline {
-    pub advect_levelset_pipeline: CachedComputePipelineId,
-    advect_levelset_bind_group_layout: BindGroupLayoutDescriptor,
-}
-
-#[derive(Component)]
-pub(crate) struct AdvectScalarBindGroups {
-    pub advect_levelset_bind_group: BindGroup,
-}
-
-impl Plugin for AdvectScalarPlugin {
-    fn build(&self, app: &mut App) {
-        embedded_asset!(app, "shaders/advect_levelset.wgsl");
-
-        app.add_plugins(ExtractComponentPlugin::<AdvectLevelsetResource>::default());
-
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_groups.in_set(RenderSystems::PrepareBindGroups),
-        );
-    }
-
-    fn finish(&self, app: &mut App) {
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<AdvectScalarPipeline>();
-    }
-}
-
-impl Pipeline for AdvectScalarPipeline {
-    fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
-        Self::is_pipeline_loaded(pipeline_cache, self.advect_levelset_pipeline)
-    }
+    pub pipeline: SingleComputePipeline,
 }
 
 impl FromWorld for AdvectScalarPipeline {
@@ -74,54 +53,39 @@ impl FromWorld for AdvectScalarPipeline {
         let asset_server = world.resource::<AssetServer>();
 
         let uniform_bind_group_layout = uniform_bind_group_layout_desc();
-        let advect_levelset_bind_group_layout =
-            AdvectLevelsetResource::bind_group_layout_descriptor(render_device);
+        let bind_group_layout = AdvectLevelsetResource::bind_group_layout_descriptor(render_device);
 
-        let advect_levelset_pipeline =
-            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("AdvectLevelsetPipeline".into()),
-                layout: vec![
-                    advect_levelset_bind_group_layout.clone(),
-                    uniform_bind_group_layout.clone(),
-                ],
-                shader: load_embedded_asset!(asset_server, "shaders/advect_levelset.wgsl"),
-                shader_defs: vec!["CUBIC".into()],
-                entry_point: Some("advect_levelset".into()),
-                ..default()
-            });
+        let pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
+            label: Some("AdvectLevelsetPipeline".into()),
+            layout: vec![bind_group_layout.clone(), uniform_bind_group_layout.clone()],
+            shader: load_embedded_asset!(asset_server, "shaders/advect_levelset.wgsl"),
+            shader_defs: vec!["CUBIC".into()],
+            entry_point: Some("advect_levelset".into()),
+            ..default()
+        });
 
         AdvectScalarPipeline {
-            advect_levelset_pipeline,
-            advect_levelset_bind_group_layout,
+            pipeline: SingleComputePipeline {
+                pipeline,
+                bind_group_layout,
+            },
         }
     }
 }
 
-fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<AdvectScalarPipeline>,
-    query: Query<(Entity, &AdvectLevelsetResource)>,
-    render_device: Res<RenderDevice>,
-    pipeline_cache: Res<PipelineCache>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, advect_levelset_resource) in &query {
-        let advect_levelset_bind_group = advect_levelset_resource
-            .as_bind_group(
-                &pipeline.advect_levelset_bind_group_layout,
-                &render_device,
-                &pipeline_cache,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl HasBindGroupLayout for AdvectScalarPipeline {
+    fn bind_group_layout(&self) -> &BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
 
-        commands.entity(entity).insert(AdvectScalarBindGroups {
-            advect_levelset_bind_group,
-        });
+#[derive(Component)]
+pub(crate) struct AdvectScalarBindGroups {
+    pub bind_group: BindGroup,
+}
+
+impl From<BindGroup> for AdvectScalarBindGroups {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
