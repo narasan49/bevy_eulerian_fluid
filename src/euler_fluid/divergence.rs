@@ -5,7 +5,7 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
             ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
@@ -38,7 +38,7 @@ pub(crate) struct DivergenceResource {
 #[derive(Resource)]
 pub(crate) struct DivergencePipeline {
     pub divergence_pipeline: CachedComputePipelineId,
-    divergence_bind_group_layout: BindGroupLayout,
+    divergence_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -77,7 +77,8 @@ impl FromWorld for DivergencePipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let divergence_bind_group_layout = DivergenceResource::bind_group_layout(render_device);
+        let divergence_bind_group_layout =
+            DivergenceResource::bind_group_layout_descriptor(render_device);
 
         let divergence_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -100,6 +101,7 @@ fn prepare_bind_group(
     pipeline: Res<DivergencePipeline>,
     query: Query<(Entity, &DivergenceResource)>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -110,6 +112,7 @@ fn prepare_bind_group(
             .as_bind_group(
                 &pipeline.divergence_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()

@@ -5,7 +5,7 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
             ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
@@ -15,7 +15,7 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::create_uniform_bind_group_layout, pipeline::Pipeline};
+use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
 
 pub(crate) struct InitializePlugin;
 
@@ -45,8 +45,8 @@ pub(crate) struct InitializeGridCenterResource {
 pub(crate) struct InitializePipeline {
     pub init_velocity_pipeline: CachedComputePipelineId,
     pub init_grid_center_pipeline: CachedComputePipelineId,
-    init_velocity_bind_group_layout: BindGroupLayout,
-    init_grid_center_bind_group_layout: BindGroupLayout,
+    init_velocity_bind_group_layout: BindGroupLayoutDescriptor,
+    init_grid_center_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -91,11 +91,11 @@ impl FromWorld for InitializePipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
         let init_velocity_bind_group_layout =
-            InitializeVelocityResource::bind_group_layout(render_device);
+            InitializeVelocityResource::bind_group_layout_descriptor(render_device);
         let init_grid_center_bind_group_layout =
-            InitializeGridCenterResource::bind_group_layout(render_device);
+            InitializeGridCenterResource::bind_group_layout_descriptor(render_device);
 
         let init_velocity_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -136,6 +136,7 @@ fn prepare_bind_groups<'a>(
         &InitializeGridCenterResource,
     )>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     mut param: (
         Res<'a, RenderAssets<GpuImage>>,
         Res<'a, FallbackImage>,
@@ -147,6 +148,7 @@ fn prepare_bind_groups<'a>(
             .as_bind_group(
                 &pipeline.init_velocity_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -156,6 +158,7 @@ fn prepare_bind_groups<'a>(
             .as_bind_group(
                 &pipeline.init_grid_center_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()

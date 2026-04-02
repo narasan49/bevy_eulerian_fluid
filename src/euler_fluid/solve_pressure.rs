@@ -5,7 +5,7 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
             ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
@@ -15,7 +15,7 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::create_uniform_bind_group_layout, pipeline::Pipeline};
+use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
 
 pub(crate) struct SolvePressurePlugin;
 
@@ -51,8 +51,8 @@ pub(crate) struct JacobiIterationReverseResource {
 pub(crate) struct SolvePressurePipeline {
     pub jacobi_iteration_pipeline: CachedComputePipelineId,
     pub jacobi_iteration_reverse_pipeline: CachedComputePipelineId,
-    jacobi_iteration_bind_group_layout: BindGroupLayout,
-    jacobi_iteration_reverse_bind_group_layout: BindGroupLayout,
+    jacobi_iteration_bind_group_layout: BindGroupLayoutDescriptor,
+    jacobi_iteration_reverse_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -96,12 +96,12 @@ impl FromWorld for SolvePressurePipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
 
         let jacobi_iteration_bind_group_layout =
-            JacobiIterationResource::bind_group_layout(render_device);
+            JacobiIterationResource::bind_group_layout_descriptor(render_device);
         let jacobi_iteration_reverse_bind_group_layout =
-            JacobiIterationReverseResource::bind_group_layout(render_device);
+            JacobiIterationReverseResource::bind_group_layout_descriptor(render_device);
 
         let jacobi_iteration_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -146,6 +146,7 @@ fn prepare_bind_groups(
         &JacobiIterationReverseResource,
     )>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -156,6 +157,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.jacobi_iteration_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -164,6 +166,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.jacobi_iteration_reverse_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()

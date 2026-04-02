@@ -5,9 +5,8 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            binding_types::uniform_buffer, AsBindGroup, BindGroup, BindGroupLayout,
-            BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor,
-            PipelineCache, ShaderStages,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
+            ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
         storage::GpuShaderStorageBuffer,
@@ -16,7 +15,7 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::SimulationUniform, pipeline::Pipeline};
+use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
 
 pub(crate) struct AdvectionPlugin;
 
@@ -36,7 +35,7 @@ pub(crate) struct AdvectionResource {
 pub(crate) struct AdvectionPipeline {
     pub advect_u_pipeline: CachedComputePipelineId,
     pub advect_v_pipeline: CachedComputePipelineId,
-    advection_bind_group_layout: BindGroupLayout,
+    advection_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -76,15 +75,10 @@ impl FromWorld for AdvectionPipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let uniform_bind_group_layout = render_device.create_bind_group_layout(
-            Some("uniform bind group layout"),
-            &BindGroupLayoutEntries::single(
-                ShaderStages::COMPUTE,
-                uniform_buffer::<SimulationUniform>(true),
-            ),
-        );
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
 
-        let advection_bind_group_layout = AdvectionResource::bind_group_layout(render_device);
+        let advection_bind_group_layout =
+            AdvectionResource::bind_group_layout_descriptor(render_device);
 
         let advect_u_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: Some("AdvectUPipeline".into()),
@@ -121,6 +115,7 @@ fn prepare_bind_group(
     pipeline: Res<AdvectionPipeline>,
     query: Query<(Entity, &AdvectionResource)>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -131,6 +126,7 @@ fn prepare_bind_group(
             .as_bind_group(
                 &pipeline.advection_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
