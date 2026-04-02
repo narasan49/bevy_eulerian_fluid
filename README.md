@@ -1,6 +1,6 @@
 # bevy_eulerian_fluid
 
-This project is a fluid simulation plugin for [Bevy](https://bevyengine.org/).
+GPU-accelerated 2D fluid simulation plugin for [Bevy](https://bevyengine.org/) with real-time performance and good mass conservation
 
 ![img](./docs/bevy_fluid_various_shapes.gif)
 
@@ -8,7 +8,7 @@ Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
 ## Basic Usage
 1. Add `FluidPlugin` and `PhysicsPlugins` to the app with the same length unit.
-2. Spawn `FluidSettings`, then `FluidSimulationBundle` will be inserted automatically to the entity. By querying components `FluidTextures`, the simulation results can be retreived.  
+2. Spawn `FluidSettings`, then `FluidSimulationBundle` will be inserted automatically to the entity. By querying components `FluidTextures`, the simulation results can be retrieved.  
 
 Here is a short example. See [examples](./examples/) for the detailed implementation!  
 
@@ -41,11 +41,11 @@ fn setup_scene(
         FluidSettings {
             rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
-            size: UVec2::new(512),
+            size: UVec2::splat(512),
             initial_fluid_level: 0.9,
         },
         Mesh2d(mesh),
-    );
+    ));
 }
 
 fn on_fluid_setup(
@@ -62,20 +62,20 @@ fn on_fluid_setup(
 ### Interact to the fluid
 The simulation entity has `LocalForces` component, which holds arrays of forces (in m/s^2) and position (in pixels). forces can be applied to the simulation domain by setting `LocalForces`.
 
-See also an [interaction example](./examples/interaction.rs) for the detailed implementation.
+See also an [example](./examples/various_shapes.rs) for the detailed implementation.
 
 ## Features
 - [x] Incompressible 2D fluid simulation
-- [ ] Viscosity
+  - GPU Red-Black Gauss-Seidel pressure solve
 - [x] Fluid surface
+  - Level Set interface tracking
+- [x] Area-fraction based fluid-rigid body two-way coupling
+  - Various shape support: Circle, Rectangle, Capsule, Triangle
 - [ ] Fluid source/drain
-- [x] Solid body interaction
-  - [x] One-way solid body to fluid interaction
-  - [x] Two-way coupling with solid body and fluid
-  - [x] Various shape support: Circle, Rectangle, Capsule, Triangle
+- [ ] Viscosity
 
 ## Examples
-There are some examples to demonstrate how to visualize and interact to the simulation results:  
+There are some examples to demonstrate how to visualize and interact with the simulation results:  
 - **Fluid-Solid two-way interaction**
 
   ```ps1
@@ -90,16 +90,19 @@ There are some examples to demonstrate how to visualize and interact to the simu
   ![img](./docs/bevy_fluid_interaction.gif)
 
 ## Versions
-| Bevy | Bevy Eularian Fluid |
+| Bevy | Bevy Eulerian Fluid |
 | --- | --- |
+| 0.18 | 0.4 |
 | 0.17 | 0.2, 0.3 |
 | 0.15 | 0.1 |
 
-## Acknowledgments
-The simulation is inspired by and based on the algorithms described in these books:
+## References
+This simulation is inspired by and based on the algorithms described in these books, papers and source codes:
 
 - [Fluid Simulation for Computer Graphics](https://www.amazon.co.jp/dp/1482232839) by Robert Bridson
 - [GPU Gems Chapter 38](https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu) by Mark J. Harris
+- [FluidRigidCoupling2D](https://github.com/christopherbatty/FluidRigidCoupling2D) by Cristopher Batty for velocity extrapolation
+- [A fast iterative method for eikonal equations](https://scholar.archive.org/work/ckx4xnjo6rbljdac4ng75mwy5a/access/wayback/http://people.seas.harvard.edu:80/~wkjeong/publication/wkjeong-sisc-fim.pdf) by Jeong, Won-Ki, and Ross T. Whitaker.
 
 ## License
 
