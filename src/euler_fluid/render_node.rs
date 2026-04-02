@@ -9,7 +9,7 @@ use bevy::{
 
 use crate::{
     advect_levelset::{AdvectLevelSetBindGroups, AdvectLevelSetPipeline},
-    advection::{AdvectionBindGroups, AdvectionPipeline},
+    advection::{self, AdvectionBindGroup, AdvectionPipeline},
     apply_forces::{ApplyForcesBindGroups, ApplyForcesPipeline},
     divergence::{DivergenceBindGroups, DivergencePipeline},
     extrapolate_velocity::{ExtrapolateVelocityBindGroups, ExtrapolateVelocityPipeline},
@@ -58,7 +58,7 @@ struct FluidBindGroupsQueryData {
     initialize_bind_groups: &'static InitializeBindGroups,
     update_solid_bind_groups: &'static UpdateSolidBindGroups,
     update_area_fraction_bind_group: &'static UpdateAreaFractionBindGroup,
-    advection_bind_groups: &'static AdvectionBindGroups,
+    advection_bind_groups: &'static AdvectionBindGroup,
     apply_forces_bind_groups: &'static ApplyForcesBindGroups,
     divergence_bind_groups: &'static DivergenceBindGroups,
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
@@ -259,7 +259,7 @@ impl render_graph::Node for EulerFluidNode {
                             );
 
                             let advection_pipeline = world.resource::<AdvectionPipeline>();
-                            advection(
+                            advection::dispatch(
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.advection_bind_groups,
@@ -441,36 +441,6 @@ fn initialize(
         &[uniform_bind_group.index],
     );
     pass.dispatch_center(size);
-    pass.pop_debug_group();
-}
-
-fn advection(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    advection_bind_groups: &AdvectionBindGroups,
-    uniform_bind_group: &SimulationUniformBindGroup,
-    advection_pipeline: &AdvectionPipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Advect velocity");
-    let advect_u_pipeline = pipeline_cache
-        .get_compute_pipeline(advection_pipeline.advect_u_pipeline)
-        .unwrap();
-    let advect_v_pipeline = pipeline_cache
-        .get_compute_pipeline(advection_pipeline.advect_v_pipeline)
-        .unwrap();
-
-    pass.set_pipeline(&advect_u_pipeline);
-    pass.set_bind_group(0, &advection_bind_groups.advection_bind_group, &[]);
-    pass.set_bind_group(
-        1,
-        &uniform_bind_group.bind_group,
-        &[uniform_bind_group.index],
-    );
-    pass.dispatch_x_major(size);
-
-    pass.set_pipeline(&advect_v_pipeline);
-    pass.dispatch_y_major(size);
     pass.pop_debug_group();
 }
 

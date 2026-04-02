@@ -58,7 +58,7 @@ impl Plugin for FluidPlugin {
             .add_plugins((
                 initialize::InitializePlugin,
                 update_solid::UpdateSolidPlugin,
-                advection::AdvectionPlugin,
+                FluidComputePassPlugin::<advection::AdvectionPass>::default(),
                 apply_forces::ApplyForcesPlugin,
                 divergence::DivergencePlugin,
                 fluid_uniform::SimulationUniformPlugin,
