@@ -18,6 +18,7 @@ use crate::{
     fluid_uniform::SimulationUniformBindGroup,
     particle_levelset_two_layers::{
         particle::MAX_PARTICLES_PER_CELL,
+        plugin::WORKGROUP_SIZE_PARTICLE,
         reseed::{
             add_particles::{
                 AddNegativeParticlesBindGroup, AddNegativeParticlesPass, AddParticlesPipeline,
@@ -57,6 +58,7 @@ use crate::{
             },
         },
     },
+    pipeline::WORKGROUP_SIZE,
     plugin::FluidComputePassPlugin,
 };
 
@@ -129,9 +131,9 @@ pub(crate) fn dispatch(
     uniform_bind_group: &SimulationUniformBindGroup,
     grid_size: UVec2,
 ) {
-    let num_workgroups_grid = (grid_size / 8).extend(1);
+    let num_workgroups_grid = (grid_size / WORKGROUP_SIZE).extend(1);
     let num_workgroups_particle = UVec3::new(
-        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / 256,
+        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / WORKGROUP_SIZE_PARTICLE,
         1,
         1,
     );

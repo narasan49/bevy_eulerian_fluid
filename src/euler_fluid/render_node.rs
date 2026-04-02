@@ -30,7 +30,7 @@ use crate::{
         reseed::PLSReseedBindGroupsQuery,
     },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
-    pipeline::{DispatchFluidPass, Pipeline},
+    pipeline::{DispatchFluidPass, Pipeline, WORKGROUP_SIZE},
     projection::{
         self, gauss_seidel::GaussSeidelPipeline, ProjectionBindGroupsQuery, ProjectionMethod,
     },
@@ -235,7 +235,8 @@ impl render_graph::Node for EulerFluidNode {
                                     ..default()
                                 },
                             );
-                            let num_workgroups_grid = (fluid_settings.size / 8).extend(1);
+                            let num_workgroups_grid =
+                                (fluid_settings.size / WORKGROUP_SIZE).extend(1);
                             let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                             let obstacles_bind_groups =
                                 world.resource::<SolidObstaclesBindGroups>();

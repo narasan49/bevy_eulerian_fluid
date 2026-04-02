@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use crate::{
-    pipeline::{is_pipeline_loaded, DispatchFluidPass},
+    pipeline::{is_pipeline_loaded, DispatchFluidPass, WORKGROUP_SIZE},
     plugin::FluidComputePassPlugin,
     reinitialize_levelset::{
         fast_iterative_method::{
@@ -191,7 +191,7 @@ pub(crate) fn dispatch(
         }
         ReinitializeMethod::FastIterative(config) => {
             pass.push_debug_group("Reinitialize levelset (FIM)");
-            let num_workgroups_grid = (size / 8).extend(1);
+            let num_workgroups_grid = (size / WORKGROUP_SIZE).extend(1);
             let initialize_pipeline = world.resource::<FastIterativeInitializePipeline>();
             initialize_pipeline.pipeline.dispatch(
                 pipeline_cache,

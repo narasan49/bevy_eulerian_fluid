@@ -15,6 +15,8 @@ use bevy::{
 
 use crate::fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup};
 
+pub(crate) const WORKGROUP_SIZE: u32 = 8;
+
 pub fn is_pipeline_loaded(
     pipeline_cache: &PipelineCache,
     pipeline: CachedComputePipelineId,
@@ -163,8 +165,6 @@ pub(crate) fn queue_compute_pipeline(
 }
 
 pub trait DispatchFluidPass {
-    const WORKGROUP_SIZE: u32 = 8;
-
     fn dispatch_center(&mut self, size: UVec2);
 
     fn dispatch_x_major(&mut self, size: UVec2);
@@ -174,26 +174,14 @@ pub trait DispatchFluidPass {
 
 impl DispatchFluidPass for ComputePass<'_> {
     fn dispatch_center(&mut self, size: UVec2) {
-        self.dispatch_workgroups(
-            size.x / Self::WORKGROUP_SIZE,
-            size.y / Self::WORKGROUP_SIZE,
-            1,
-        );
+        self.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
     }
 
     fn dispatch_x_major(&mut self, size: UVec2) {
-        self.dispatch_workgroups(
-            size.x + 1,
-            size.y / Self::WORKGROUP_SIZE / Self::WORKGROUP_SIZE,
-            1,
-        );
+        self.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
     }
 
     fn dispatch_y_major(&mut self, size: UVec2) {
-        self.dispatch_workgroups(
-            size.x / Self::WORKGROUP_SIZE / Self::WORKGROUP_SIZE,
-            size.y + 1,
-            1,
-        );
+        self.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
     }
 }
