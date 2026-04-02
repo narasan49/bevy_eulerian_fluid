@@ -5,7 +5,7 @@
 
 @compute
 @workgroup_size(1, 64, 1)
-fn initialize_velocity(
+fn initialize_grid_edge(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let x_u = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));

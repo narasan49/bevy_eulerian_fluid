@@ -56,7 +56,10 @@ impl Plugin for FluidPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins((
-                initialize::InitializePlugin,
+                FluidComputePassPlugin::<initialize::InitializeGridCenterPass>::default(),
+                FluidComputePassPlugin::<initialize::InitializeGridEdgePass>::default(),
+            ))
+            .add_plugins((
                 update_solid::UpdateSolidPlugin,
                 FluidComputePassPlugin::<advection::AdvectionPass>::default(),
                 apply_forces::ApplyForcesPlugin,

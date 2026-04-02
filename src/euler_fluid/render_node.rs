@@ -19,7 +19,10 @@ use crate::{
         MAX_SOLIDS,
     },
     fluid_uniform::SimulationUniformBindGroup,
-    initialize::{InitializeBindGroups, InitializePipeline},
+    initialize::{
+        InitializeGridCenterBindGroup, InitializeGridCenterPipeline, InitializeGridEdgeBindGroup,
+        InitializeGridEdgePipeline,
+    },
     levelset_gradient::{LevelSetGradientBindGroup, LevelSetGradientPipeline},
     particle_levelset_two_layers::{
         self,
@@ -55,7 +58,8 @@ enum State {
 
 #[derive(QueryData)]
 struct FluidBindGroupsQueryData {
-    initialize_bind_groups: &'static InitializeBindGroups,
+    initialize_center_bind_group: &'static InitializeGridCenterBindGroup,
+    initialize_edge_bind_group: &'static InitializeGridEdgeBindGroup,
     update_solid_bind_groups: &'static UpdateSolidBindGroups,
     update_area_fraction_bind_group: &'static UpdateAreaFractionBindGroup,
     advection_bind_groups: &'static AdvectionBindGroup,
@@ -87,10 +91,7 @@ pub(crate) struct EulerFluidNode {
         &'static ProjectionMethod,
         &'static ReinitializeMethod,
     )>,
-    query_fluid_status: QueryState<
-        (Entity, Option<&'static mut FluidStatus>),
-        (With<FluidSettings>, With<InitializeBindGroups>),
-    >,
+    query_fluid_status: QueryState<(Entity, Option<&'static mut FluidStatus>), With<FluidSettings>>,
 }
 
 impl EulerFluidNode {
@@ -109,7 +110,8 @@ impl render_graph::Node for EulerFluidNode {
         let pipeline_cache = world.resource::<PipelineCache>();
         match self.state {
             State::Loading => {
-                let initialize_pipeline = world.resource::<InitializePipeline>();
+                let initialize_center_pipeline = world.resource::<InitializeGridCenterPipeline>();
+                let initialize_edge_pipeline = world.resource::<InitializeGridEdgePipeline>();
 
                 let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                 let update_area_fraction_pipeline = world.resource::<UpdateAreaFractionPipeline>();
@@ -123,7 +125,8 @@ impl render_graph::Node for EulerFluidNode {
                 let advect_levelset_pipeline = world.resource::<AdvectLevelSetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
-                if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
+                if initialize_center_pipeline.pipeline.is_ready(pipeline_cache)
+                    && initialize_edge_pipeline.pipeline.is_ready(pipeline_cache)
                     && update_solid_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && update_area_fraction_pipeline
                         .pipeline
@@ -207,15 +210,29 @@ impl render_graph::Node for EulerFluidNode {
                                     ..default()
                                 },
                             );
+                            let num_workgroups_grid =
+                                (fluid_settings.size / WORKGROUP_SIZE).extend(1);
+                            let num_workgroups_x_edge = ((fluid_settings.size + UVec2::X)
+                                / UVec2::new(1, WORKGROUP_SIZE * WORKGROUP_SIZE))
+                            .extend(1);
 
-                            let initialize_pipeline = world.resource::<InitializePipeline>();
-                            initialize(
+                            let initialize_center_pipeline =
+                                world.resource::<InitializeGridCenterPipeline>();
+                            initialize_center_pipeline.pipeline.dispatch_with_uniform(
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.initialize_bind_groups,
+                                &bind_groups.initialize_center_bind_group.bind_group,
                                 bind_groups.simulation_uniform,
-                                initialize_pipeline,
-                                fluid_settings.size,
+                                num_workgroups_grid,
+                            );
+
+                            let initialize_edge_pipeline =
+                                world.resource::<InitializeGridEdgePipeline>();
+                            initialize_edge_pipeline.pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.initialize_edge_bind_group.bind_group,
+                                num_workgroups_x_edge,
                             );
 
                             if let Some(pls_init_bind_groups) = pls_init_bind_groups {
@@ -237,6 +254,7 @@ impl render_graph::Node for EulerFluidNode {
                             );
                             let num_workgroups_grid =
                                 (fluid_settings.size / WORKGROUP_SIZE).extend(1);
+
                             let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                             let obstacles_bind_groups =
                                 world.resource::<SolidObstaclesBindGroups>();
@@ -411,37 +429,6 @@ impl render_graph::Node for EulerFluidNode {
 
         Ok(())
     }
-}
-
-fn initialize(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    initialize_bind_groups: &InitializeBindGroups,
-    uniform_bind_group: &SimulationUniformBindGroup,
-    pipeline: &InitializePipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Initialize simulation");
-    let initialize_velocity_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.init_velocity_pipeline)
-        .unwrap();
-    let initialize_grid_center_pipeline = pipeline_cache
-        .get_compute_pipeline(pipeline.init_grid_center_pipeline)
-        .unwrap();
-
-    pass.set_pipeline(&initialize_velocity_pipeline);
-    pass.set_bind_group(0, &initialize_bind_groups.init_velocity_bind_group, &[]);
-    pass.dispatch_x_major(size);
-
-    pass.set_pipeline(&initialize_grid_center_pipeline);
-    pass.set_bind_group(0, &initialize_bind_groups.init_grid_center_bind_group, &[]);
-    pass.set_bind_group(
-        1,
-        &uniform_bind_group.bind_group,
-        &[uniform_bind_group.index],
-    );
-    pass.dispatch_center(size);
-    pass.pop_debug_group();
 }
 
 fn apply_forces(
