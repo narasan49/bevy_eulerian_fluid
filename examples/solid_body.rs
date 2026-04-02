@@ -129,8 +129,6 @@ fn on_fluid_setup(
         let material = materials.add(CustomMaterial {
             levelset: fluid_textures.levelset_air.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
-            offset: 0.0,
-            scale: -100.0,
         });
 
         commands.entity(entity).insert((MeshMaterial2d(material),));
@@ -169,14 +167,10 @@ struct CustomMaterial {
     pub levelset: Handle<Image>,
     #[uniform(2)]
     pub base_color: Vec3,
-    #[uniform(3)]
-    pub offset: f32,
-    #[uniform(4)]
-    pub scale: f32,
 }
 
 impl Material2d for CustomMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/visualize/scalar.wgsl".into()
+        "shaders/draw_levelset.wgsl".into()
     }
 }

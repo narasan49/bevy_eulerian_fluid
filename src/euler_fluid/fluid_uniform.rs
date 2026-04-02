@@ -7,8 +7,8 @@ use bevy::{
             UniformComponentPlugin,
         },
         render_resource::{
-            binding_types::uniform_buffer, BindGroup, BindGroupEntries, BindGroupLayout,
-            BindGroupLayoutEntries, ShaderStages, ShaderType,
+            binding_types::uniform_buffer, BindGroup, BindGroupEntries, BindGroupLayoutDescriptor,
+            BindGroupLayoutEntries, PipelineCache, ShaderStages, ShaderType,
         },
         renderer::RenderDevice,
         Render, RenderApp, RenderSystems,
@@ -34,7 +34,7 @@ pub struct SimulationUniform {
 }
 
 #[derive(Resource)]
-pub(crate) struct SimulationUniformBindGroupLayout(pub BindGroupLayout);
+pub(crate) struct SimulationUniformBindGroupLayout(pub BindGroupLayoutDescriptor);
 
 #[derive(Component)]
 pub(crate) struct SimulationUniformBindGroup {
@@ -67,17 +67,15 @@ impl Plugin for SimulationUniformPlugin {
 }
 
 impl FromWorld for SimulationUniformBindGroupLayout {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-
-        let uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
+    fn from_world(_world: &mut World) -> Self {
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
         SimulationUniformBindGroupLayout(uniform_bind_group_layout)
     }
 }
 
-pub(crate) fn create_uniform_bind_group_layout(render_device: &RenderDevice) -> BindGroupLayout {
-    render_device.create_bind_group_layout(
-        Some("UniformBindGroupLayout"),
+pub(crate) fn uniform_bind_group_layout_desc() -> BindGroupLayoutDescriptor {
+    BindGroupLayoutDescriptor::new(
+        "UniformBindGroupLayout",
         &BindGroupLayoutEntries::single(
             ShaderStages::COMPUTE,
             uniform_buffer::<SimulationUniform>(true),
@@ -91,11 +89,12 @@ pub(crate) fn prepare_bind_groups(
     bind_group_layout: Res<SimulationUniformBindGroupLayout>,
     query: Query<(Entity, &DynamicUniformIndex<SimulationUniform>)>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
 ) {
     let simulation_uniform = simulation_uniform.uniforms();
     let uniform_bind_group = render_device.create_bind_group(
         "SimulationUniformBindGroup",
-        &bind_group_layout.0,
+        &pipeline_cache.get_bind_group_layout(&bind_group_layout.0),
         &BindGroupEntries::single(simulation_uniform),
     );
 

@@ -2,11 +2,8 @@ use bevy::{
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
@@ -18,27 +15,17 @@ use crate::{
 pub(crate) struct PrefixSumAlivePositiveParticlesPass;
 
 impl FluidComputePass for PrefixSumAlivePositiveParticlesPass {
-    type P = PrefixSumPipeline;
-
+    type Pipeline = PrefixSumPipeline;
     type Resource = PrefixSumAlivePositiveParticlesResource;
-
-    fn prepare_bind_groups_system(
-    ) -> bevy::ecs::schedule::ScheduleConfigs<bevy::ecs::system::ScheduleSystem> {
-        prepare_bind_groups_positive.into_configs()
-    }
+    type BG = PrefixSumAlivePositiveParticlesBindGroup;
 }
 
 pub(crate) struct PrefixSumAliveNegativeParticlesPass;
 
 impl FluidComputePass for PrefixSumAliveNegativeParticlesPass {
-    type P = PrefixSumPipeline;
-
+    type Pipeline = PrefixSumPipeline;
     type Resource = PrefixSumAliveNegativeParticlesResource;
-
-    fn prepare_bind_groups_system(
-    ) -> bevy::ecs::schedule::ScheduleConfigs<bevy::ecs::system::ScheduleSystem> {
-        prepare_bind_groups_negative.into_configs()
-    }
+    type BG = PrefixSumAliveNegativeParticlesBindGroup;
 }
 
 #[derive(Component, ExtractComponent, Clone, AsBindGroup)]
@@ -105,48 +92,14 @@ pub(crate) struct PrefixSumAliveNegativeParticlesBindGroup {
     pub bind_group: BindGroup,
 }
 
-fn prepare_bind_groups_positive<'a>(
-    mut commands: Commands,
-    pipeline: Res<PrefixSumPipeline>,
-    query: Query<(Entity, &PrefixSumAlivePositiveParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(PrefixSumAlivePositiveParticlesBindGroup { bind_group });
+impl From<BindGroup> for PrefixSumAlivePositiveParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
 
-fn prepare_bind_groups_negative<'a>(
-    mut commands: Commands,
-    pipeline: Res<PrefixSumPipeline>,
-    query: Query<(Entity, &PrefixSumAliveNegativeParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(PrefixSumAliveNegativeParticlesBindGroup { bind_group });
+impl From<BindGroup> for PrefixSumAliveNegativeParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

@@ -1,31 +1,24 @@
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct CorrectLevelSetPass;
 
 impl FluidComputePass for CorrectLevelSetPass {
-    type P = CorrectLevelSetPipeline;
-
+    type Pipeline = CorrectLevelSetPipeline;
     type Resource = CorrectLevelSetResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups.into_configs()
-    }
+    type BG = CorrectLevelSetBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/correct_levelset.wgsl");
@@ -78,29 +71,14 @@ pub(crate) struct CorrectLevelSetBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<CorrectLevelSetPipeline>,
-    query: Query<(Entity, &CorrectLevelSetResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl HasBindGroupLayout for CorrectLevelSetPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(CorrectLevelSetBindGroup { bind_group });
+impl From<BindGroup> for CorrectLevelSetBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

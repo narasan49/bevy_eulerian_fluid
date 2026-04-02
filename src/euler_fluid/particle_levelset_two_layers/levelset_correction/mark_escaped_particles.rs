@@ -1,31 +1,24 @@
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct MarkEscapedParticlesPass;
 
 impl FluidComputePass for MarkEscapedParticlesPass {
-    type P = MarkEscapedParticlesPipeline;
-
+    type Pipeline = MarkEscapedParticlesPipeline;
     type Resource = MarkEscapedParticlesResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups.into_configs()
-    }
+    type BG = MarkEscapedParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/mark_escaped_particles.wgsl");
@@ -86,29 +79,14 @@ pub(crate) struct MarkEscapedParticlesBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<MarkEscapedParticlesPipeline>,
-    query: Query<(Entity, &MarkEscapedParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl HasBindGroupLayout for MarkEscapedParticlesPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(MarkEscapedParticlesBindGroup { bind_group });
+impl From<BindGroup> for MarkEscapedParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

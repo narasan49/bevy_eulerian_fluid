@@ -5,15 +5,17 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId, CachedPipelineState,
-            ComputePass, ComputePipelineDescriptor, PipelineCache,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
+            CachedPipelineState, ComputePass, ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
     },
     shader::PipelineCacheError,
 };
 
-use crate::fluid_uniform::{create_uniform_bind_group_layout, SimulationUniformBindGroup};
+use crate::fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup};
+
+pub(crate) const WORKGROUP_SIZE: u32 = 8;
 
 pub fn is_pipeline_loaded(
     pipeline_cache: &PipelineCache,
@@ -47,9 +49,13 @@ pub trait Pipeline {
     }
 }
 
+pub(crate) trait HasBindGroupLayout {
+    fn bind_group_layout(&self) -> &BindGroupLayoutDescriptor;
+}
+
 pub(crate) struct SingleComputePipeline {
     pub pipeline: CachedComputePipelineId,
-    pub bind_group_layout: BindGroupLayout,
+    pub bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 impl SingleComputePipeline {
@@ -61,7 +67,7 @@ impl SingleComputePipeline {
     ) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let bind_group_layout = B::bind_group_layout(render_device);
+        let bind_group_layout = B::bind_group_layout_descriptor(render_device);
 
         let pipeline = queue_compute_pipeline(
             world,
@@ -85,8 +91,8 @@ impl SingleComputePipeline {
     ) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let bind_group_layout = B::bind_group_layout(render_device);
-        let uniform_layout = create_uniform_bind_group_layout(render_device);
+        let bind_group_layout = B::bind_group_layout_descriptor(render_device);
+        let uniform_layout = uniform_bind_group_layout_desc();
 
         let pipeline = queue_compute_pipeline(
             world,
@@ -144,7 +150,7 @@ pub(crate) fn queue_compute_pipeline(
     label: &'static str,
     shader: PathBuf,
     entry_point: &'static str,
-    layouts: Vec<BindGroupLayout>,
+    layouts: Vec<BindGroupLayoutDescriptor>,
 ) -> CachedComputePipelineId {
     let pipeline_cache = world.resource::<PipelineCache>();
     let asset_server = world.resource::<AssetServer>();
@@ -159,8 +165,6 @@ pub(crate) fn queue_compute_pipeline(
 }
 
 pub trait DispatchFluidPass {
-    const WORKGROUP_SIZE: u32 = 8;
-
     fn dispatch_center(&mut self, size: UVec2);
 
     fn dispatch_x_major(&mut self, size: UVec2);
@@ -170,26 +174,14 @@ pub trait DispatchFluidPass {
 
 impl DispatchFluidPass for ComputePass<'_> {
     fn dispatch_center(&mut self, size: UVec2) {
-        self.dispatch_workgroups(
-            size.x / Self::WORKGROUP_SIZE,
-            size.y / Self::WORKGROUP_SIZE,
-            1,
-        );
+        self.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
     }
 
     fn dispatch_x_major(&mut self, size: UVec2) {
-        self.dispatch_workgroups(
-            size.x + 1,
-            size.y / Self::WORKGROUP_SIZE / Self::WORKGROUP_SIZE,
-            1,
-        );
+        self.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
     }
 
     fn dispatch_y_major(&mut self, size: UVec2) {
-        self.dispatch_workgroups(
-            size.x / Self::WORKGROUP_SIZE / Self::WORKGROUP_SIZE,
-            size.y + 1,
-            1,
-        );
+        self.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
     }
 }

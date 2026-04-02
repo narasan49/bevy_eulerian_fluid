@@ -2,7 +2,7 @@
 
 This project is a fluid simulation plugin for [Bevy](https://bevyengine.org/).
 
-![img](./docs/bevy-fluid-various-shape-rigid-bodies.gif)
+![img](./docs/bevy_fluid_various_shapes.gif)
 
 Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
@@ -81,14 +81,13 @@ There are some examples to demonstrate how to visualize and interact to the simu
   ```ps1
   cargo run --example various_shapes
   ```
-  ![img](./docs/bevy-fluid-various-shape-rigid-bodies.gif)
+  ![img](./docs/bevy_fluid_various_shapes.gif)
 
 - **Imposing forces with mouse and touch input**
-  (Also available [here](https://narasan49.github.io/bevy_eulerian_fluid/))
   ```ps1
   cargo run --example interaction
   ```
-  ![img](./docs/bevy-fluid-interaction.gif)
+  ![img](./docs/bevy_fluid_interaction.gif)
 
 ## Versions
 | Bevy | Bevy Eularian Fluid |

@@ -1,31 +1,24 @@
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct AccumulateLevelSetCorrectionPlusPass;
 
 impl FluidComputePass for AccumulateLevelSetCorrectionPlusPass {
-    type P = AccumulateLevelSetCorrectionPipeline;
-
+    type Pipeline = AccumulateLevelSetCorrectionPipeline;
     type Resource = AccumulateLevelSetCorrectionPlusResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_plus.into_configs()
-    }
+    type BG = AccumulateLevelSetCorrectionPlusBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/accumulate_levelset_correction.wgsl");
@@ -35,13 +28,9 @@ impl FluidComputePass for AccumulateLevelSetCorrectionPlusPass {
 pub(crate) struct AccumulateLevelSetCorrectionMinusPass;
 
 impl FluidComputePass for AccumulateLevelSetCorrectionMinusPass {
-    type P = AccumulateLevelSetCorrectionPipeline;
-
+    type Pipeline = AccumulateLevelSetCorrectionPipeline;
     type Resource = AccumulateLevelSetCorrectionMinusResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_minus.into_configs()
-    }
+    type BG = AccumulateLevelSetCorrectionMinusBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/accumulate_levelset_correction.wgsl");
@@ -130,56 +119,20 @@ pub(crate) struct AccumulateLevelSetCorrectionMinusBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_plus<'a>(
-    mut commands: Commands,
-    pipeline: Res<AccumulateLevelSetCorrectionPipeline>,
-    query: Query<(Entity, &AccumulateLevelSetCorrectionPlusResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(AccumulateLevelSetCorrectionPlusBindGroup { bind_group });
+impl HasBindGroupLayout for AccumulateLevelSetCorrectionPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
     }
 }
 
-pub(super) fn prepare_bind_groups_minus<'a>(
-    mut commands: Commands,
-    pipeline: Res<AccumulateLevelSetCorrectionPipeline>,
-    query: Query<(Entity, &AccumulateLevelSetCorrectionMinusResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl From<BindGroup> for AccumulateLevelSetCorrectionPlusBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(AccumulateLevelSetCorrectionMinusBindGroup { bind_group });
+impl From<BindGroup> for AccumulateLevelSetCorrectionMinusBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

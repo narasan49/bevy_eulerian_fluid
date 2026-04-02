@@ -82,10 +82,13 @@ use crate::{
             UpdateInterfaceBandMaskPipeline, UpdateInterfaceBandMaskResource,
         },
     },
+    pipeline::WORKGROUP_SIZE,
     plugin::FluidComputePassPlugin,
     settings::FluidSettings,
     texture::NewTexture,
 };
+
+pub(crate) const WORKGROUP_SIZE_PARTICLE: u32 = 256;
 
 pub struct ParticleLevelsetTwoLayersPlugin;
 
@@ -133,7 +136,7 @@ pub(crate) fn dispatch_initialize(
     particle_bind_groups: PLSInitializeBindGroupsQueryItem,
     grid_size: UVec2,
 ) {
-    let num_workgroups_grid = (grid_size / 8).extend(1);
+    let num_workgroups_grid = (grid_size / WORKGROUP_SIZE).extend(1);
 
     let update_interface_band_mask_pipeline = world.resource::<UpdateInterfaceBandMaskPipeline>();
     update_interface_band_mask_pipeline.pipeline.dispatch(
@@ -165,7 +168,7 @@ pub(crate) fn dispatch_update(
     grid_size: UVec2,
 ) {
     let num_workgroups_particle = UVec3::new(
-        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / 256,
+        grid_size.element_product() * MAX_PARTICLES_PER_CELL as u32 / WORKGROUP_SIZE_PARTICLE,
         1,
         1,
     );

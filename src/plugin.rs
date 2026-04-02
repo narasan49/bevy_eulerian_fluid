@@ -1,21 +1,35 @@
 use std::marker::PhantomData;
 
 use bevy::{
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
+        render_asset::RenderAssets,
+        render_resource::{AsBindGroup, BindGroup, PipelineCache},
+        renderer::RenderDevice,
+        storage::GpuShaderStorageBuffer,
+        texture::{FallbackImage, GpuImage},
         Render, RenderApp, RenderSystems,
     },
 };
 
+use crate::pipeline::HasBindGroupLayout;
+
 pub(crate) trait FluidComputePass: Sized + Send + Sync + 'static {
-    type P: Resource + FromWorld;
-    type Resource: Component + ExtractComponent + Clone;
+    type Pipeline: Resource + FromWorld + HasBindGroupLayout;
+    type Resource: Component
+        + ExtractComponent
+        + Clone
+        + AsBindGroup<
+            Param = (
+                Res<'static, RenderAssets<GpuImage>>,
+                Res<'static, FallbackImage>,
+                Res<'static, RenderAssets<GpuShaderStorageBuffer>>,
+            ),
+        >;
+    type BG: Component + From<BindGroup>;
 
     fn register_assets(_app: &mut App) {}
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem>;
 }
 
 pub(crate) struct FluidComputePassPlugin<T: FluidComputePass> {
@@ -40,7 +54,7 @@ impl<T: FluidComputePass> Plugin for FluidComputePassPlugin<T> {
         };
         render_app.add_systems(
             Render,
-            T::prepare_bind_groups_system().in_set(RenderSystems::PrepareBindGroups),
+            prepare_bind_groups::<T>.in_set(RenderSystems::PrepareBindGroups),
         );
     }
 
@@ -48,90 +62,100 @@ impl<T: FluidComputePass> Plugin for FluidComputePassPlugin<T> {
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
-        render_app.init_resource::<T::P>();
+        render_app.init_resource::<T::Pipeline>();
+    }
+}
+
+fn prepare_bind_groups<'a, T: FluidComputePass>(
+    mut commands: Commands,
+    pipeline: Res<T::Pipeline>,
+    query: Query<(Entity, &T::Resource)>,
+    render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
+    mut param: (
+        Res<'a, RenderAssets<GpuImage>>,
+        Res<'a, FallbackImage>,
+        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
+    ),
+) {
+    for (entity, resource) in &query {
+        let bind_group = resource
+            .as_bind_group(
+                &pipeline.bind_group_layout(),
+                &render_device,
+                &pipeline_cache,
+                &mut param,
+            )
+            .unwrap()
+            .bind_group;
+
+        commands.entity(entity).insert(T::BG::from(bind_group));
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::path::PathBuf;
+
     use super::FluidComputePass;
     use bevy::{
-        ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
         prelude::*,
         render::{
             extract_component::ExtractComponent,
-            render_asset::RenderAssets,
-            render_resource::{AsBindGroup, BindGroup, BindGroupLayout},
-            renderer::RenderDevice,
+            render_resource::{AsBindGroup, BindGroup},
             settings::WgpuSettings,
-            storage::GpuShaderStorageBuffer,
-            texture::{FallbackImage, GpuImage},
             RenderPlugin,
         },
     };
 
-    use crate::{pipeline::Pipeline, plugin::FluidComputePassPlugin};
-
-    struct TestPlugin;
+    use crate::{
+        pipeline::{HasBindGroupLayout, SingleComputePipeline},
+        plugin::FluidComputePassPlugin,
+    };
 
     #[derive(Resource)]
     struct TestPipeline {
-        bind_group_layout: BindGroupLayout,
-    }
-
-    impl Pipeline for TestPipeline {
-        fn is_pipeline_state_ready(
-            &self,
-            _pipeline_cache: &bevy::render::render_resource::PipelineCache,
-        ) -> bool {
-            true
-        }
+        pipeline: SingleComputePipeline,
     }
 
     impl FromWorld for TestPipeline {
         fn from_world(world: &mut World) -> Self {
-            let render_device = world.resource::<RenderDevice>();
-            let bind_group_layout = TestShaderResource::bind_group_layout(render_device);
-            Self { bind_group_layout }
+            let pipeline = SingleComputePipeline::new::<TestShaderResource>(
+                world,
+                "TestPipeline",
+                PathBuf::from("test.wgsl"),
+                "main",
+            );
+            Self { pipeline }
+        }
+    }
+
+    impl HasBindGroupLayout for TestPipeline {
+        fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+            &self.pipeline.bind_group_layout
+        }
+    }
+
+    struct TestPass;
+
+    #[derive(Component)]
+    struct TestBindGroup {
+        pub _bind_group: BindGroup,
+    }
+
+    impl From<BindGroup> for TestBindGroup {
+        fn from(_bind_group: BindGroup) -> Self {
+            Self { _bind_group }
         }
     }
 
     #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
     struct TestShaderResource {}
 
-    #[derive(Component)]
-    struct TestBindGroups {
-        _bind_group: BindGroup,
-    }
-
-    impl FluidComputePass for TestPlugin {
-        type P = TestPipeline;
+    impl FluidComputePass for TestPass {
         type Resource = TestShaderResource;
-
-        fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-            prepare_bind_groups.into_configs()
-        }
-    }
-
-    fn prepare_bind_groups<'a>(
-        mut commands: Commands,
-        pipeline: Res<TestPipeline>,
-        query: Query<(Entity, &TestShaderResource)>,
-        render_device: Res<RenderDevice>,
-        mut param: (
-            Res<'a, RenderAssets<GpuImage>>,
-            Res<'a, FallbackImage>,
-            Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-        ),
-    ) {
-        for (e, res) in &query {
-            let _bind_group = res
-                .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
-                .unwrap()
-                .bind_group;
-
-            commands.entity(e).insert(TestBindGroups { _bind_group });
-        }
+        type Pipeline = TestPipeline;
+        type BG = TestBindGroup;
     }
 
     #[test]
@@ -149,6 +173,6 @@ mod test {
                 ..default()
             },
         ));
-        app.add_plugins(FluidComputePassPlugin::<TestPlugin>::default());
+        app.add_plugins(FluidComputePassPlugin::<TestPass>::default());
     }
 }

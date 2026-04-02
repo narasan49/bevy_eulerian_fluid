@@ -11,7 +11,7 @@ use bevy::{
 
 use crate::{
     fluid_uniform::SimulationUniformBindGroup,
-    pipeline::DispatchFluidPass,
+    pipeline::{DispatchFluidPass, WORKGROUP_SIZE},
     plugin::FluidComputePassPlugin,
     projection::gauss_seidel::{
         GaussSeidelBindGroup, GaussSeidelConfig, GaussSeidelPass, GaussSeidelPipeline,
@@ -58,7 +58,7 @@ pub(crate) fn dispatch(
             pass.push_debug_group("Projection (Gauss-Seidel)");
 
             let pipeline = world.resource::<GaussSeidelPipeline>();
-            let num_workgroups = (size / 8).extend(1);
+            let num_workgroups = (size / WORKGROUP_SIZE).extend(1);
             pipeline.dispatch(
                 pipeline_cache,
                 pass,

@@ -10,8 +10,9 @@ use bevy::{
         render_graph::{self, RenderGraph, RenderLabel},
         render_resource::{
             binding_types::uniform_buffer, AsBindGroup, BindGroup, BindGroupEntries,
-            BindGroupLayout, BindGroupLayoutEntries, CachedComputePipelineId, CachedPipelineState,
-            ComputePassDescriptor, ComputePipelineDescriptor, PipelineCache, ShaderStages,
+            BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedComputePipelineId,
+            CachedPipelineState, ComputePassDescriptor, ComputePipelineDescriptor, PipelineCache,
+            ShaderStages,
         },
         renderer::RenderDevice,
         storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
@@ -21,7 +22,7 @@ use bevy::{
 };
 
 use crate::{
-    fluid_uniform::{create_uniform_bind_group_layout, SimulationUniformBindGroup},
+    fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup},
     pipeline::DispatchFluidPass,
     render_node::FluidLabel,
     settings::FluidSettings,
@@ -43,8 +44,8 @@ pub(crate) struct ConstructVelocityArrowsResource {
 #[derive(Resource)]
 struct Pipeline {
     pipeline: CachedComputePipelineId,
-    bind_group_layout: BindGroupLayout,
-    bin_size_bind_group_layout: BindGroupLayout,
+    bind_group_layout: BindGroupLayoutDescriptor,
+    bin_size_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -109,15 +110,16 @@ impl FromWorld for Pipeline {
         let render_device = world.resource::<RenderDevice>();
         let pipeline_cache = world.resource::<PipelineCache>();
 
-        let bind_group_layout = ConstructVelocityArrowsResource::bind_group_layout(render_device);
-        let bin_size_bind_group_layout = render_device.create_bind_group_layout(
-            Some("VelocityMapBinSizeBindGroupLayout"),
+        let bind_group_layout =
+            ConstructVelocityArrowsResource::bind_group_layout_descriptor(render_device);
+        let bin_size_bind_group_layout = BindGroupLayoutDescriptor::new(
+            "VelocityMapBinSizeBindGroupLayout",
             &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
                 uniform_buffer::<VelocityOverlay>(true),
             ),
         );
-        let simulation_uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
+        let simulation_uniform_bind_group_layout = uniform_bind_group_layout_desc();
 
         let pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: Some("ConstructVelocityArrowsPipeline".into()),
@@ -149,6 +151,7 @@ fn prepare_bind_group(
     )>,
     bin_size_uniform: Res<ComponentUniforms<VelocityOverlay>>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -156,13 +159,18 @@ fn prepare_bind_group(
     let mut param = (gpu_images, fallback_image, buffers);
     for (entity, resource, bin_size_uniform_index) in &query {
         let bind_group = resource
-            .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
+            .as_bind_group(
+                &pipeline.bind_group_layout,
+                &render_device,
+                &pipeline_cache,
+                &mut param,
+            )
             .unwrap()
             .bind_group;
 
         let bin_size_bind_group = render_device.create_bind_group(
             "VelocityMapBinSizeBindGroup",
-            &pipeline.bin_size_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.bin_size_bind_group_layout),
             &BindGroupEntries::single(bin_size_uniform.uniforms()),
         );
 

@@ -1,4 +1,4 @@
-pub mod advect_scalar;
+pub mod advect_levelset;
 pub mod advection;
 pub mod apply_forces;
 pub mod common_pass;
@@ -56,17 +56,20 @@ impl Plugin for FluidPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins((
-                initialize::InitializePlugin,
+                FluidComputePassPlugin::<initialize::InitializeGridCenterPass>::default(),
+                FluidComputePassPlugin::<initialize::InitializeGridEdgePass>::default(),
+            ))
+            .add_plugins((
                 update_solid::UpdateSolidPlugin,
-                advection::AdvectionPlugin,
+                FluidComputePassPlugin::<advection::AdvectionPass>::default(),
                 apply_forces::ApplyForcesPlugin,
-                divergence::DivergencePlugin,
+                FluidComputePassPlugin::<divergence::DivergencePass>::default(),
                 fluid_uniform::SimulationUniformPlugin,
                 PressureProjectionPlugin,
                 solve_pressure::SolvePressurePlugin,
                 solve_velocity::SolveVelocityPlugin,
                 extrapolate_velocity::ExtrapolateVelocityPlugin,
-                advect_scalar::AdvectScalarPlugin,
+                FluidComputePassPlugin::<advect_levelset::AdvectLevelSetPass>::default(),
                 reinitialize_levelset::ReinitializeLevelSetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
                 FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),
