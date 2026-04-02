@@ -1,15 +1,13 @@
-use crate::{pipeline::SingleComputePipeline, plugin::FluidComputePass};
+use crate::{
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
+    plugin::FluidComputePass,
+};
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
     },
 };
 
@@ -27,13 +25,9 @@ impl Default for FastIterativeMethodConfig {
 pub(crate) struct FastIterativeInitializePass;
 
 impl FluidComputePass for FastIterativeInitializePass {
-    type P = FastIterativeInitializePipeline;
-
+    type Pipeline = FastIterativeInitializePipeline;
     type Resource = FastIterativeInitializeResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_initialize.into_configs()
-    }
+    type BG = FastIterativeInitializeBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/fast_iterative_method/initialize.wgsl");
@@ -78,48 +72,29 @@ impl FromWorld for FastIterativeInitializePipeline {
     }
 }
 
+impl HasBindGroupLayout for FastIterativeInitializePipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
+
 #[derive(Component)]
 pub(crate) struct FastIterativeInitializeBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_initialize<'a>(
-    mut commands: Commands,
-    pipeline: Res<FastIterativeInitializePipeline>,
-    query: Query<(Entity, &FastIterativeInitializeResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(FastIterativeInitializeBindGroup { bind_group });
+impl From<BindGroup> for FastIterativeInitializeBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
 
 pub(crate) struct FastIterativeInitializeActiveLabelPass;
 
 impl FluidComputePass for FastIterativeInitializeActiveLabelPass {
-    type P = FastIterativeInitializeActiveLabelPipeline;
-
+    type Pipeline = FastIterativeInitializeActiveLabelPipeline;
     type Resource = FastIterativeInitializeActiveLabelResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_initialize_active_label.into_configs()
-    }
+    type BG = FastIterativeInitializeActiveLabelBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(
@@ -166,48 +141,29 @@ impl FromWorld for FastIterativeInitializeActiveLabelPipeline {
     }
 }
 
+impl HasBindGroupLayout for FastIterativeInitializeActiveLabelPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
+
 #[derive(Component)]
 pub(crate) struct FastIterativeInitializeActiveLabelBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_initialize_active_label<'a>(
-    mut commands: Commands,
-    pipeline: Res<FastIterativeInitializeActiveLabelPipeline>,
-    query: Query<(Entity, &FastIterativeInitializeActiveLabelResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(FastIterativeInitializeActiveLabelBindGroup { bind_group });
+impl From<BindGroup> for FastIterativeInitializeActiveLabelBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
 
 pub(crate) struct FastIterativeUpdatePass;
 
 impl FluidComputePass for FastIterativeUpdatePass {
-    type P = FastIterativeUpdatePipeline;
-
+    type Pipeline = FastIterativeUpdatePipeline;
     type Resource = FastIterativeUpdateResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_update.into_configs()
-    }
+    type BG = FastIterativeUpdateBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/fast_iterative_method/update.wgsl");
@@ -249,34 +205,19 @@ impl FromWorld for FastIterativeUpdatePipeline {
     }
 }
 
+impl HasBindGroupLayout for FastIterativeUpdatePipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
+
 #[derive(Component)]
 pub(crate) struct FastIterativeUpdateBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_update<'a>(
-    mut commands: Commands,
-    pipeline: Res<FastIterativeUpdatePipeline>,
-    query: Query<(Entity, &FastIterativeUpdateResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(FastIterativeUpdateBindGroup { bind_group });
+impl From<BindGroup> for FastIterativeUpdateBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

@@ -3,19 +3,17 @@ use bevy::{
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId, ComputePass,
-            PipelineCache,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
+            ComputePass, PipelineCache,
         },
         renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 use crate::{
-    pipeline::{is_pipeline_loaded, queue_compute_pipeline},
+    pipeline::{is_pipeline_loaded, queue_compute_pipeline, HasBindGroupLayout},
     plugin::FluidComputePass,
 };
 
@@ -24,17 +22,12 @@ pub(crate) const PREFIX_SUM_BLOCK_SIZE: usize = 512;
 pub(crate) struct PrefixSumPass;
 
 impl FluidComputePass for PrefixSumPass {
-    type P = PrefixSumPipeline;
-
+    type Pipeline = PrefixSumPipeline;
     type Resource = PrefixSumResource;
+    type BG = PrefixSumBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/prefix_sum.wgsl");
-    }
-
-    fn prepare_bind_groups_system(
-    ) -> bevy::ecs::schedule::ScheduleConfigs<bevy::ecs::system::ScheduleSystem> {
-        prepare_bind_groups.into_configs()
     }
 }
 
@@ -58,14 +51,14 @@ pub(crate) struct PrefixSumPipeline {
     pub prefix_sum_block_pipeline: CachedComputePipelineId,
     pub prefix_sum_local_scans_pipeline: CachedComputePipelineId,
     pub add_scanned_block_sums_pipeline: CachedComputePipelineId,
-    pub bind_group_layout: BindGroupLayout,
+    pub bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 impl PrefixSumPipeline {
     pub fn new(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let bind_group_layout = PrefixSumResource::bind_group_layout(render_device);
+        let bind_group_layout = PrefixSumResource::bind_group_layout_descriptor(render_device);
 
         let prefix_sum_block_pipeline = queue_compute_pipeline(
             world,
@@ -138,25 +131,16 @@ impl FromWorld for PrefixSumPipeline {
     }
 }
 
-fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<PrefixSumPipeline>,
-    query: Query<(Entity, &PrefixSumResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let _bind_group = resource
-            .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
-            .unwrap()
-            .bind_group;
+impl HasBindGroupLayout for PrefixSumPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.bind_group_layout
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(PrefixSumBindGroup { _bind_group });
+impl From<BindGroup> for PrefixSumBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self {
+            _bind_group: bind_group,
+        }
     }
 }

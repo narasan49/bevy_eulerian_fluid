@@ -6,28 +6,20 @@ use crate::{
 };
 use bevy::{
     asset::embedded_asset,
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct CorrectLevelSetSecondPass;
 
 impl FluidComputePass for CorrectLevelSetSecondPass {
-    type P = CorrectLevelSetPipeline;
-
+    type Pipeline = CorrectLevelSetPipeline;
     type Resource = CorrectLevelSetSecondResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups.into_configs()
-    }
+    type BG = CorrectLevelSetSecondBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/correct_levelset.wgsl");
@@ -62,29 +54,8 @@ pub(crate) struct CorrectLevelSetSecondBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<CorrectLevelSetPipeline>,
-    query: Query<(Entity, &CorrectLevelSetSecondResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(CorrectLevelSetSecondBindGroup { bind_group });
+impl From<BindGroup> for CorrectLevelSetSecondBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
