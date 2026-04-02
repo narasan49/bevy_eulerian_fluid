@@ -20,8 +20,8 @@ use crate::{
     },
     fluid_uniform::SimulationUniformBindGroup,
     initialize::{
-        InitializeGridCenterBindGroup, InitializeGridCenterPipeline, InitializeGridEdgeBindGroup,
-        InitializeGridEdgePipeline,
+        InitializeGridCenterBindGroup, InitializeGridCenterPipeline, InitializeGridCenterResource,
+        InitializeGridEdgeBindGroup, InitializeGridEdgePipeline,
     },
     levelset_gradient::{LevelSetGradientBindGroup, LevelSetGradientPipeline},
     particle_levelset_two_layers::{
@@ -91,7 +91,10 @@ pub(crate) struct EulerFluidNode {
         &'static ProjectionMethod,
         &'static ReinitializeMethod,
     )>,
-    query_fluid_status: QueryState<(Entity, Option<&'static mut FluidStatus>), With<FluidSettings>>,
+    query_fluid_status: QueryState<
+        (Entity, Option<&'static mut FluidStatus>),
+        (With<FluidSettings>, With<InitializeGridCenterResource>),
+    >,
 }
 
 impl EulerFluidNode {
