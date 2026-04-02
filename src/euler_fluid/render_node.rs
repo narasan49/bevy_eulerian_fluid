@@ -68,7 +68,7 @@ struct FluidBindGroupsQueryData {
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
     levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
-    prijection_bind_groups: ProjectionBindGroupsQuery,
+    projection_bind_groups: ProjectionBindGroupsQuery,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -115,7 +115,7 @@ impl render_graph::Node for EulerFluidNode {
                 let update_area_fraction_pipeline = world.resource::<UpdateAreaFractionPipeline>();
                 let advection_pipeline = world.resource::<AdvectionPipeline>();
                 let divergence_pipeline = world.resource::<DivergencePipeline>();
-                let apply_forcces_pipeline = world.resource::<ApplyForcesPipeline>();
+                let apply_forces_pipeline = world.resource::<ApplyForcesPipeline>();
                 let solve_pressure_pipeline = world.resource::<SolvePressurePipeline>();
                 let gauss_seidel_pipeline = world.resource::<GaussSeidelPipeline>();
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
@@ -129,7 +129,7 @@ impl render_graph::Node for EulerFluidNode {
                         .pipeline
                         .is_ready(pipeline_cache)
                     && advection_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && apply_forcces_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && apply_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && divergence_pipeline.pipeline.is_ready(pipeline_cache)
                     && solve_pressure_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && gauss_seidel_pipeline.is_ready(pipeline_cache)
@@ -292,7 +292,7 @@ impl render_graph::Node for EulerFluidNode {
                                 projection_method,
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.prijection_bind_groups,
+                                bind_groups.projection_bind_groups,
                                 bind_groups.simulation_uniform,
                                 fluid_settings.size,
                             );
