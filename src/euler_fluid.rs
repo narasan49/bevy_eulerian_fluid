@@ -1,4 +1,4 @@
-pub mod advect_scalar;
+pub mod advect_levelset;
 pub mod advection;
 pub mod apply_forces;
 pub mod common_pass;
@@ -66,7 +66,7 @@ impl Plugin for FluidPlugin {
                 solve_pressure::SolvePressurePlugin,
                 solve_velocity::SolveVelocityPlugin,
                 extrapolate_velocity::ExtrapolateVelocityPlugin,
-                FluidComputePassPlugin::<advect_scalar::AdvectScalarPass>::default(),
+                FluidComputePassPlugin::<advect_levelset::AdvectLevelSetPass>::default(),
                 reinitialize_levelset::ReinitializeLevelSetPlugin,
                 fluid_to_solid::FluidToSolidForcesPlugin,
                 FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),

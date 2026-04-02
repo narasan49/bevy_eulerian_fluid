@@ -17,12 +17,12 @@ use crate::{
     plugin::FluidComputePass,
 };
 
-pub(crate) struct AdvectScalarPass;
+pub(crate) struct AdvectLevelSetPass;
 
-impl FluidComputePass for AdvectScalarPass {
-    type Pipeline = AdvectScalarPipeline;
-    type Resource = AdvectLevelsetResource;
-    type BG = AdvectScalarBindGroups;
+impl FluidComputePass for AdvectLevelSetPass {
+    type Pipeline = AdvectLevelSetPipeline;
+    type Resource = AdvectLevelSetResource;
+    type BG = AdvectLevelSetBindGroups;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/advect_levelset.wgsl");
@@ -30,7 +30,7 @@ impl FluidComputePass for AdvectScalarPass {
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
-pub(crate) struct AdvectLevelsetResource {
+pub(crate) struct AdvectLevelSetResource {
     #[storage_texture(0, image_format = R32Float, access = ReadOnly)]
     pub u0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
@@ -42,18 +42,18 @@ pub(crate) struct AdvectLevelsetResource {
 }
 
 #[derive(Resource)]
-pub(crate) struct AdvectScalarPipeline {
+pub(crate) struct AdvectLevelSetPipeline {
     pub pipeline: SingleComputePipeline,
 }
 
-impl FromWorld for AdvectScalarPipeline {
+impl FromWorld for AdvectLevelSetPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
         let uniform_bind_group_layout = uniform_bind_group_layout_desc();
-        let bind_group_layout = AdvectLevelsetResource::bind_group_layout_descriptor(render_device);
+        let bind_group_layout = AdvectLevelSetResource::bind_group_layout_descriptor(render_device);
 
         let pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: Some("AdvectLevelsetPipeline".into()),
@@ -64,7 +64,7 @@ impl FromWorld for AdvectScalarPipeline {
             ..default()
         });
 
-        AdvectScalarPipeline {
+        AdvectLevelSetPipeline {
             pipeline: SingleComputePipeline {
                 pipeline,
                 bind_group_layout,
@@ -73,18 +73,18 @@ impl FromWorld for AdvectScalarPipeline {
     }
 }
 
-impl HasBindGroupLayout for AdvectScalarPipeline {
+impl HasBindGroupLayout for AdvectLevelSetPipeline {
     fn bind_group_layout(&self) -> &BindGroupLayoutDescriptor {
         &self.pipeline.bind_group_layout
     }
 }
 
 #[derive(Component)]
-pub(crate) struct AdvectScalarBindGroups {
+pub(crate) struct AdvectLevelSetBindGroups {
     pub bind_group: BindGroup,
 }
 
-impl From<BindGroup> for AdvectScalarBindGroups {
+impl From<BindGroup> for AdvectLevelSetBindGroups {
     fn from(bind_group: BindGroup) -> Self {
         Self { bind_group }
     }

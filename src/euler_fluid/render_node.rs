@@ -8,7 +8,7 @@ use bevy::{
 };
 
 use crate::{
-    advect_scalar::{AdvectScalarBindGroups, AdvectScalarPipeline},
+    advect_levelset::{AdvectLevelSetBindGroups, AdvectLevelSetPipeline},
     advection::{AdvectionBindGroups, AdvectionPipeline},
     apply_forces::{ApplyForcesBindGroups, ApplyForcesPipeline},
     divergence::{DivergenceBindGroups, DivergencePipeline},
@@ -63,7 +63,7 @@ struct FluidBindGroupsQueryData {
     divergence_bind_groups: &'static DivergenceBindGroups,
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
-    advect_scalar_bind_groups: &'static AdvectScalarBindGroups,
+    advect_levelset_bind_groups: &'static AdvectLevelSetBindGroups,
     reinit_levelset_bind_groups: ReinitializeLevelSetBindGroupQuery,
     fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     simulation_uniform: &'static SimulationUniformBindGroup,
@@ -120,7 +120,7 @@ impl render_graph::Node for EulerFluidNode {
                 let gauss_seidel_pipeline = world.resource::<GaussSeidelPipeline>();
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
-                let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
+                let advect_levelset_pipeline = world.resource::<AdvectLevelSetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
 
                 if initialize_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -135,7 +135,7 @@ impl render_graph::Node for EulerFluidNode {
                     && gauss_seidel_pipeline.is_ready(pipeline_cache)
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && advect_scalar_pipeline.pipeline.is_ready(pipeline_cache)
+                    && advect_levelset_pipeline.pipeline.is_ready(pipeline_cache)
                     && reinitialize_levelset::is_pipeline_ready(world, pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && are_pls_pipelines_ready(world, pipeline_cache)
@@ -317,11 +317,12 @@ impl render_graph::Node for EulerFluidNode {
                                 fluid_settings.size,
                             );
 
-                            let advect_scalar_pipeline = world.resource::<AdvectScalarPipeline>();
-                            advect_scalar_pipeline.pipeline.dispatch(
+                            let advect_levelset_pipeline =
+                                world.resource::<AdvectLevelSetPipeline>();
+                            advect_levelset_pipeline.pipeline.dispatch(
                                 pipeline_cache,
                                 &mut pass,
-                                &bind_groups.advect_scalar_bind_groups.bind_group,
+                                &bind_groups.advect_levelset_bind_groups.bind_group,
                                 num_workgroups_grid,
                             );
 

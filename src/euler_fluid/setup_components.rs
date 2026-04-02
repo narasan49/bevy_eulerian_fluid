@@ -8,7 +8,7 @@ use bevy::{
 };
 
 use crate::{
-    advect_scalar::AdvectLevelsetResource,
+    advect_levelset::AdvectLevelSetResource,
     advection::AdvectionResource,
     apply_forces::{ApplyForcesResource, ForceToFluid},
     divergence::DivergenceResource,
@@ -227,7 +227,7 @@ pub(crate) fn watch_fluid_component(
             out_is_v_valid: out_is_v_valid.clone(),
         };
 
-        let advect_levelset_resource = AdvectLevelsetResource {
+        let advect_levelset_resource = AdvectLevelSetResource {
             u0: u0.clone(),
             v0: v0.clone(),
             levelset_air0: levelset_air0.clone(),
