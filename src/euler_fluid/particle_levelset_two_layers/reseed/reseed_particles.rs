@@ -1,31 +1,24 @@
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct ReseedPositiveParticlesPass;
 
 impl FluidComputePass for ReseedPositiveParticlesPass {
-    type P = ReseedParticlesPipeline;
-
+    type Pipeline = ReseedParticlesPipeline;
     type Resource = ReseedPositiveParticlesResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_positive.into_configs()
-    }
+    type BG = ReseedPositiveParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/reseed_particles.wgsl");
@@ -35,13 +28,9 @@ impl FluidComputePass for ReseedPositiveParticlesPass {
 pub(crate) struct ReseedNegativeParticlesPass;
 
 impl FluidComputePass for ReseedNegativeParticlesPass {
-    type P = ReseedParticlesPipeline;
-
+    type Pipeline = ReseedParticlesPipeline;
     type Resource = ReseedNegativeParticlesResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_negative.into_configs()
-    }
+    type BG = ReseedNegativeParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/reseed_particles.wgsl");
@@ -160,56 +149,20 @@ pub(crate) struct ReseedNegativeParticlesBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_positive<'a>(
-    mut commands: Commands,
-    pipeline: Res<ReseedParticlesPipeline>,
-    query: Query<(Entity, &ReseedPositiveParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(ReseedPositiveParticlesBindGroup { bind_group });
+impl HasBindGroupLayout for ReseedParticlesPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
     }
 }
 
-pub(super) fn prepare_bind_groups_negative<'a>(
-    mut commands: Commands,
-    pipeline: Res<ReseedParticlesPipeline>,
-    query: Query<(Entity, &ReseedNegativeParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl From<BindGroup> for ReseedPositiveParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(ReseedNegativeParticlesBindGroup { bind_group });
+impl From<BindGroup> for ReseedNegativeParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

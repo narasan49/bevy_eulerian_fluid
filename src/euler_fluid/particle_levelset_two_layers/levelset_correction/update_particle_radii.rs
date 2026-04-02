@@ -1,31 +1,24 @@
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct UpdatePositiveParticleRadiiPass;
 
 impl FluidComputePass for UpdatePositiveParticleRadiiPass {
-    type P = UpdateParticleRadiiPipeline;
-
+    type Pipeline = UpdateParticleRadiiPipeline;
     type Resource = UpdatePositiveParticleRadiiResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_positive.into_configs()
-    }
+    type BG = UpdatePositiveParticleRadiiBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/update_particle_radii.wgsl");
@@ -35,13 +28,9 @@ impl FluidComputePass for UpdatePositiveParticleRadiiPass {
 pub(crate) struct UpdateNegativeParticleRadiiPass;
 
 impl FluidComputePass for UpdateNegativeParticleRadiiPass {
-    type P = UpdateParticleRadiiPipeline;
-
+    type Pipeline = UpdateParticleRadiiPipeline;
     type Resource = UpdateNegativeParticleRadiiResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_negative.into_configs()
-    }
+    type BG = UpdateNegativeParticleRadiiBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/update_particle_radii.wgsl");
@@ -120,56 +109,20 @@ pub(crate) struct UpdateNegativeParticleRadiiBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_positive<'a>(
-    mut commands: Commands,
-    pipeline: Res<UpdateParticleRadiiPipeline>,
-    query: Query<(Entity, &UpdatePositiveParticleRadiiResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(UpdatePositiveParticleRadiiBindGroup { bind_group });
+impl HasBindGroupLayout for UpdateParticleRadiiPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
     }
 }
 
-pub(super) fn prepare_bind_groups_negative<'a>(
-    mut commands: Commands,
-    pipeline: Res<UpdateParticleRadiiPipeline>,
-    query: Query<(Entity, &UpdateNegativeParticleRadiiResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl From<BindGroup> for UpdateNegativeParticleRadiiBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(UpdateNegativeParticleRadiiBindGroup { bind_group });
+impl From<BindGroup> for UpdatePositiveParticleRadiiBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

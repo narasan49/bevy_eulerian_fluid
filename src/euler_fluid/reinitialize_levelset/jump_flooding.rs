@@ -6,9 +6,10 @@ use bevy::{
         render_asset::RenderAssets,
         render_resource::{
             binding_types::{texture_storage_2d, uniform_buffer},
-            AsBindGroup, BindGroup, BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries,
-            CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache, ShaderStages,
-            ShaderType, StorageTextureAccess, TextureFormat, UniformBuffer,
+            AsBindGroup, BindGroup, BindGroupEntries, BindGroupLayoutDescriptor,
+            BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor,
+            PipelineCache, ShaderStages, ShaderType, StorageTextureAccess, TextureFormat,
+            UniformBuffer,
         },
         renderer::{RenderDevice, RenderQueue},
         storage::GpuShaderStorageBuffer,
@@ -48,11 +49,11 @@ pub(crate) struct JumpFloodingPipeline {
     pub init_seeds_pipeline: CachedComputePipelineId,
     pub iterate_pipeline: CachedComputePipelineId,
     pub sdf_pipeline: CachedComputePipelineId,
-    init_seeds_bind_group_layout: BindGroupLayout,
-    jump_flooding_step_bind_group_layout: BindGroupLayout,
-    sdf_bind_group_layout: BindGroupLayout,
-    read_only_seeds_bind_group_layout: BindGroupLayout,
-    write_only_seeds_bind_group_layout: BindGroupLayout,
+    init_seeds_bind_group_layout: BindGroupLayoutDescriptor,
+    jump_flooding_step_bind_group_layout: BindGroupLayoutDescriptor,
+    sdf_bind_group_layout: BindGroupLayoutDescriptor,
+    read_only_seeds_bind_group_layout: BindGroupLayoutDescriptor,
+    write_only_seeds_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -103,31 +104,31 @@ impl FromWorld for JumpFloodingPipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let jump_flooding_step_bind_group_layout = render_device.create_bind_group_layout(
-            Some("JumpFloodingStepBindGroupLayout"),
+        let jump_flooding_step_bind_group_layout = BindGroupLayoutDescriptor::new(
+            "JumpFloodingStepBindGroupLayout",
             &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
                 uniform_buffer::<JumpFloodingUniform>(false),
             ),
         );
-        let read_only_seeds_bind_group_layout = render_device.create_bind_group_layout(
-            Some("ReadOnlySeedsBindGroupLayout"),
+        let read_only_seeds_bind_group_layout = BindGroupLayoutDescriptor::new(
+            "ReadOnlySeedsBindGroupLayout",
             &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
                 texture_storage_2d(TextureFormat::Rg32Float, StorageTextureAccess::ReadOnly),
             ),
         );
-        let write_only_seeds_bind_group_layout = render_device.create_bind_group_layout(
-            Some("WriteOnlySeedsBindGroupLayout"),
+        let write_only_seeds_bind_group_layout = BindGroupLayoutDescriptor::new(
+            "WriteOnlySeedsBindGroupLayout",
             &BindGroupLayoutEntries::single(
                 ShaderStages::COMPUTE,
                 texture_storage_2d(TextureFormat::Rg32Float, StorageTextureAccess::WriteOnly),
             ),
         );
         let init_seeds_bind_group_layout =
-            JumpFloodingInitializeSeedsResource::bind_group_layout(render_device);
+            JumpFloodingInitializeSeedsResource::bind_group_layout_descriptor(render_device);
         let sdf_bind_group_layout =
-            JumpFloodingCalculateSdfResource::bind_group_layout(render_device);
+            JumpFloodingCalculateSdfResource::bind_group_layout_descriptor(render_device);
 
         let init_seeds_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -182,6 +183,7 @@ fn prepare_bind_groups<'a>(
     pipeline: Res<JumpFloodingPipeline>,
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
+    pipeline_cache: Res<PipelineCache>,
     query: Query<(
         Entity,
         &FluidSettings,
@@ -212,24 +214,33 @@ fn prepare_bind_groups<'a>(
 
         let mut jump_flooding_step_bind_groups = Vec::with_capacity(jump_flooding_buffer.len());
         for buffer in &jump_flooding_buffer {
-            jump_flooding_step_bind_groups.push(render_device.create_bind_group(
-                Some("JumpFloodingStepBindGroup"),
-                &pipeline.jump_flooding_step_bind_group_layout,
-                &BindGroupEntries::single(buffer.binding().unwrap()),
-            ));
+            jump_flooding_step_bind_groups.push(
+                render_device.create_bind_group(
+                    Some("JumpFloodingStepBindGroup"),
+                    &pipeline_cache
+                        .get_bind_group_layout(&pipeline.jump_flooding_step_bind_group_layout),
+                    &BindGroupEntries::single(buffer.binding().unwrap()),
+                ),
+            );
         }
 
         let init_seeds_bind_group = init_seeds_resource
             .as_bind_group(
                 &pipeline.init_seeds_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
             .bind_group;
 
         let sdf_bind_group = sdf_resource
-            .as_bind_group(&pipeline.sdf_bind_group_layout, &render_device, &mut param)
+            .as_bind_group(
+                &pipeline.sdf_bind_group_layout,
+                &render_device,
+                &pipeline_cache,
+                &mut param,
+            )
             .unwrap()
             .bind_group;
 
@@ -239,24 +250,24 @@ fn prepare_bind_groups<'a>(
         let mut read_only_seeds_bind_groups = Vec::with_capacity(2);
         read_only_seeds_bind_groups.push(render_device.create_bind_group(
             Some("ReadOnlySeedsBindGroup0"),
-            &pipeline.read_only_seeds_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.read_only_seeds_bind_group_layout),
             &BindGroupEntries::single(&seeds0.texture_view),
         ));
         read_only_seeds_bind_groups.push(render_device.create_bind_group(
             Some("ReadOnlySeedsBindGroup1"),
-            &pipeline.read_only_seeds_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.read_only_seeds_bind_group_layout),
             &BindGroupEntries::single(&seeds1.texture_view),
         ));
 
         let mut write_only_seeds_bind_groups = Vec::with_capacity(2);
         write_only_seeds_bind_groups.push(render_device.create_bind_group(
             Some("WriteOnlySeedsBindGroup0"),
-            &pipeline.write_only_seeds_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.write_only_seeds_bind_group_layout),
             &BindGroupEntries::single(&seeds0.texture_view),
         ));
         write_only_seeds_bind_groups.push(render_device.create_bind_group(
             Some("WriteOnlySeedsBindGroup1"),
-            &pipeline.write_only_seeds_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.write_only_seeds_bind_group_layout),
             &BindGroupEntries::single(&seeds1.texture_view),
         ));
 

@@ -5,7 +5,7 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
             ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
@@ -15,7 +15,7 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::create_uniform_bind_group_layout, pipeline::Pipeline};
+use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
 
 pub(crate) struct SolveVelocityPlugin;
 
@@ -55,8 +55,8 @@ pub(crate) struct SolveVResource {
 pub(crate) struct SolveVelocityPipeline {
     pub solve_u_pipeline: CachedComputePipelineId,
     pub solve_v_pipeline: CachedComputePipelineId,
-    solve_u_bind_group_layout: BindGroupLayout,
-    solve_v_bind_group_layout: BindGroupLayout,
+    solve_u_bind_group_layout: BindGroupLayoutDescriptor,
+    solve_v_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -101,9 +101,9 @@ impl FromWorld for SolveVelocityPipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
-        let solve_u_bind_group_layout = SolveUResource::bind_group_layout(render_device);
-        let solve_v_bind_group_layout = SolveVResource::bind_group_layout(render_device);
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
+        let solve_u_bind_group_layout = SolveUResource::bind_group_layout_descriptor(render_device);
+        let solve_v_bind_group_layout = SolveVResource::bind_group_layout_descriptor(render_device);
 
         let solve_u_pipeline = pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
             label: Some("SolveUPipeline".into()),
@@ -141,6 +141,7 @@ fn prepare_bind_groups(
     pipeline: Res<SolveVelocityPipeline>,
     query: Query<(Entity, &SolveUResource, &SolveVResource)>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -151,6 +152,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.solve_u_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -160,6 +162,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.solve_v_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()

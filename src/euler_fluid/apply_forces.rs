@@ -5,9 +5,8 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            binding_types::uniform_buffer, AsBindGroup, BindGroup, BindGroupLayout,
-            BindGroupLayoutEntries, CachedComputePipelineId, ComputePipelineDescriptor,
-            PipelineCache, ShaderStages, ShaderType,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
+            ComputePipelineDescriptor, PipelineCache, ShaderType,
         },
         renderer::RenderDevice,
         storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
@@ -16,7 +15,7 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::SimulationUniform, pipeline::Pipeline};
+use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
 
 pub(crate) struct ApplyForcesPlugin;
 
@@ -49,7 +48,7 @@ pub struct ForcesToFluid {
 pub(crate) struct ApplyForcesPipeline {
     pub apply_forces_u_pipeline: CachedComputePipelineId,
     pub apply_forces_v_pipeline: CachedComputePipelineId,
-    apply_forces_bind_group_layout: BindGroupLayout,
+    apply_forces_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -90,15 +89,10 @@ impl FromWorld for ApplyForcesPipeline {
         let pipeline_cache = world.resource::<PipelineCache>();
         let asset_server = world.resource::<AssetServer>();
 
-        let uniform_bind_group_layout = render_device.create_bind_group_layout(
-            Some("uniform bind group layout"),
-            &BindGroupLayoutEntries::single(
-                ShaderStages::COMPUTE,
-                uniform_buffer::<SimulationUniform>(true),
-            ),
-        );
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
 
-        let apply_forces_bind_group_layout = ApplyForcesResource::bind_group_layout(render_device);
+        let apply_forces_bind_group_layout =
+            ApplyForcesResource::bind_group_layout_descriptor(render_device);
 
         let apply_forces_u_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -137,6 +131,7 @@ fn prepare_bind_group(
     pipeline: Res<ApplyForcesPipeline>,
     query: Query<(Entity, &ApplyForcesResource)>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -147,6 +142,7 @@ fn prepare_bind_group(
             .as_bind_group(
                 &pipeline.apply_forces_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()

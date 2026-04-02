@@ -1,51 +1,40 @@
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 
 pub(super) struct SortPositiveParticlesPass;
 
 impl FluidComputePass for SortPositiveParticlesPass {
-    type P = SortParticlesPipeline;
-
+    type Pipeline = SortParticlesPipeline;
     type Resource = SortPositiveParticlesResource;
+    type BG = SortPositiveParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/sort_particles.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_positive.into_configs()
     }
 }
 
 pub(super) struct SortNegativeParticlesPass;
 
 impl FluidComputePass for SortNegativeParticlesPass {
-    type P = SortParticlesPipeline;
-
+    type Pipeline = SortParticlesPipeline;
     type Resource = SortNegativeParticlesResource;
+    type BG = SortNegativeParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/sort_particles.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_negative.into_configs()
     }
 }
 
@@ -147,56 +136,20 @@ impl FromWorld for SortParticlesPipeline {
     }
 }
 
-fn prepare_bind_groups_positive<'a>(
-    mut commands: Commands,
-    pipelines: Res<SortParticlesPipeline>,
-    query: Query<(Entity, &SortPositiveParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(SortPositiveParticlesBindGroup { bind_group });
+impl HasBindGroupLayout for SortParticlesPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
     }
 }
 
-fn prepare_bind_groups_negative<'a>(
-    mut commands: Commands,
-    pipelines: Res<SortParticlesPipeline>,
-    query: Query<(Entity, &SortNegativeParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl From<BindGroup> for SortPositiveParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(SortNegativeParticlesBindGroup { bind_group });
+impl From<BindGroup> for SortNegativeParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

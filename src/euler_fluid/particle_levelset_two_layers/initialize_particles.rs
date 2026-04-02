@@ -1,35 +1,28 @@
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 
 pub(super) struct InitializeParticlesPass;
 
 impl FluidComputePass for InitializeParticlesPass {
-    type P = InitializeParticlesPipeline;
-
+    type Pipeline = InitializeParticlesPipeline;
     type Resource = InitializeParticlesResource;
+    type BG = InitializeParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/initialize_particles.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups.into_configs()
     }
 }
 
@@ -98,29 +91,14 @@ impl FromWorld for InitializeParticlesPipeline {
     }
 }
 
-fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipelines: Res<InitializeParticlesPipeline>,
-    query: Query<(Entity, &InitializeParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl HasBindGroupLayout for InitializeParticlesPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
 
-        commands
-            .entity(entity)
-            .insert(InitializeParticlesBindGroup { bind_group });
+impl From<BindGroup> for InitializeParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

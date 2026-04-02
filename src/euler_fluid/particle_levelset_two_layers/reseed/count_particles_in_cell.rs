@@ -1,51 +1,40 @@
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 
 pub(super) struct CountPositiveParticlesInCellPass;
 
 impl FluidComputePass for CountPositiveParticlesInCellPass {
-    type P = CountParticlesInCellPipeline;
-
+    type Pipeline = CountParticlesInCellPipeline;
     type Resource = CountPositiveParticlesInCellResource;
+    type BG = CountPositiveParticlesInCellBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/count_particles_in_cell.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_positive.into_configs()
     }
 }
 
 pub(super) struct CountNegativeParticlesInCellPass;
 
 impl FluidComputePass for CountNegativeParticlesInCellPass {
-    type P = CountParticlesInCellPipeline;
-
+    type Pipeline = CountParticlesInCellPipeline;
     type Resource = CountNegativeParticlesInCellResource;
+    type BG = CountNegativeParticlesInCellBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/count_particles_in_cell.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_negative.into_configs()
     }
 }
 
@@ -108,16 +97,6 @@ pub(crate) struct CountParticlesInCellPipeline {
     pub pipeline: SingleComputePipeline,
 }
 
-#[derive(Component)]
-pub(crate) struct CountPositiveParticlesInCellBindGroup {
-    pub bind_group: BindGroup,
-}
-
-#[derive(Component)]
-pub(crate) struct CountNegativeParticlesInCellBindGroup {
-    pub bind_group: BindGroup,
-}
-
 impl FromWorld for CountParticlesInCellPipeline {
     fn from_world(world: &mut World) -> Self {
         let pipeline = SingleComputePipeline::new::<CountPositiveParticlesInCellResource>(
@@ -131,56 +110,30 @@ impl FromWorld for CountParticlesInCellPipeline {
     }
 }
 
-fn prepare_bind_groups_positive<'a>(
-    mut commands: Commands,
-    pipelines: Res<CountParticlesInCellPipeline>,
-    query: Query<(Entity, &CountPositiveParticlesInCellResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(CountPositiveParticlesInCellBindGroup { bind_group });
+impl HasBindGroupLayout for CountParticlesInCellPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
     }
 }
 
-fn prepare_bind_groups_negative<'a>(
-    mut commands: Commands,
-    pipelines: Res<CountParticlesInCellPipeline>,
-    query: Query<(Entity, &CountNegativeParticlesInCellResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+#[derive(Component)]
+pub(crate) struct CountPositiveParticlesInCellBindGroup {
+    pub bind_group: BindGroup,
+}
 
-        commands
-            .entity(entity)
-            .insert(CountNegativeParticlesInCellBindGroup { bind_group });
+impl From<BindGroup> for CountPositiveParticlesInCellBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
+    }
+}
+
+#[derive(Component)]
+pub(crate) struct CountNegativeParticlesInCellBindGroup {
+    pub bind_group: BindGroup,
+}
+
+impl From<BindGroup> for CountNegativeParticlesInCellBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

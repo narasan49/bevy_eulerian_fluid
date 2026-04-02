@@ -1,34 +1,27 @@
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
     },
 };
 
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 
 pub(super) struct UpdateInterfaceBandMaskPass;
 
 impl FluidComputePass for UpdateInterfaceBandMaskPass {
-    type P = UpdateInterfaceBandMaskPipeline;
+    type Pipeline = UpdateInterfaceBandMaskPipeline;
     type Resource = UpdateInterfaceBandMaskResource;
+    type BG = UpdateInterfaceBandMaskBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/update_interface_band_mask.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups.into_configs()
     }
 }
 
@@ -56,9 +49,10 @@ pub(crate) struct UpdateInterfaceBandMaskPipeline {
     pub pipeline: SingleComputePipeline,
 }
 
-#[derive(Component)]
-pub(crate) struct UpdateInterfaceBandMaskBindGroup {
-    pub bind_group: BindGroup,
+impl HasBindGroupLayout for UpdateInterfaceBandMaskPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
 }
 
 impl FromWorld for UpdateInterfaceBandMaskPipeline {
@@ -74,29 +68,13 @@ impl FromWorld for UpdateInterfaceBandMaskPipeline {
     }
 }
 
-fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipelines: Res<UpdateInterfaceBandMaskPipeline>,
-    query: Query<(Entity, &UpdateInterfaceBandMaskResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+#[derive(Component)]
+pub(crate) struct UpdateInterfaceBandMaskBindGroup {
+    pub bind_group: BindGroup,
+}
 
-        commands
-            .entity(entity)
-            .insert(UpdateInterfaceBandMaskBindGroup { bind_group });
+impl From<BindGroup> for UpdateInterfaceBandMaskBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

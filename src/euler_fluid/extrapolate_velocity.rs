@@ -5,8 +5,8 @@ use bevy::{
         extract_component::{ExtractComponent, ExtractComponentPlugin},
         render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupEntries, BindGroupLayout, CachedComputePipelineId,
-            ComputePipelineDescriptor, PipelineCache,
+            AsBindGroup, BindGroup, BindGroupEntries, BindGroupLayoutDescriptor,
+            CachedComputePipelineId, ComputePipelineDescriptor, PipelineCache,
         },
         renderer::RenderDevice,
         storage::GpuShaderStorageBuffer,
@@ -61,10 +61,10 @@ pub(crate) struct ExtrapolateVelocityPipeline {
     pub initialize_v_valid_pipeline: CachedComputePipelineId,
     pub extrapolate_u_pipeline: CachedComputePipelineId,
     pub extrapolate_v_pipeline: CachedComputePipelineId,
-    initialize_u_valid_bind_group_layout: BindGroupLayout,
-    initialize_v_valid_bind_group_layout: BindGroupLayout,
-    extrapolate_u_bind_group_layout: BindGroupLayout,
-    extrapolate_v_bind_group_layout: BindGroupLayout,
+    initialize_u_valid_bind_group_layout: BindGroupLayoutDescriptor,
+    initialize_v_valid_bind_group_layout: BindGroupLayoutDescriptor,
+    extrapolate_u_bind_group_layout: BindGroupLayoutDescriptor,
+    extrapolate_v_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 #[derive(Component)]
@@ -118,14 +118,14 @@ impl FromWorld for ExtrapolateVelocityPipeline {
         let asset_server = world.resource::<AssetServer>();
 
         let initialize_u_valid_bind_group_layout =
-            InitializeUValid::bind_group_layout(render_device);
+            InitializeUValid::bind_group_layout_descriptor(render_device);
         let initialize_v_valid_bind_group_layout =
-            InitializeVValid::bind_group_layout(render_device);
+            InitializeVValid::bind_group_layout_descriptor(render_device);
 
         let extrapolate_u_bind_group_layout =
-            ExtrapolateUResource::bind_group_layout(render_device);
+            ExtrapolateUResource::bind_group_layout_descriptor(render_device);
         let extrapolate_v_bind_group_layout =
-            ExtrapolateVResource::bind_group_layout(render_device);
+            ExtrapolateVResource::bind_group_layout_descriptor(render_device);
 
         let initialize_u_valid_pipeline =
             pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
@@ -199,6 +199,7 @@ fn prepare_bind_groups(
         &ExtrapolateVResource,
     )>,
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     fallback_image: Res<FallbackImage>,
     buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
@@ -209,6 +210,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.initialize_v_valid_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -218,6 +220,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.initialize_u_valid_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -227,6 +230,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.extrapolate_u_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -236,6 +240,7 @@ fn prepare_bind_groups(
             .as_bind_group(
                 &pipeline.extrapolate_v_bind_group_layout,
                 &render_device,
+                &pipeline_cache,
                 &mut param,
             )
             .unwrap()
@@ -247,7 +252,7 @@ fn prepare_bind_groups(
 
         let extrapolate_u_reverse_bind_group = render_device.create_bind_group(
             None,
-            &pipeline.extrapolate_u_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.extrapolate_u_bind_group_layout),
             &BindGroupEntries::sequential((
                 &u0.texture_view,
                 &out_is_u_valid.texture_view,
@@ -261,7 +266,7 @@ fn prepare_bind_groups(
 
         let extrapolate_v_reverse_bind_group = render_device.create_bind_group(
             None,
-            &pipeline.extrapolate_v_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&pipeline.extrapolate_v_bind_group_layout),
             &BindGroupEntries::sequential((
                 &v0.texture_view,
                 &out_is_v_valid.texture_view,

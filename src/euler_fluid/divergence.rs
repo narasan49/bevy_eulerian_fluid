@@ -1,23 +1,28 @@
 use bevy::{
-    asset::{embedded_asset, load_embedded_asset},
+    asset::{embedded_asset, embedded_path},
     prelude::*,
     render::{
-        extract_component::{ExtractComponent, ExtractComponentPlugin},
-        render_asset::RenderAssets,
-        render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId,
-            ComputePipelineDescriptor, PipelineCache,
-        },
-        renderer::RenderDevice,
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
-        Render, RenderApp, RenderSystems,
+        extract_component::ExtractComponent,
+        render_resource::{AsBindGroup, BindGroup, BindGroupLayoutDescriptor},
     },
 };
 
-use crate::pipeline::Pipeline;
+use crate::{
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
+    plugin::FluidComputePass,
+};
 
-pub(crate) struct DivergencePlugin;
+pub(crate) struct DivergencePass;
+
+impl FluidComputePass for DivergencePass {
+    type Pipeline = DivergencePipeline;
+    type Resource = DivergenceResource;
+    type BG = DivergenceBindGroup;
+
+    fn register_assets(app: &mut App) {
+        embedded_asset!(app, "shaders/divergence.wgsl");
+    }
+}
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct DivergenceResource {
@@ -37,86 +42,35 @@ pub(crate) struct DivergenceResource {
 
 #[derive(Resource)]
 pub(crate) struct DivergencePipeline {
-    pub divergence_pipeline: CachedComputePipelineId,
-    divergence_bind_group_layout: BindGroupLayout,
+    pub pipeline: SingleComputePipeline,
 }
 
 #[derive(Component)]
-pub(crate) struct DivergenceBindGroups {
-    pub divergence_bind_group: BindGroup,
-}
-
-impl Plugin for DivergencePlugin {
-    fn build(&self, app: &mut App) {
-        embedded_asset!(app, "shaders/divergence.wgsl");
-
-        app.add_plugins(ExtractComponentPlugin::<DivergenceResource>::default());
-
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.add_systems(
-            Render,
-            prepare_bind_group.in_set(RenderSystems::PrepareBindGroups),
-        );
-    }
-
-    fn finish(&self, app: &mut App) {
-        let render_app = app.sub_app_mut(RenderApp);
-        render_app.init_resource::<DivergencePipeline>();
-    }
-}
-
-impl Pipeline for DivergencePipeline {
-    fn is_pipeline_state_ready(&self, pipeline_cache: &PipelineCache) -> bool {
-        Self::is_pipeline_loaded(pipeline_cache, self.divergence_pipeline)
-    }
+pub(crate) struct DivergenceBindGroup {
+    pub bind_group: BindGroup,
 }
 
 impl FromWorld for DivergencePipeline {
     fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
-        let pipeline_cache = world.resource::<PipelineCache>();
-        let asset_server = world.resource::<AssetServer>();
+        let pipeline = SingleComputePipeline::new::<DivergenceResource>(
+            world,
+            "DivergencePipeline",
+            embedded_path!("shaders/divergence.wgsl"),
+            "divergence",
+        );
 
-        let divergence_bind_group_layout = DivergenceResource::bind_group_layout(render_device);
-
-        let divergence_pipeline =
-            pipeline_cache.queue_compute_pipeline(ComputePipelineDescriptor {
-                label: Some("DivergencePipeline".into()),
-                layout: vec![divergence_bind_group_layout.clone()],
-                shader: load_embedded_asset!(asset_server, "shaders/divergence.wgsl"),
-                entry_point: Some("divergence".into()),
-                ..default()
-            });
-
-        DivergencePipeline {
-            divergence_pipeline,
-            divergence_bind_group_layout,
-        }
+        DivergencePipeline { pipeline }
     }
 }
 
-fn prepare_bind_group(
-    mut commands: Commands,
-    pipeline: Res<DivergencePipeline>,
-    query: Query<(Entity, &DivergenceResource)>,
-    render_device: Res<RenderDevice>,
-    gpu_images: Res<RenderAssets<GpuImage>>,
-    fallback_image: Res<FallbackImage>,
-    buffers: Res<RenderAssets<GpuShaderStorageBuffer>>,
-) {
-    let mut param = (gpu_images, fallback_image, buffers);
-    for (entity, divergence_resource) in &query {
-        let divergence_bind_group = divergence_resource
-            .as_bind_group(
-                &pipeline.divergence_bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+impl HasBindGroupLayout for DivergencePipeline {
+    fn bind_group_layout(&self) -> &BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
+    }
+}
 
-        commands.entity(entity).insert(DivergenceBindGroups {
-            divergence_bind_group,
-        });
+impl From<BindGroup> for DivergenceBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

@@ -7,28 +7,20 @@ use crate::{
 };
 use bevy::{
     asset::embedded_asset,
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 pub(crate) struct AccumulateLevelSetCorrectionPlusSecondPass;
 
 impl FluidComputePass for AccumulateLevelSetCorrectionPlusSecondPass {
-    type P = AccumulateLevelSetCorrectionPipeline;
-
+    type Pipeline = AccumulateLevelSetCorrectionPipeline;
     type Resource = AccumulateLevelSetCorrectionPlusSecondResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_plus.into_configs()
-    }
+    type BG = AccumulateLevelSetCorrectionPlusSecondBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/accumulate_levelset_correction.wgsl");
@@ -38,13 +30,9 @@ impl FluidComputePass for AccumulateLevelSetCorrectionPlusSecondPass {
 pub(crate) struct AccumulateLevelSetCorrectionMinusSecondPass;
 
 impl FluidComputePass for AccumulateLevelSetCorrectionMinusSecondPass {
-    type P = AccumulateLevelSetCorrectionPipeline;
-
+    type Pipeline = AccumulateLevelSetCorrectionPipeline;
     type Resource = AccumulateLevelSetCorrectionMinusSecondResource;
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_minus.into_configs()
-    }
+    type BG = AccumulateLevelSetCorrectionMinusSecondBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/accumulate_levelset_correction.wgsl");
@@ -115,56 +103,14 @@ pub(crate) struct AccumulateLevelSetCorrectionMinusSecondBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups_plus<'a>(
-    mut commands: Commands,
-    pipeline: Res<AccumulateLevelSetCorrectionPipeline>,
-    query: Query<(Entity, &AccumulateLevelSetCorrectionPlusSecondResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(AccumulateLevelSetCorrectionPlusSecondBindGroup { bind_group });
+impl From<BindGroup> for AccumulateLevelSetCorrectionPlusSecondBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }
 
-pub(super) fn prepare_bind_groups_minus<'a>(
-    mut commands: Commands,
-    pipeline: Res<AccumulateLevelSetCorrectionPipeline>,
-    query: Query<(Entity, &AccumulateLevelSetCorrectionMinusSecondResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipeline.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(AccumulateLevelSetCorrectionMinusSecondBindGroup { bind_group });
+impl From<BindGroup> for AccumulateLevelSetCorrectionMinusSecondBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

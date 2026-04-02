@@ -1,39 +1,32 @@
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{
-            AsBindGroup, BindGroup, BindGroupLayout, CachedComputePipelineId, ComputePass,
-            PipelineCache,
+            AsBindGroup, BindGroup, BindGroupLayoutDescriptor, CachedComputePipelineId,
+            ComputePass, PipelineCache,
         },
         renderer::RenderDevice,
-        storage::GpuShaderStorageBuffer,
-        texture::{FallbackImage, GpuImage},
     },
 };
 
 use crate::{
-    fluid_uniform::{create_uniform_bind_group_layout, SimulationUniformBindGroup},
-    pipeline::{is_pipeline_loaded, queue_compute_pipeline},
+    fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup},
+    pipeline::{is_pipeline_loaded, queue_compute_pipeline, HasBindGroupLayout},
     plugin::FluidComputePass,
 };
 
 pub(crate) struct GaussSeidelPass;
 
 impl FluidComputePass for GaussSeidelPass {
-    type P = GaussSeidelPipeline;
+    type Pipeline = GaussSeidelPipeline;
 
     type Resource = GaussSeidelResource;
+    type BG = GaussSeidelBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/gauss_seidel.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups.into_configs()
     }
 }
 
@@ -79,15 +72,15 @@ impl GaussSeidelResource {
 #[derive(Resource)]
 pub(crate) struct GaussSeidelPipeline {
     pipelines: [CachedComputePipelineId; 2],
-    bind_group_layout: BindGroupLayout,
+    bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 impl FromWorld for GaussSeidelPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
 
-        let bind_group_layout = GaussSeidelResource::bind_group_layout(render_device);
-        let uniform_bind_group_layout = create_uniform_bind_group_layout(render_device);
+        let bind_group_layout = GaussSeidelResource::bind_group_layout_descriptor(render_device);
+        let uniform_bind_group_layout = uniform_bind_group_layout_desc();
 
         let pipeline_red = queue_compute_pipeline(
             world,
@@ -149,30 +142,19 @@ impl GaussSeidelPipeline {
     }
 }
 
+impl HasBindGroupLayout for GaussSeidelPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.bind_group_layout
+    }
+}
+
 #[derive(Component)]
 pub(crate) struct GaussSeidelBindGroup {
     pub bind_group: BindGroup,
 }
 
-pub(super) fn prepare_bind_groups<'a>(
-    mut commands: Commands,
-    pipeline: Res<GaussSeidelPipeline>,
-    query: Query<(Entity, &GaussSeidelResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(&pipeline.bind_group_layout, &render_device, &mut param)
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(GaussSeidelBindGroup { bind_group });
+impl From<BindGroup> for GaussSeidelBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

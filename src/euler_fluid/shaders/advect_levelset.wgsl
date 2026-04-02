@@ -33,7 +33,7 @@ fn advect_levelset(
     } 
 }
 
-fn cubuc1d_x(
+fn cubic1d_x(
     base_idx: vec2<i32>,
     texture: texture_storage_2d<r32float, read>,
     t: f32
@@ -65,10 +65,10 @@ fn cubic2d(
     texture: texture_storage_2d<r32float, read>,
     t: vec2<f32>,
 ) -> f32 {
-    let y0 = cubuc1d_x(base_idx + vec2<i32>(0, -1), texture, t.x);
-    let y1 = cubuc1d_x(base_idx, texture, t.x);
-    let y2 = cubuc1d_x(base_idx + vec2<i32>(0, 1), texture, t.x);
-    let y3 = cubuc1d_x(base_idx + vec2<i32>(0, 2), texture, t.x);
+    let y0 = cubic1d_x(base_idx + vec2<i32>(0, -1), texture, t.x);
+    let y1 = cubic1d_x(base_idx, texture, t.x);
+    let y2 = cubic1d_x(base_idx + vec2<i32>(0, 1), texture, t.x);
+    let y3 = cubic1d_x(base_idx + vec2<i32>(0, 2), texture, t.x);
 
     return cubic1d(vec4<f32>(y0, y1, y2, y3), t.y);
 }

@@ -1,51 +1,40 @@
 use bevy::{
     asset::{embedded_asset, embedded_path},
-    ecs::{schedule::ScheduleConfigs, system::ScheduleSystem},
     prelude::*,
     render::{
         extract_component::ExtractComponent,
-        render_asset::RenderAssets,
         render_resource::{AsBindGroup, BindGroup},
-        renderer::RenderDevice,
-        storage::{GpuShaderStorageBuffer, ShaderStorageBuffer},
-        texture::{FallbackImage, GpuImage},
+        storage::ShaderStorageBuffer,
     },
 };
 
 use crate::{
-    particle_levelset_two_layers::plugin::PLSResources, pipeline::SingleComputePipeline,
+    particle_levelset_two_layers::plugin::PLSResources,
+    pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
 };
 
 pub(super) struct AddPositiveParticlesPass;
 
 impl FluidComputePass for AddPositiveParticlesPass {
-    type P = AddParticlesPipeline;
-
+    type Pipeline = AddParticlesPipeline;
     type Resource = AddPositiveParticlesResource;
+    type BG = AddPositiveParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/add_particles.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_positive.into_configs()
     }
 }
 
 pub(super) struct AddNegativeParticlesPass;
 
 impl FluidComputePass for AddNegativeParticlesPass {
-    type P = AddParticlesPipeline;
-
+    type Pipeline = AddParticlesPipeline;
     type Resource = AddNegativeParticlesResource;
+    type BG = AddNegativeParticlesBindGroup;
 
     fn register_assets(app: &mut App) {
         embedded_asset!(app, "shaders/add_particles.wgsl");
-    }
-
-    fn prepare_bind_groups_system() -> ScheduleConfigs<ScheduleSystem> {
-        prepare_bind_groups_negative.into_configs()
     }
 }
 
@@ -128,16 +117,6 @@ pub(crate) struct AddParticlesPipeline {
     pub pipeline: SingleComputePipeline,
 }
 
-#[derive(Component)]
-pub(crate) struct AddPositiveParticlesBindGroup {
-    pub bind_group: BindGroup,
-}
-
-#[derive(Component)]
-pub(crate) struct AddNegativeParticlesBindGroup {
-    pub bind_group: BindGroup,
-}
-
 impl FromWorld for AddParticlesPipeline {
     fn from_world(world: &mut World) -> Self {
         let pipeline = SingleComputePipeline::new::<AddPositiveParticlesResource>(
@@ -151,56 +130,30 @@ impl FromWorld for AddParticlesPipeline {
     }
 }
 
-fn prepare_bind_groups_positive<'a>(
-    mut commands: Commands,
-    pipelines: Res<AddParticlesPipeline>,
-    query: Query<(Entity, &AddPositiveParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
-
-        commands
-            .entity(entity)
-            .insert(AddPositiveParticlesBindGroup { bind_group });
+impl HasBindGroupLayout for AddParticlesPipeline {
+    fn bind_group_layout(&self) -> &bevy::render::render_resource::BindGroupLayoutDescriptor {
+        &self.pipeline.bind_group_layout
     }
 }
 
-fn prepare_bind_groups_negative<'a>(
-    mut commands: Commands,
-    pipelines: Res<AddParticlesPipeline>,
-    query: Query<(Entity, &AddNegativeParticlesResource)>,
-    render_device: Res<RenderDevice>,
-    mut param: (
-        Res<'a, RenderAssets<GpuImage>>,
-        Res<'a, FallbackImage>,
-        Res<'a, RenderAssets<GpuShaderStorageBuffer>>,
-    ),
-) {
-    for (entity, resource) in &query {
-        let bind_group = resource
-            .as_bind_group(
-                &pipelines.pipeline.bind_group_layout,
-                &render_device,
-                &mut param,
-            )
-            .unwrap()
-            .bind_group;
+#[derive(Component)]
+pub(crate) struct AddPositiveParticlesBindGroup {
+    pub bind_group: BindGroup,
+}
 
-        commands
-            .entity(entity)
-            .insert(AddNegativeParticlesBindGroup { bind_group });
+impl From<BindGroup> for AddPositiveParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
+    }
+}
+
+#[derive(Component)]
+pub(crate) struct AddNegativeParticlesBindGroup {
+    pub bind_group: BindGroup,
+}
+
+impl From<BindGroup> for AddNegativeParticlesBindGroup {
+    fn from(bind_group: BindGroup) -> Self {
+        Self { bind_group }
     }
 }

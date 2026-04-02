@@ -19,7 +19,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const LENGTH_UNIT: f32 = 10.0;
+const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
     let mut app = App::new();
@@ -87,8 +87,8 @@ fn on_fluid_setup(
     for (entity, fluid_texture) in &query {
         let mesh = meshes.add(Rectangle::default());
         let material = materials.add(VelocityMaterial {
-            u_range: Vec2::new(-10.0, 10.0),
-            v_range: Vec2::new(-10.0, 10.0),
+            u_range: Vec2::new(-100.0, 100.0),
+            v_range: Vec2::new(-100.0, 100.0),
             u: fluid_texture.u.clone(),
             v: fluid_texture.v.clone(),
         });
