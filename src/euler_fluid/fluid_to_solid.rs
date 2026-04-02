@@ -5,7 +5,7 @@ use crate::{
     pipeline::Pipeline,
     settings::FluidGridLength,
 };
-use avian2d::prelude::{Forces, RigidBody, RigidBodyForces};
+use avian2d::prelude::{Forces, RigidBody, WriteRigidBodyForces};
 use bevy::{
     asset::{embedded_asset, load_embedded_asset},
     prelude::*,
