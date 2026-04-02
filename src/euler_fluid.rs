@@ -60,7 +60,7 @@ impl Plugin for FluidPlugin {
                 update_solid::UpdateSolidPlugin,
                 FluidComputePassPlugin::<advection::AdvectionPass>::default(),
                 apply_forces::ApplyForcesPlugin,
-                divergence::DivergencePlugin,
+                FluidComputePassPlugin::<divergence::DivergencePass>::default(),
                 fluid_uniform::SimulationUniformPlugin,
                 PressureProjectionPlugin,
                 solve_pressure::SolvePressurePlugin,

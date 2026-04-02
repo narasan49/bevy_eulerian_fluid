@@ -11,7 +11,7 @@ use crate::{
     advect_levelset::{AdvectLevelSetBindGroups, AdvectLevelSetPipeline},
     advection::{self, AdvectionBindGroup, AdvectionPipeline},
     apply_forces::{ApplyForcesBindGroups, ApplyForcesPipeline},
-    divergence::{DivergenceBindGroups, DivergencePipeline},
+    divergence::{DivergenceBindGroup, DivergencePipeline},
     extrapolate_velocity::{ExtrapolateVelocityBindGroups, ExtrapolateVelocityPipeline},
     fluid_status::FluidStatus,
     fluid_to_solid::{
@@ -60,7 +60,7 @@ struct FluidBindGroupsQueryData {
     update_area_fraction_bind_group: &'static UpdateAreaFractionBindGroup,
     advection_bind_groups: &'static AdvectionBindGroup,
     apply_forces_bind_groups: &'static ApplyForcesBindGroups,
-    divergence_bind_groups: &'static DivergenceBindGroups,
+    divergence_bind_groups: &'static DivergenceBindGroup,
     solve_velocity_bind_groups: &'static SolveVelocityBindGroups,
     extrapolate_velocity_bind_groups: &'static ExtrapolateVelocityBindGroups,
     advect_levelset_bind_groups: &'static AdvectLevelSetBindGroups,
@@ -130,7 +130,7 @@ impl render_graph::Node for EulerFluidNode {
                         .is_ready(pipeline_cache)
                     && advection_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && apply_forcces_pipeline.is_pipeline_state_ready(pipeline_cache)
-                    && divergence_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && divergence_pipeline.pipeline.is_ready(pipeline_cache)
                     && solve_pressure_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && gauss_seidel_pipeline.is_ready(pipeline_cache)
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
@@ -280,12 +280,11 @@ impl render_graph::Node for EulerFluidNode {
                             );
 
                             let divergence_pipeline = world.resource::<DivergencePipeline>();
-                            divergence(
+                            divergence_pipeline.pipeline.dispatch(
                                 pipeline_cache,
                                 &mut pass,
-                                bind_groups.divergence_bind_groups,
-                                divergence_pipeline,
-                                fluid_settings.size,
+                                &bind_groups.divergence_bind_groups.bind_group,
+                                num_workgroups_grid,
                             );
 
                             projection::dispatch(
@@ -473,24 +472,6 @@ fn apply_forces(
 
     pass.set_pipeline(&apply_forces_v_pipeline);
     pass.dispatch_y_major(size);
-    pass.pop_debug_group();
-}
-
-fn divergence(
-    pipeline_cache: &PipelineCache,
-    pass: &mut ComputePass,
-    divergence_bind_groups: &DivergenceBindGroups,
-    divergence_pipeline: &DivergencePipeline,
-    size: UVec2,
-) {
-    pass.push_debug_group("Divergence");
-    let divergence_pipeline = pipeline_cache
-        .get_compute_pipeline(divergence_pipeline.divergence_pipeline)
-        .unwrap();
-
-    pass.set_pipeline(&divergence_pipeline);
-    pass.set_bind_group(0, &divergence_bind_groups.divergence_bind_group, &[]);
-    pass.dispatch_center(size);
     pass.pop_debug_group();
 }
 
