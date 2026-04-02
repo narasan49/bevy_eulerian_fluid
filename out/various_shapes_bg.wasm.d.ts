@@ -4,7 +4,7 @@ export const memory: WebAssembly.Memory;
 export const main: (a: number, b: number) => number;
 export const wasm_bindgen__convert__closures_____invoke__h193f663c53dc2979: (a: number, b: number, c: any) => [number, number];
 export const wasm_bindgen__convert__closures_____invoke__h7d80c8195046afef: (a: number, b: number, c: any, d: any) => void;
-export const wasm_bindgen__convert__closures_____invoke__hb82dfcb0da6f948f: (a: number, b: number, c: any) => void;
+export const wasm_bindgen__convert__closures_____invoke__h98e3009ba765e4dd: (a: number, b: number, c: any) => void;
 export const wasm_bindgen__convert__closures_____invoke__h77b665a2aef49218: (a: number, b: number, c: any) => void;
 export const wasm_bindgen__convert__closures_____invoke__h77b665a2aef49218_4: (a: number, b: number, c: any) => void;
 export const wasm_bindgen__convert__closures_____invoke__h77b665a2aef49218_5: (a: number, b: number, c: any) => void;
