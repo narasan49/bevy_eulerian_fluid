@@ -1,4 +1,5 @@
 pub mod gauss_seidel;
+pub mod multi_grid;
 
 use bevy::{
     ecs::query::QueryData,
@@ -13,8 +14,14 @@ use crate::{
     fluid_uniform::SimulationUniformBindGroup,
     pipeline::{DispatchFluidPass, WORKGROUP_SIZE},
     plugin::FluidComputePassPlugin,
-    projection::gauss_seidel::{
-        GaussSeidelBindGroup, GaussSeidelConfig, GaussSeidelPass, GaussSeidelPipeline,
+    projection::{
+        gauss_seidel::{
+            GaussSeidelBindGroup, GaussSeidelConfig, GaussSeidelPass, GaussSeidelPipeline,
+        },
+        multi_grid::{
+            MultiGridBindGroups, MultiGridConfig, MultiGridNumLevels, MultiGridPassPlugin,
+            MultiGridPipelines,
+        },
     },
     solve_pressure::{SolvePressureBindGroups, SolvePressurePipeline},
 };
@@ -26,6 +33,7 @@ impl Plugin for PressureProjectionPlugin {
         app.add_plugins((
             FluidComputePassPlugin::<GaussSeidelPass>::default(),
             ExtractComponentPlugin::<ProjectionMethod>::default(),
+            MultiGridPassPlugin,
         ));
     }
 }
@@ -35,13 +43,14 @@ pub enum ProjectionMethod {
     #[default]
     Jacobi,
     GaussSeidel(GaussSeidelConfig),
-    MultiGrid,
+    MultiGrid(MultiGridConfig),
 }
 
 #[derive(QueryData)]
 pub(crate) struct ProjectionBindGroupsQuery {
     pub gauss_seidel_bind_group: Option<&'static GaussSeidelBindGroup>,
     pub jacobi_bind_groups: Option<&'static SolvePressureBindGroups>,
+    pub multi_grid_bind_groups: Option<(&'static MultiGridBindGroups, &'static MultiGridNumLevels)>,
 }
 
 pub(crate) fn dispatch(
@@ -101,8 +110,22 @@ pub(crate) fn dispatch(
             }
             pass.pop_debug_group();
         }
-        ProjectionMethod::MultiGrid => {
-            unimplemented!();
+        ProjectionMethod::MultiGrid(config) => {
+            let (bind_groups, num_levels) = projection_bind_groups.multi_grid_bind_groups.expect(
+                "MultiGridBindGroups or MultiGridNumLevels components are missing in RenderWorld.",
+            );
+            pass.push_debug_group("Projection (MultiGrid)");
+            let pipelines = world.resource::<MultiGridPipelines>();
+            pipelines.dispatch(
+                pipeline_cache,
+                pass,
+                bind_groups,
+                uniform_bind_group,
+                size,
+                config,
+                num_levels,
+            );
+            pass.pop_debug_group();
         }
     }
 }

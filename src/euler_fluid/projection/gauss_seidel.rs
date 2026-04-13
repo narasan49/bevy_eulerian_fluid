@@ -51,6 +51,10 @@ pub(crate) struct GaussSeidelResource {
     levelset_air: Handle<Image>,
     #[storage_texture(3, image_format = Rgba32Float, access = ReadOnly)]
     area_fraction_solid: Handle<Image>,
+    #[uniform(4)]
+    weight: f32,
+    #[uniform(5)]
+    resolution_scale: f32,
 }
 
 impl GaussSeidelResource {
@@ -65,6 +69,8 @@ impl GaussSeidelResource {
             div: div.clone(),
             levelset_air: levelset_air.clone(),
             area_fraction_solid: area_fraction_solid.clone(),
+            weight: 1.9,
+            resolution_scale: 1.0,
         }
     }
 }
@@ -72,7 +78,7 @@ impl GaussSeidelResource {
 #[derive(Resource)]
 pub(crate) struct GaussSeidelPipeline {
     pipelines: [CachedComputePipelineId; 2],
-    bind_group_layout: BindGroupLayoutDescriptor,
+    pub bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 impl FromWorld for GaussSeidelPipeline {
