@@ -35,7 +35,8 @@ use crate::{
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{DispatchFluidPass, Pipeline, WORKGROUP_SIZE},
     projection::{
-        self, gauss_seidel::GaussSeidelPipeline, ProjectionBindGroupsQuery, ProjectionMethod,
+        self, gauss_seidel::GaussSeidelPipeline, multi_grid::MultiGridPipelines,
+        ProjectionBindGroupsQuery, ProjectionMethod,
     },
     reinitialize_levelset::{self, ReinitializeLevelSetBindGroupQuery, ReinitializeMethod},
     settings::FluidSettings,
