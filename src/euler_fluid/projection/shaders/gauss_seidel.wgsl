@@ -4,19 +4,23 @@
 @group(0) @binding(1) var div: texture_storage_2d<r32float, read>;
 @group(0) @binding(2) var levelset_air0: texture_storage_2d<r32float, read>;
 @group(0) @binding(3) var area_fraction_solid: texture_storage_2d<rgba32float, read>;
+@group(0) @binding(4) var<uniform> weight: f32;
+@group(0) @binding(5) var<uniform> resolution_scale: f32;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
-
-const WEIGHT = 1.9;
 
 @compute @workgroup_size(8, 8, 1)
 fn gauss_seidel_red(
     @builtin(global_invocation_id) global_invocation_id: vec3<u32>,
 ) {
-    let idx = vec2<i32>(global_invocation_id.xy);
+    let idx = global_invocation_id.xy;
+    let dim = textureDimensions(div);
+    if any(idx >= dim) {
+        return;
+    }
 
     if ((idx.x + idx.y) % 2 == 1) {
-        let p_new = update_pressure(idx);
+        let p_new = update_pressure(vec2i(idx));
         textureStore(p, idx, vec4<f32>(p_new, 0.0, 0.0, 0.0));
     }
 }
@@ -25,10 +29,14 @@ fn gauss_seidel_red(
 fn gauss_seidel_black(
     @builtin(global_invocation_id) global_invocation_id: vec3<u32>,
 ) {
-    let idx = vec2<i32>(global_invocation_id.xy);
+    let idx = global_invocation_id.xy;
+    let dim = textureDimensions(div);
+    if any(idx >= dim) {
+        return;
+    }
 
     if ((idx.x + idx.y) % 2 == 0) {
-        let p_new = update_pressure(idx);
+        let p_new = update_pressure(vec2i(idx));
         textureStore(p, idx, vec4<f32>(p_new, 0.0, 0.0, 0.0));
     }
 }
@@ -46,7 +54,8 @@ fn update_pressure(idx: vec2<i32>) -> f32 {
     }
 
     var denom = 0.0;
-    var nume = -constants.dx * constants.rho / constants.dt * textureLoad(div, idx).r;
+    let dx = resolution_scale * constants.dx;
+    var nume = dx * dx * constants.rho / constants.dt * textureLoad(div, idx).r;
     let offsets = array<vec2<i32>, 4>(
         vec2<i32>(-1, 0),
         vec2<i32>(1, 0),
@@ -58,7 +67,6 @@ fn update_pressure(idx: vec2<i32>) -> f32 {
     let dim = vec2<i32>(textureDimensions(levelset_air0));
     for (var i = 0; i < 4; i++) {
         var j = idx + offsets[i];
-        // j = clamp(j, vec2<i32>(0), dim - vec2<i32>(1));
         if all(vec2<i32>(0) <= j) && all(j < dim) {
             let level = textureLoad(levelset_air0, j).r;
             if level < 0.0 {
@@ -76,5 +84,5 @@ fn update_pressure(idx: vec2<i32>) -> f32 {
 
     let p_new = nume / denom;
 
-    return  WEIGHT * p_new + (1.0 - WEIGHT) * p_old;
+    return  weight * p_new + (1.0 - weight) * p_old;
 }

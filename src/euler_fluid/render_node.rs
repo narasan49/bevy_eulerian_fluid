@@ -35,7 +35,8 @@ use crate::{
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{DispatchFluidPass, Pipeline, WORKGROUP_SIZE},
     projection::{
-        self, gauss_seidel::GaussSeidelPipeline, ProjectionBindGroupsQuery, ProjectionMethod,
+        self, gauss_seidel::GaussSeidelPipeline, multi_grid::MultiGridPipelines,
+        ProjectionBindGroupsQuery, ProjectionMethod,
     },
     reinitialize_levelset::{self, ReinitializeLevelSetBindGroupQuery, ReinitializeMethod},
     settings::FluidSettings,
@@ -123,6 +124,7 @@ impl render_graph::Node for EulerFluidNode {
                 let apply_forces_pipeline = world.resource::<ApplyForcesPipeline>();
                 let solve_pressure_pipeline = world.resource::<SolvePressurePipeline>();
                 let gauss_seidel_pipeline = world.resource::<GaussSeidelPipeline>();
+                let multi_grid_pipeline = world.resource::<MultiGridPipelines>();
                 let solve_velocity_pipeline = world.resource::<SolveVelocityPipeline>();
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_levelset_pipeline = world.resource::<AdvectLevelSetPipeline>();
@@ -139,6 +141,7 @@ impl render_graph::Node for EulerFluidNode {
                     && divergence_pipeline.pipeline.is_ready(pipeline_cache)
                     && solve_pressure_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && gauss_seidel_pipeline.is_ready(pipeline_cache)
+                    && multi_grid_pipeline.ready(pipeline_cache)
                     && solve_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && extrapolate_velocity_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && advect_levelset_pipeline.pipeline.is_ready(pipeline_cache)
@@ -301,10 +304,11 @@ impl render_graph::Node for EulerFluidNode {
                             );
 
                             let divergence_pipeline = world.resource::<DivergencePipeline>();
-                            divergence_pipeline.pipeline.dispatch(
+                            divergence_pipeline.pipeline.dispatch_with_uniform(
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.divergence_bind_groups.bind_group,
+                                bind_groups.simulation_uniform,
                                 num_workgroups_grid,
                             );
 

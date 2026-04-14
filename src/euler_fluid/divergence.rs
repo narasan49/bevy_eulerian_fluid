@@ -52,7 +52,7 @@ pub(crate) struct DivergenceBindGroup {
 
 impl FromWorld for DivergencePipeline {
     fn from_world(world: &mut World) -> Self {
-        let pipeline = SingleComputePipeline::new::<DivergenceResource>(
+        let pipeline = SingleComputePipeline::new_with_uniform::<DivergenceResource>(
             world,
             "DivergencePipeline",
             embedded_path!("shaders/divergence.wgsl"),
