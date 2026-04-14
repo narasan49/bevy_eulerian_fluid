@@ -38,12 +38,21 @@ impl Plugin for PressureProjectionPlugin {
     }
 }
 
-#[derive(Component, ExtractComponent, Clone, Default, Debug)]
+/// Method for iterative pressure solver.
+#[derive(Component, ExtractComponent, Clone, Debug)]
 pub enum ProjectionMethod {
-    #[default]
+    /// Jacobi iteration. Simple to implement, but slow convergence.
     Jacobi,
+    /// SOR-weighted Red Black Gauss-Seidel solver. It converges faster than Jacobi iteration.
     GaussSeidel(GaussSeidelConfig),
+    /// Multigrid solver. Most performant.
     MultiGrid(MultiGridConfig),
+}
+
+impl Default for ProjectionMethod {
+    fn default() -> Self {
+        ProjectionMethod::GaussSeidel(GaussSeidelConfig::default())
+    }
 }
 
 #[derive(QueryData)]
