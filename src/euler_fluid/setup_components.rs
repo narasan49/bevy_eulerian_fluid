@@ -24,7 +24,7 @@ use crate::{
     levelset_gradient::LevelSetGradientResource,
     obstacle::SolidEntities,
     particle_levelset_two_layers,
-    projection::gauss_seidel::GaussSeidelResource,
+    projection::{gauss_seidel::GaussSeidelResource, multi_grid},
     reinitialize_levelset::{self, ReinitializeMethod},
     settings::{FluidGridLength, FluidSettings, FluidTextures},
     solve_pressure::{JacobiIterationResource, JacobiIterationReverseResource},
@@ -311,6 +311,17 @@ pub(crate) fn watch_fluid_component(
             &levelset_air0,
             &levelset_air1,
             &grad_levelset_air,
+        );
+
+        multi_grid::setup_multigrid_resources(
+            &mut commands,
+            entity,
+            settings.size,
+            &div,
+            &p0,
+            &levelset_air0,
+            &area_fraction_solid,
+            &mut images,
         );
     }
 }

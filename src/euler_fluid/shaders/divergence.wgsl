@@ -1,6 +1,6 @@
 #import bevy_fluid::coordinate::{left, right, bottom, top};
 #import bevy_fluid::area_fraction::area_fractions;
-
+#import bevy_fluid::fluid_uniform::SimulationUniform;
 
 // The number of texture_storage binding for WebGPU is limited to 8.
 // So divergence has only bindings for u1 and v1.
@@ -10,6 +10,8 @@
 @group(0) @binding(3) var v_solid: texture_storage_2d<r32float, read>;
 @group(0) @binding(4) var levelset_solid: texture_storage_2d<r32float, read>;
 @group(0) @binding(5) var div: texture_storage_2d<r32float, write>;
+
+@group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
 @compute @workgroup_size(8, 8, 1)
 fn divergence(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
@@ -34,7 +36,7 @@ fn divergence(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let du_solid = (1.0 - f.iplusj) * u_solid_iplusj - (1.0 - f.iminusj) * u_solid_iminusj;
     let dv_solid = (1.0 - f.ijplus) * v_solid_ijplus - (1.0 - f.ijminus) * v_solid_ijminus;
 
-    let rhs = du_fluid + dv_fluid + du_solid + dv_solid;
+    let rhs = -(du_fluid + dv_fluid + du_solid + dv_solid) / constants.dx;
 
     textureStore(div, idx, vec4<f32>(rhs, 0.0, 0.0, 0.0));
 }
