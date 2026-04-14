@@ -4,7 +4,7 @@
 @group(0) @binding(1) var b: texture_storage_2d<r32float, read>;
 @group(0) @binding(2) var levelset_air: texture_storage_2d<r32float, read>;
 @group(0) @binding(3) var area_fraction_solid: texture_storage_2d<rgba32float, read>;
-@group(0) @binding(4) var r: texture_storage_2d<r32float, write>;
+@group(0) @binding(4) var r: texture_storage_2d<r32float, read_write>;
 @group(0) @binding(5) var<uniform> resolution_scale: f32;
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;

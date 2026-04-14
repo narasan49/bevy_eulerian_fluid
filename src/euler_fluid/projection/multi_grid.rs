@@ -153,7 +153,8 @@ impl FromWorld for MultiGridPipelines {
                     texture_storage_2d(TextureFormat::R32Float, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TextureFormat::R32Float, StorageTextureAccess::ReadOnly),
                     texture_storage_2d(TextureFormat::Rgba32Float, StorageTextureAccess::ReadOnly),
-                    texture_storage_2d(TextureFormat::R32Float, StorageTextureAccess::WriteOnly),
+                    // Workaround: Insert resource barrier by changing to read-and-write access to surpress simulation instability on DX12 and NVIDIA GPU while the only write access should be enough.
+                    texture_storage_2d(TextureFormat::R32Float, StorageTextureAccess::ReadWrite),
                     uniform_buffer::<f32>(false),
                 ),
             ),
