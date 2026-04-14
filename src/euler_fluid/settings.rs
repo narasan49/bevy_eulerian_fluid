@@ -1,7 +1,8 @@
 use bevy::{prelude::*, render::extract_component::ExtractComponent};
 
 use crate::{
-    apply_forces::ForcesToFluid, fluid_status::FluidStatus, projection::ProjectionMethod,
+    apply_forces::ForcesToFluid, fluid_source::fluid_source_uniform::FluidSourceUniform,
+    fluid_status::FluidStatus, projection::ProjectionMethod,
     reinitialize_levelset::ReinitializeMethod,
 };
 
@@ -66,7 +67,8 @@ use crate::{
     FluidStatus,
     ForcesToFluid,
     ProjectionMethod,
-    ReinitializeMethod
+    ReinitializeMethod,
+    FluidSourceUniform
 )]
 pub struct FluidSettings {
     pub rho: f32,

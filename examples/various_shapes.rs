@@ -20,6 +20,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceShape, FluidSourceVelocity},
     projection::{multi_grid::MultiGridConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
@@ -113,7 +114,8 @@ fn setup_fluid(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
 fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
-    commands.spawn((
+    commands
+        .spawn((
         FluidSettings {
             rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
@@ -123,7 +125,30 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
         ProjectionMethod::MultiGrid(MultiGridConfig::default()),
         Mesh2d(meshes.add(fluid_domain_rectangle)),
         Transform::default(),
-    ));
+        ))
+        .with_children(|commands| {
+            commands.spawn((
+                FluidSource {
+                    active: true,
+                    mode: FluidSourceMode::Source,
+                },
+                Transform::from_xyz(50.0, 50.0, 0.0),
+                FluidSourceShape::Aabb {
+                    half_size: Vec2::splat(10.0),
+                },
+                FluidSourceVelocity(Vec2::new(50.0, 10.0)),
+            ));
+            commands.spawn((
+                FluidSource {
+                    active: true,
+                    mode: FluidSourceMode::Sink,
+                },
+                Transform::from_xyz(512.0 - 50.0, 100.0, 0.0),
+                FluidSourceShape::Aabb {
+                    half_size: Vec2::splat(10.0),
+                },
+            ));
+        });
 }
 
 fn setup_walls(

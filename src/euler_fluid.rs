@@ -4,6 +4,7 @@ pub mod apply_forces;
 pub mod common_pass;
 pub mod divergence;
 pub mod extrapolate_velocity;
+pub mod fluid_source;
 pub mod fluid_status;
 pub mod fluid_to_solid;
 pub mod fluid_uniform;
@@ -32,7 +33,7 @@ use bevy::{
 };
 
 use crate::{
-    material::FluidMaterialPlugin, plugin::FluidComputePassPlugin,
+    fluid_source::FluidSourcePlugin, material::FluidMaterialPlugin, plugin::FluidComputePassPlugin,
     projection::PressureProjectionPlugin,
 };
 use render_node::{EulerFluidNode, FluidLabel};
@@ -74,6 +75,7 @@ impl Plugin for FluidPlugin {
                 fluid_to_solid::FluidToSolidForcesPlugin,
                 FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),
                 FluidComputePassPlugin::<update_area_fraction::UpdateAreaFractionPass>::default(),
+                FluidSourcePlugin,
             ))
             .add_plugins((
                 // particle_levelset_two_layers::ParticleLevelsetTwoLayersPlugin,
