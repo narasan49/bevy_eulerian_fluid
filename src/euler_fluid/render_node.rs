@@ -256,6 +256,24 @@ impl render_graph::Node for EulerFluidNode {
                                     fluid_settings.size,
                                 );
                             }
+
+                            let update_fluid_source_pipeline =
+                                world.resource::<UpdateFluidSourcePipeline>();
+                            update_fluid_source_pipeline.dispatch_init(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.update_fluid_source_bind_groups,
+                                num_workgroups_grid,
+                            );
+
+                            reinitialize_levelset::dispatch(
+                                world,
+                                reinitialize_method,
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.reinit_levelset_bind_groups,
+                                fluid_settings.size,
+                            );
                         }
                         FluidStatus::Initialized => {
                             let mut pass = render_context.command_encoder().begin_compute_pass(

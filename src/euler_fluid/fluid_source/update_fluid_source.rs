@@ -100,8 +100,28 @@ impl UpdateFluidSourcePipeline {
         pass.set_bind_group(0, &bind_groups.bind_group.bind_group, &[]);
         pass.set_bind_group(
             1,
-            &bind_groups.uniform_bind_group.bind_group,
-            &[bind_groups.uniform_bind_group.index],
+            &bind_groups.uniform_bind_group.update_bind_group,
+            &[bind_groups.uniform_bind_group.update_index],
+        );
+
+        pass.dispatch_workgroups(num_workgroups.x, num_workgroups.y, num_workgroups.z);
+    }
+
+    pub fn dispatch_init(
+        &self,
+        pipeline_cache: &PipelineCache,
+        pass: &mut ComputePass,
+        bind_groups: &UpdateFluidSourceBindGroupsQueryItem,
+        num_workgroups: UVec3,
+    ) {
+        let pipeline = pipeline_cache.get_compute_pipeline(self.pipeline).unwrap();
+
+        pass.set_pipeline(pipeline);
+        pass.set_bind_group(0, &bind_groups.bind_group.bind_group, &[]);
+        pass.set_bind_group(
+            1,
+            &bind_groups.uniform_bind_group.init_bind_group,
+            &[bind_groups.uniform_bind_group.init_index],
         );
 
         pass.dispatch_workgroups(num_workgroups.x, num_workgroups.y, num_workgroups.z);

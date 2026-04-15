@@ -26,6 +26,7 @@ impl Plugin for FluidSourcePlugin {
 pub struct FluidSource {
     pub active: bool,
     pub mode: FluidSourceMode,
+    pub init_only: bool,
 }
 
 #[derive(Default)]
