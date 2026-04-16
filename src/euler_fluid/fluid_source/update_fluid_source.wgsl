@@ -1,3 +1,5 @@
+#import bevy_render::view::uv_to_ndc;
+
 struct FluidSourceData {
     center: vec2f,
     data: vec2f,
@@ -30,10 +32,14 @@ fn update_fluid_source(
     @builtin(global_invocation_id) global_invocation_id: vec3u,
 ) {
     let idx = global_invocation_id.xy;
+    let dimf = vec2f(textureDimensions(levelset_air));
+    let uv = vec2f(idx) / dimf;
+    let ndc = uv_to_ndc(uv);
+    let position = 0.5 * dimf * ndc;
 
     for (var i: u32 = 0; i < fluid_source_uniform.count; i++) {
         let data = fluid_source_uniform.data[i];
-        let source_sdf = level_source(data, idx);
+        let source_sdf = level_source(data, position);
 
         var new_level = textureLoad(levelset_air, idx).r;
         if data.mode == MODE_SOURCE {
@@ -52,16 +58,16 @@ fn update_fluid_source(
     }
 }
 
-fn level_source(data: FluidSourceData, idx: vec2u) -> f32 {
+fn level_source(data: FluidSourceData, position: vec2f) -> f32 {
     switch data.shape {
         case SHAPE_CIRCLE: {
             let radius = data.data.x;
-            return distance(data.center, vec2f(idx)) - radius;
+            return distance(data.center, position) - radius;
             
         }
         case SHAPE_AABB: {
             let half_size = data.data;
-            return level_aabb(half_size, data.center, vec2f(idx));
+            return level_aabb(half_size, data.center, position);
         }
         default: {
             return 0.0;
