@@ -120,7 +120,7 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
             rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
             size: SIZE,
-            initial_fluid_level: 0.7,
+                initial_fluid_level: 0.0,
         },
         ProjectionMethod::MultiGrid(MultiGridConfig::default()),
         Mesh2d(meshes.add(fluid_domain_rectangle)),
@@ -146,6 +146,17 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
                 Transform::from_xyz(512.0 - 50.0, 100.0, 0.0),
                 FluidSourceShape::Aabb {
                     half_size: Vec2::splat(10.0),
+                },
+            ));
+            commands.spawn((
+                FluidSource {
+                    active: true,
+                    mode: FluidSourceMode::Source,
+                    init_only: true,
+                },
+                Transform::from_translation((Vec2::new(0.0, -0.15) * SIZE.as_vec2()).extend(0.0)),
+                FluidSourceShape::Aabb {
+                    half_size: 0.5 * Vec2::new(1.0, 0.7) * SIZE.as_vec2(),
                 },
             ));
         });
