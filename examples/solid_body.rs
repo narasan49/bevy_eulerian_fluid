@@ -88,7 +88,6 @@ fn setup_scene(
                 rho: 99.7, // water density in 2D
                 gravity: Vec2::Y * 9.8,
                 size: SIZE,
-                initial_fluid_level: 0.0,
             },
             Mesh2d(meshes.add(fluid_domain_rectangle)),
             Transform::default()

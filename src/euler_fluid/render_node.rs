@@ -230,11 +230,10 @@ impl render_graph::Node for EulerFluidNode {
 
                             let initialize_center_pipeline =
                                 world.resource::<InitializeGridCenterPipeline>();
-                            initialize_center_pipeline.pipeline.dispatch_with_uniform(
+                            initialize_center_pipeline.pipeline.dispatch(
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.initialize_center_bind_group.bind_group,
-                                bind_groups.simulation_uniform,
                                 num_workgroups_grid,
                             );
 

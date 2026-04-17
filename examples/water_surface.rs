@@ -90,7 +90,6 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
                 rho: 99.7, // water density in 2D
                 gravity: Vec2::Y * 9.8,
                 size: SIZE,
-                initial_fluid_level: 0.0,
             },
             ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
             Mesh2d(mesh),

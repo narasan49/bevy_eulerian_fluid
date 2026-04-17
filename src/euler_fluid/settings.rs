@@ -13,7 +13,6 @@ use crate::{
 /// # Arguments
 /// * `size`: The size of 2D simulation domain in pixels. The size is recommended to be same between each dimension and to be multiple of 64 pixels.
 /// * `rho`: The density of fluid in unit of [kg/m^2]. Currently, uniform density is supported only.
-/// * `initial_fluid_level`: Initialize fluid level with specified value. the value is valid between 0.0 - 1.0. 0.0 indicates empty and 1.0 indicates the simulation domain is filled with fluid.
 /// * `gravity`: Uniform force enforced uniformly to the simulation domain in unit of [m/s^2].
 ///
 /// # Examples
@@ -37,7 +36,6 @@ use crate::{
 ///             rho: 99.7, // water density in 2D
 ///             gravity: Vec2::ZERO,
 ///             size: UVec2::splat(512),
-///             initial_fluid_level: 1.0, // filled with fluid
 ///         },
 ///         Mesh2d(mesh),
 ///     ));
@@ -77,7 +75,6 @@ pub struct FluidSettings {
     pub rho: f32,
     pub gravity: Vec2,
     pub size: UVec2,
-    pub initial_fluid_level: f32,
 }
 
 #[derive(Resource, Clone, Copy)]

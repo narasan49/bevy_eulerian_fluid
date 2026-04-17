@@ -108,7 +108,6 @@ pub(crate) fn watch_fluid_component(
             dt: 0.0,
             rho: settings.rho,
             gravity: settings.gravity,
-            initial_fluid_level: settings.initial_fluid_level,
             fluid_transform,
             size: size.as_vec2(),
         };

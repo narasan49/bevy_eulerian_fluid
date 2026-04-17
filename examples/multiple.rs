@@ -81,7 +81,6 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
                         rho: 99.7, // water density in 2D
                         gravity: Vec2::ZERO,
                         size: UVec2::splat(size),
-                        initial_fluid_level: 0.0,
                     },
                     Transform::default().with_translation(translation),
                     Mesh2d(mesh),

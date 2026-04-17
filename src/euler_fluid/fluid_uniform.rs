@@ -28,7 +28,6 @@ pub struct SimulationUniform {
     pub dt: f32,
     pub rho: f32,
     pub gravity: Vec2,
-    pub initial_fluid_level: f32,
     pub fluid_transform: Mat4,
     pub size: Vec2,
 }
@@ -116,7 +115,6 @@ fn update_simulation_uniform(
         uniform.dt = time_step.0;
         uniform.rho = settings.rho;
         uniform.gravity = settings.gravity;
-        uniform.initial_fluid_level = settings.initial_fluid_level;
         uniform.fluid_transform = transform.to_matrix();
         uniform.size = settings.size.as_vec2();
     }

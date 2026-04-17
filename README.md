@@ -42,7 +42,6 @@ fn setup_scene(
             rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
             size: UVec2::splat(512),
-            initial_fluid_level: 0.9,
         },
         Mesh2d(mesh),
     ));
