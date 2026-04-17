@@ -21,8 +21,15 @@ impl Plugin for FluidSourcePlugin {
     }
 }
 
+/// Defines source/sink of fluid. If [`FluidSource`] is spawned as a child of [`crate::euler_fluid::FluidSettings`] component, fluids are sourced or drained with respect to [`FluidSource::mode`] while [`FluidSource::active`] is `true`.
+/// The shape is configured by [`FluidSourceShape`].
+/// If [`FluidSource::mode`] is [`FluidSourceMode::Source`], the velocity of the souce should be defined by [`FluidSourceVelocity`].
+///
+/// If you want the fluid to be sourced only on startup, spawn [`FluidSource`] with [`FluidSourceOneshot`]
+///
+/// See [`crate::euler_fluid::FluidSettings`] for more details.
 #[derive(Component, Default)]
-#[require(FluidSourceShape, FluidSourceVelocity)]
+#[require(FluidSourceShape, FluidSourceVelocity, Transform)]
 pub struct FluidSource {
     pub active: bool,
     pub mode: FluidSourceMode,
@@ -75,5 +82,7 @@ impl Default for FluidSourceShape {
 #[derive(Component, Default)]
 pub struct FluidSourceVelocity(pub Vec2);
 
+/// Spawning a FluidSourceOneshot with [`FluidSource`], [`FluidSource`] will be added only on startup.
+/// Used to setup initial fluid domain.
 #[derive(Component)]
 pub struct FluidSourceOneshot;

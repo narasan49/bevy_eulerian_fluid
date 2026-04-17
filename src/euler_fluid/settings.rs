@@ -8,19 +8,24 @@ use crate::{
     reinitialize_levelset::ReinitializeMethod,
 };
 
-/// Setting for fluid simulation. By spawning fluid settings, components required to the simulation will be spawned and the simulation will start.
+/// Setting for fluid simulation. Spawning a FluidSettings automatically inserts the components required to the simulation and the simulation will start.
 /// Simulation result can be found on [`FluidTextures`].
-/// # Arguments
-/// * `size`: The size of 2D simulation domain in pixels. The size is recommended to be same between each dimension and to be multiple of 64 pixels.
-/// * `rho`: The density of fluid in unit of [kg/m^2]. Currently, uniform density is supported only.
+/// # Fields
+/// * `size`: The size of 2D simulation domain in pixels. The size is recommended to be multiple of 64 pixels.
+/// * `rho`: The density of fluid in unit of [kg/m^2]. Currently, only uniform density is supported.
 /// * `gravity`: Uniform force enforced uniformly to the simulation domain in unit of [m/s^2].
 ///
+/// To let fluids flow in or out of the domain, spawn [`crate::fluid_source::FluidSource`] as a child component.
+///
 /// # Examples
-/// ```rust
+/// ```no_run
 /// use bevy::{
 ///     prelude::*,
 /// };
 /// use bevy_eulerian_fluid::{
+///    fluid_source::{
+///        FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape, FluidSourceVelocity,
+///    },
 ///     material::VelocityMaterial,
 ///     settings::{FluidSettings, FluidTextures},
 /// };
@@ -30,15 +35,46 @@ use crate::{
 ///     mut commands: Commands,
 ///     mut meshes: ResMut<Assets<Mesh>>,
 /// ) {
-///     let mesh = meshes.add(Rectangle::from_size(Vec2::splat(512.0)));
+///     let size = UVec2::splat(512);
+///     let mesh = meshes.add(Rectangle::from_size(size.as_vec2()));
 ///     commands.spawn((
 ///         FluidSettings {
 ///             rho: 99.7, // water density in 2D
 ///             gravity: Vec2::ZERO,
-///             size: UVec2::splat(512),
+///             size,
 ///         },
 ///         Mesh2d(mesh),
-///     ));
+///     ))
+///     .with_children(|commands| {
+///         // oneshot fluid source
+///         commands.spawn((
+///             FluidSource {
+///                 active: true,
+///                 mode: FluidSourceMode::Source,
+///             },
+///             // center of fluid source relative to fluid calculation domain.
+///             Transform::from_translation((Vec2::new(0.0, -0.15) * size.as_vec2()).extend(0.0)),
+///             // the shape of fluid source
+///             FluidSourceShape::Aabb {
+///                 half_size: Vec2::new(0.5, 0.35) * size.as_vec2(),
+///             },
+///             // fluid source will be added only on simulation startup
+///             FluidSourceOneshot,
+///         ));
+///         // continuous fluid source
+///         commands.spawn((
+///             FluidSource {
+///                 active: true,
+///                 mode: FluidSourceMode::Source,
+///             },
+///             Transform::from_translation((Vec2::new(-0.4, 0.3) * size.as_vec2()).extend(0.0)),
+///             FluidSourceShape::Aabb {
+///                 half_size: Vec2::splat(10.0),
+///             },
+///             // velocity of sourced fluid
+///             FluidSourceVelocity(Vec2::new(50.0, 10.0)),
+///         ));
+///     });
 /// }
 ///
 /// // On Update

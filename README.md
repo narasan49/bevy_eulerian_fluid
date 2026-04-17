@@ -8,16 +8,20 @@ Try it on [here](https://narasan49.github.io/bevy_eulerian_fluid/)!
 
 ## Basic Usage
 1. Add `FluidPlugin` and `PhysicsPlugins` to the app with the same length unit.
-2. Spawn `FluidSettings`, then `FluidSimulationBundle` will be inserted automatically to the entity. By querying components `FluidTextures`, the simulation results can be retrieved.  
+2. Spawn `FluidSettings` with `FluidSource` as a child component.
+3. `FluidSimulationBundle` will be inserted automatically to the entity. By querying components `FluidTextures`, the simulation results can be retrieved.
 
 Here is a short example. See [examples](./examples/) for the detailed implementation!  
 
 ```rust
 use avian2d::PhysicsPlugins;
 use bevy_eulerian_fluid::{
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
+
+const SIZE: UVec2 = UVec2::splat(256);
 
 fn main() {
     App::new()
@@ -41,9 +45,21 @@ fn setup_scene(
         FluidSettings {
             rho: 99.7, // water density in 2D
             gravity: Vec2::Y * 9.8,
-            size: UVec2::splat(512),
+            size: SIZE,
         },
         Mesh2d(mesh),
+    ))
+    .with_child((
+        FluidSource {
+            active: true,
+            mode: FluidSourceMode::Source,
+        },
+        Transform::from_translation((Vec2::new(0.0, -0.2) * SIZE.as_vec2()).extend(0.0)),
+        FluidSourceShape::Aabb {
+            half_size: 0.5 * Vec2::new(1.0, 0.6) * SIZE.as_vec2(),
+        },
+        // FluidSource will be applied only on fluid startup.
+        FluidSourceOneshot,
     ));
 }
 
