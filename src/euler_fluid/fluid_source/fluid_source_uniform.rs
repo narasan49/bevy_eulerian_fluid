@@ -29,8 +29,10 @@ impl Plugin for FluidSourceUniformPlugin {
             UniformComponentPlugin::<FluidSourceInitUniform>::default(),
         ));
 
-        app.add_systems(FixedPostUpdate, update_fluid_source_buffer)
-            .add_systems(Update, update_fluid_source_init_buffer);
+        app.add_systems(
+            FixedPostUpdate,
+            (update_fluid_source_init_buffer, update_fluid_source_buffer),
+        );
 
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
@@ -74,7 +76,7 @@ pub(crate) struct FluidSourceUniformBindGroup {
 
 fn update_fluid_source_init_buffer(
     mut q_fluid: Query<(&mut FluidSourceInitUniform, Option<&Children>)>,
-    q_source: Query<(&FluidSource, &FluidSourceShape, &Transform), Added<FluidSource>>,
+    q_source: Query<(&FluidSource, &FluidSourceShape, &Transform)>,
 ) {
     for (mut uniform, children) in &mut q_fluid {
         let mut count = 0;
@@ -104,10 +106,8 @@ fn update_fluid_source_init_buffer(
                 count += 1;
             }
         }
-        if count > 0 {
-            uniform.count = count as u32;
-            uniform.data = data;
-        }
+        uniform.count = count as u32;
+        uniform.data = data;
     }
 }
 
