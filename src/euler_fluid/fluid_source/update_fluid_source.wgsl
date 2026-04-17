@@ -8,7 +8,7 @@ struct FluidSourceData {
     mode: u32,
 }
 
-struct FluidSrouceUniform {
+struct FluidSourceUniform {
     data: array<FluidSourceData, 16>,
     count: u32,
 }
@@ -25,7 +25,7 @@ const LARGE_FLOAT: f32 = 1.0e6;
 @group(0) @binding(1) var u: texture_storage_2d<r32float, write>;
 @group(0) @binding(2) var v: texture_storage_2d<r32float, write>;
 
-@group(1) @binding(0) var<uniform> fluid_source_uniform: FluidSrouceUniform;
+@group(1) @binding(0) var<uniform> fluid_source_uniform: FluidSourceUniform;
 
 @compute @workgroup_size(8, 8, 1)
 fn update_fluid_source(
@@ -105,18 +105,4 @@ fn level_aabb(half_size: vec2f, center: vec2f, x: vec2f) -> f32 {
         }
     }
     return level;
-}
-
-fn mode_to_sdf(mode: u32) -> f32 {
-    switch mode {
-        case MODE_SOURCE: {
-            return -LARGE_FLOAT;
-        }
-        case MODE_SINK: {
-            return LARGE_FLOAT;
-        }
-        default: {
-            return -LARGE_FLOAT;
-        }
-    }
 }
