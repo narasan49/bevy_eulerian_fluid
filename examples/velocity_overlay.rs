@@ -12,6 +12,7 @@ use bevy::{
     sprite_render::{Material2d, Material2dPlugin},
 };
 use bevy_eulerian_fluid::{
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     settings::{FluidSettings, FluidTextures},
     velocity_overlay::{VelocityOverlay, VelocityOverlayGroup, VelocityOverlayPlugin},
     FluidPlugin,
@@ -110,21 +111,33 @@ fn setup_fluid(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
 fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
-    commands.spawn((
-        FluidSettings {
-            rho: 99.7, // water density in 2D
-            gravity: Vec2::Y * 9.8,
-            size: SIZE,
-            initial_fluid_level: 0.7,
-        },
-        Mesh2d(meshes.add(fluid_domain_rectangle)),
-        Transform::default(),
-        VelocityOverlay {
-            max_clamp_speed: 20.0,
-            bin_size: UVec2::splat(16),
-            color: LinearRgba::WHITE,
-        },
-    ));
+    commands
+        .spawn((
+            FluidSettings {
+                rho: 99.7, // water density in 2D
+                gravity: Vec2::Y * 9.8,
+                size: SIZE,
+                initial_fluid_level: 0.0,
+            },
+            Mesh2d(meshes.add(fluid_domain_rectangle)),
+            Transform::default(),
+            VelocityOverlay {
+                max_clamp_speed: 20.0,
+                bin_size: UVec2::splat(16),
+                color: LinearRgba::WHITE,
+            },
+        ))
+        .with_child((
+            FluidSource {
+                active: true,
+                mode: FluidSourceMode::Source,
+            },
+            Transform::from_translation((Vec2::new(0.0, -0.2) * SIZE.as_vec2()).extend(0.0)),
+            FluidSourceShape::Aabb {
+                half_size: 0.5 * Vec2::new(1.0, 0.6) * SIZE.as_vec2(),
+            },
+            FluidSourceOneshot,
+        ));
 }
 
 fn setup_walls(

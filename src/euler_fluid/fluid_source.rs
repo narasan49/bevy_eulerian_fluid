@@ -26,7 +26,6 @@ impl Plugin for FluidSourcePlugin {
 pub struct FluidSource {
     pub active: bool,
     pub mode: FluidSourceMode,
-    pub init_only: bool,
 }
 
 #[derive(Default)]
@@ -75,3 +74,6 @@ impl Default for FluidSourceShape {
 
 #[derive(Component, Default)]
 pub struct FluidSourceVelocity(pub Vec2);
+
+#[derive(Component)]
+pub struct FluidSourceOneshot;

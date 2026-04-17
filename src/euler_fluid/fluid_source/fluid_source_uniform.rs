@@ -14,7 +14,7 @@ use bevy::{
     },
 };
 
-use crate::fluid_source::{FluidSource, FluidSourceShape, FluidSourceVelocity};
+use crate::fluid_source::{FluidSource, FluidSourceOneshot, FluidSourceShape, FluidSourceVelocity};
 
 pub const MAX_FLUID_SOURCE: usize = 16;
 
@@ -76,7 +76,7 @@ pub(crate) struct FluidSourceUniformBindGroup {
 
 fn update_fluid_source_init_buffer(
     mut q_fluid: Query<(&mut FluidSourceInitUniform, Option<&Children>)>,
-    q_source: Query<(&FluidSource, &FluidSourceShape, &Transform)>,
+    q_source: Query<(&FluidSource, &FluidSourceShape, &Transform), With<FluidSourceOneshot>>,
 ) {
     for (mut uniform, children) in &mut q_fluid {
         let mut count = 0;
@@ -86,7 +86,7 @@ fn update_fluid_source_init_buffer(
         };
         for &child in children {
             if let Ok((source, shape, transform)) = q_source.get(child) {
-                if !source.active || !source.init_only {
+                if !source.active {
                     continue;
                 }
                 if count >= MAX_FLUID_SOURCE {
@@ -113,12 +113,15 @@ fn update_fluid_source_init_buffer(
 
 fn update_fluid_source_buffer(
     mut q_fluid: Query<(&mut FluidSourceUniform, Option<&Children>)>,
-    q_source: Query<(
-        &FluidSource,
-        &FluidSourceShape,
-        &Transform,
-        &FluidSourceVelocity,
-    )>,
+    q_source: Query<
+        (
+            &FluidSource,
+            &FluidSourceShape,
+            &Transform,
+            &FluidSourceVelocity,
+        ),
+        Without<FluidSourceOneshot>,
+    >,
 ) {
     for (mut uniform, children) in &mut q_fluid {
         let mut count = 0;
@@ -128,7 +131,7 @@ fn update_fluid_source_buffer(
         };
         for &child in children {
             if let Ok((source, shape, transform, velocity)) = q_source.get(child) {
-                if !source.active || source.init_only {
+                if !source.active {
                     continue;
                 }
                 if count >= MAX_FLUID_SOURCE {

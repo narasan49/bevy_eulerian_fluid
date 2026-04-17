@@ -20,7 +20,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    fluid_source::{FluidSource, FluidSourceMode, FluidSourceShape},
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -129,12 +129,12 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
                 FluidSource {
                     active: true,
                     mode: FluidSourceMode::Source,
-                    init_only: true,
                 },
                 Transform::from_translation((Vec2::new(0.0, -0.15) * SIZE.as_vec2()).extend(0.0)),
                 FluidSourceShape::Aabb {
                     half_size: 0.5 * Vec2::new(1.0, 0.7) * SIZE.as_vec2(),
                 },
+                FluidSourceOneshot,
             ));
         });
 }

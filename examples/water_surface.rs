@@ -15,7 +15,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
-    fluid_source::{FluidSource, FluidSourceMode, FluidSourceShape},
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
@@ -101,12 +101,12 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             FluidSource {
                 active: true,
                 mode: FluidSourceMode::Source,
-                init_only: true,
             },
             Transform::from_translation((Vec2::new(0.0, -0.2) * SIZE.as_vec2()).extend(0.0)),
             FluidSourceShape::Aabb {
                 half_size: 0.5 * Vec2::new(1.0, 0.6) * SIZE.as_vec2(),
             },
+            FluidSourceOneshot,
         ));
 }
 
