@@ -37,24 +37,35 @@ fn update_fluid_source(
     let ndc = uv_to_ndc(uv);
     let position = 0.5 * dimf * ndc;
 
+    var new_level = textureLoad(levelset_air, idx).r;
+    var velocity = vec2f(0.0);
+    var has_source = false;
+    var velocity_updated = false;
     for (var i: u32 = 0; i < fluid_source_uniform.count; i++) {
         let data = fluid_source_uniform.data[i];
         let source_sdf = level_source(data, position);
 
-        var new_level = textureLoad(levelset_air, idx).r;
         if data.mode == MODE_SOURCE {
             new_level = min(new_level, source_sdf);
+            has_source = true;
+            if source_sdf < 0.0 {
+                velocity = velocity + data.velocity;
+                velocity_updated = true;
+            }
         } else {
-            new_level = max(new_level, -source_sdf);
+            if !has_source {
+                new_level = max(new_level, -source_sdf);
+            }
         }
-        textureStore(levelset_air, idx, vec4f(new_level, vec3f(0.0)));
-        if source_sdf < 0.0 && data.mode == MODE_SOURCE {
-            textureStore(u, idx, vec4f(data.velocity.x, vec3f(0.0)));
-            textureStore(u, idx + vec2u(1, 0), vec4f(data.velocity.x, vec3f(0.0)));
-            textureStore(v, idx, vec4f(data.velocity.y, vec3f(0.0)));
-            textureStore(v, idx + vec2u(0, 1), vec4f(data.velocity.y, vec3f(0.0)));
-            return;
-        }
+    }
+
+    textureStore(levelset_air, idx, vec4f(new_level, vec3f(0.0)));
+    
+    if velocity_updated {
+        textureStore(u, idx, vec4f(velocity.x, vec3f(0.0)));
+        textureStore(u, idx + vec2u(1, 0), vec4f(velocity.x, vec3f(0.0)));
+        textureStore(v, idx, vec4f(velocity.y, vec3f(0.0)));
+        textureStore(v, idx + vec2u(0, 1), vec4f(velocity.y, vec3f(0.0)));
     }
 }
 
