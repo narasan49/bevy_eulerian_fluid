@@ -13,6 +13,9 @@ use crate::{
     apply_forces::{ApplyForcesBindGroups, ApplyForcesPipeline},
     divergence::{DivergenceBindGroup, DivergencePipeline},
     extrapolate_velocity::{ExtrapolateVelocityBindGroups, ExtrapolateVelocityPipeline},
+    fluid_source::update_fluid_source::{
+        UpdateFluidSourceBindGroupsQuery, UpdateFluidSourcePipeline,
+    },
     fluid_status::FluidStatus,
     fluid_to_solid::{
         FluidToSolidForcesBindGroups, FluidToSolidForcesPipeline, SolidObstaclesBindGroups,
@@ -74,6 +77,7 @@ struct FluidBindGroupsQueryData {
     simulation_uniform: &'static SimulationUniformBindGroup,
     levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
     projection_bind_groups: ProjectionBindGroupsQuery,
+    update_fluid_source_bind_groups: UpdateFluidSourceBindGroupsQuery,
 }
 
 pub(crate) struct EulerFluidNode {
@@ -129,6 +133,7 @@ impl render_graph::Node for EulerFluidNode {
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_levelset_pipeline = world.resource::<AdvectLevelSetPipeline>();
                 let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
+                let update_fluid_source_pipeline = world.resource::<UpdateFluidSourcePipeline>();
 
                 if initialize_center_pipeline.pipeline.is_ready(pipeline_cache)
                     && initialize_edge_pipeline.pipeline.is_ready(pipeline_cache)
@@ -148,6 +153,7 @@ impl render_graph::Node for EulerFluidNode {
                     && reinitialize_levelset::is_pipeline_ready(world, pipeline_cache)
                     && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && are_pls_pipelines_ready(world, pipeline_cache)
+                    && update_fluid_source_pipeline.is_ready(pipeline_cache)
                 {
                     self.state = State::Init;
                 }
@@ -224,11 +230,10 @@ impl render_graph::Node for EulerFluidNode {
 
                             let initialize_center_pipeline =
                                 world.resource::<InitializeGridCenterPipeline>();
-                            initialize_center_pipeline.pipeline.dispatch_with_uniform(
+                            initialize_center_pipeline.pipeline.dispatch(
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.initialize_center_bind_group.bind_group,
-                                bind_groups.simulation_uniform,
                                 num_workgroups_grid,
                             );
 
@@ -250,6 +255,24 @@ impl render_graph::Node for EulerFluidNode {
                                     fluid_settings.size,
                                 );
                             }
+
+                            let update_fluid_source_pipeline =
+                                world.resource::<UpdateFluidSourcePipeline>();
+                            update_fluid_source_pipeline.dispatch_init(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.update_fluid_source_bind_groups,
+                                num_workgroups_grid,
+                            );
+
+                            reinitialize_levelset::dispatch(
+                                world,
+                                reinitialize_method,
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.reinit_levelset_bind_groups,
+                                fluid_settings.size,
+                            );
                         }
                         FluidStatus::Initialized => {
                             let mut pass = render_context.command_encoder().begin_compute_pass(
@@ -348,6 +371,15 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.advect_levelset_bind_groups.bind_group,
+                                num_workgroups_grid,
+                            );
+
+                            let update_fluid_source_pipeline =
+                                world.resource::<UpdateFluidSourcePipeline>();
+                            update_fluid_source_pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.update_fluid_source_bind_groups,
                                 num_workgroups_grid,
                             );
 

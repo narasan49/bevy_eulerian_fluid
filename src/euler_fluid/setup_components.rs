@@ -15,6 +15,7 @@ use crate::{
     extrapolate_velocity::{
         ExtrapolateUResource, ExtrapolateVResource, InitializeUValid, InitializeVValid,
     },
+    fluid_source::update_fluid_source::UpdateFluidSourceResource,
     fluid_to_solid::{
         forces_to_solid_readback, AccumulateForcesResource, FluidToSolidForce,
         SampleForcesResource, MAX_SOLIDS,
@@ -107,7 +108,6 @@ pub(crate) fn watch_fluid_component(
             dt: 0.0,
             rho: settings.rho,
             gravity: settings.gravity,
-            initial_fluid_level: settings.initial_fluid_level,
             fluid_transform,
             size: size.as_vec2(),
         };
@@ -256,6 +256,8 @@ pub(crate) fn watch_fluid_component(
             entities: Vec::new(),
         };
 
+        let update_fluid_source = UpdateFluidSourceResource::new(&levelset_air1, &u0, &v0);
+
         commands
             .entity(entity)
             .insert((
@@ -278,6 +280,7 @@ pub(crate) fn watch_fluid_component(
                 levelset_gradient_resource,
                 sample_forces_resource,
                 accumulate_forces_resource,
+                update_fluid_source,
             ))
             .insert((
                 init_u_valid,

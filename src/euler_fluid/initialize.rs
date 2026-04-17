@@ -65,7 +65,7 @@ pub(crate) struct InitializeGridCenterPipeline {
 
 impl FromWorld for InitializeGridCenterPipeline {
     fn from_world(world: &mut World) -> Self {
-        let pipeline = SingleComputePipeline::new_with_uniform::<InitializeGridCenterResource>(
+        let pipeline = SingleComputePipeline::new::<InitializeGridCenterResource>(
             world,
             "InitializeGridCenterPipeline",
             embedded_path!("shaders/initialize_grid_center.wgsl"),

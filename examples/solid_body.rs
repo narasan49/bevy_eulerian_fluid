@@ -18,6 +18,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
@@ -81,16 +82,28 @@ fn setup_scene(
     commands.spawn(Camera2d);
 
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
-    commands.spawn((
-        FluidSettings {
-            rho: 99.7, // water density in 2D
-            gravity: Vec2::Y * 9.8,
-            size: SIZE,
-            initial_fluid_level: 0.9,
-        },
-        Mesh2d(meshes.add(fluid_domain_rectangle)),
-        Transform::default().with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
-    ));
+    commands
+        .spawn((
+            FluidSettings {
+                rho: 99.7, // water density in 2D
+                gravity: Vec2::Y * 9.8,
+                size: SIZE,
+            },
+            Mesh2d(meshes.add(fluid_domain_rectangle)),
+            Transform::default()
+                .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
+        ))
+        .with_child((
+            FluidSource {
+                active: true,
+                mode: FluidSourceMode::Source,
+            },
+            Transform::from_translation((Vec2::new(0.0, -0.05) * SIZE.as_vec2()).extend(0.0)),
+            FluidSourceShape::Aabb {
+                half_size: 0.5 * Vec2::new(1.0, 0.9) * SIZE.as_vec2(),
+            },
+            FluidSourceOneshot,
+        ));
 
     let circle = Circle::new(10.0);
     let circle_mesh = meshes.add(circle);
