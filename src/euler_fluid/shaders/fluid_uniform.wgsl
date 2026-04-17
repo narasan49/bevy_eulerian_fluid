@@ -5,7 +5,6 @@ struct SimulationUniform {
     dt: f32,
     rho: f32,
     gravity: vec2<f32>,
-    initial_fluid_level: f32,
     fluid_transform: mat4x4<f32>,
     size: vec2<f32>,
 }

@@ -10,6 +10,7 @@ use bevy::{
     },
 };
 use bevy_eulerian_fluid::{
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
@@ -18,7 +19,7 @@ use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::Overla
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const LENGTH_UNIT: f32 = 10.0;
+const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
     // [workaround] Asset meta files cannot be found on browser.
@@ -74,16 +75,27 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
                 (j * size) as f32 * 1.1 - size as f32 * 0.8,
                 0.0,
             );
-            commands.spawn((
-                FluidSettings {
-                    rho: 99.7, // water density in 2D
-                    gravity: Vec2::ZERO,
-                    size: UVec2::splat(size),
-                    initial_fluid_level: 1.0,
-                },
-                Transform::default().with_translation(translation),
-                Mesh2d(mesh),
-            ));
+            commands
+                .spawn((
+                    FluidSettings {
+                        rho: 99.7, // water density in 2D
+                        gravity: Vec2::ZERO,
+                        size: UVec2::splat(size),
+                    },
+                    Transform::default().with_translation(translation),
+                    Mesh2d(mesh),
+                ))
+                .with_child((
+                    FluidSource {
+                        active: true,
+                        mode: FluidSourceMode::Source,
+                    },
+                    FluidSourceShape::Aabb {
+                        half_size: Vec2::splat(128.0),
+                    },
+                    FluidSourceOneshot,
+                    Transform::default(),
+                ));
         }
     }
 
@@ -104,8 +116,8 @@ fn on_fluid_setup(
 ) {
     for (entity, fluid_texture) in &query {
         let material = materials.add(VelocityMaterial {
-            u_range: Vec2::new(-10.0, 10.0),
-            v_range: Vec2::new(-10.0, 10.0),
+            u_range: Vec2::new(-100.0, 100.0),
+            v_range: Vec2::new(-100.0, 100.0),
             u: fluid_texture.u.clone(),
             v: fluid_texture.v.clone(),
         });

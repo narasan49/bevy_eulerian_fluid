@@ -15,6 +15,7 @@ use bevy::{
 };
 
 use bevy_eulerian_fluid::{
+    fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
@@ -83,17 +84,29 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     ));
 
     let mesh = meshes.add(Rectangle::from_size(SIZE.as_vec2()));
-    commands.spawn((
-        FluidSettings {
-            rho: 99.7, // water density in 2D
-            gravity: Vec2::Y * 9.8,
-            size: SIZE,
-            initial_fluid_level: 0.6,
-        },
-        ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
-        Mesh2d(mesh),
-        Transform::default().with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
-    ));
+    commands
+        .spawn((
+            FluidSettings {
+                rho: 99.7, // water density in 2D
+                gravity: Vec2::Y * 9.8,
+                size: SIZE,
+            },
+            ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
+            Mesh2d(mesh),
+            Transform::default()
+                .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
+        ))
+        .with_child((
+            FluidSource {
+                active: true,
+                mode: FluidSourceMode::Source,
+            },
+            Transform::from_translation((Vec2::new(0.0, -0.2) * SIZE.as_vec2()).extend(0.0)),
+            FluidSourceShape::Aabb {
+                half_size: 0.5 * Vec2::new(1.0, 0.6) * SIZE.as_vec2(),
+            },
+            FluidSourceOneshot,
+        ));
 }
 
 fn on_fluid_setup(
