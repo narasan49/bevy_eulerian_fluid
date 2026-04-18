@@ -94,7 +94,7 @@ pub(crate) fn setup_multigrid_resources(
 ) {
     let num_levels = ((grid_size.min_element() as f32).log2() as usize)
         .saturating_sub(2)
-        .min(1);
+        .max(1);
 
     let mut x = Vec::<Handle<Image>>::with_capacity(num_levels);
     let mut b = Vec::<Handle<Image>>::with_capacity(num_levels);
