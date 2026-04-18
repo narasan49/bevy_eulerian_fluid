@@ -1,6 +1,7 @@
 @group(0) @binding(0) var labels_in: texture_storage_2d<r32uint, read>;
 @group(0) @binding(1) var labels_out: texture_storage_2d<r32uint, write>;
 
+const LABEL_NONE: u32 = 0;
 const LABEL_SOURCE: u32 = 1;
 const LABEL_ACTIVE: u32 = 2;
 
@@ -20,6 +21,7 @@ fn initialize_active_label(
 
     let label = textureLoad(labels_in, idx).r;
     if label == LABEL_SOURCE {
+        textureStore(labels_out, idx, vec4u(LABEL_SOURCE, 0, 0, 0));
         return;
     }
 
@@ -33,4 +35,6 @@ fn initialize_active_label(
             }
         }
     }
+
+    textureStore(labels_out, idx, vec4u(LABEL_NONE, 0, 0, 0));
 }
