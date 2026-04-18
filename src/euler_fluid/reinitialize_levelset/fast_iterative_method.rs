@@ -61,7 +61,7 @@ pub(crate) struct FastIterativeInitializePipeline {
 
 impl FromWorld for FastIterativeInitializePipeline {
     fn from_world(world: &mut World) -> Self {
-        let pipeline = SingleComputePipeline::new_with_uniform::<FastIterativeInitializeResource>(
+        let pipeline = SingleComputePipeline::new::<FastIterativeInitializeResource>(
             world,
             "FastIterativeInitializePipeline",
             embedded_path!("shaders/fast_iterative_method/initialize.wgsl"),
@@ -129,13 +129,12 @@ pub(crate) struct FastIterativeInitializeActiveLabelPipeline {
 
 impl FromWorld for FastIterativeInitializeActiveLabelPipeline {
     fn from_world(world: &mut World) -> Self {
-        let pipeline =
-            SingleComputePipeline::new_with_uniform::<FastIterativeInitializeActiveLabelResource>(
-                world,
-                "FastIterativeInitializeActiveLabelPipeline",
-                embedded_path!("shaders/fast_iterative_method/initialize_active_label.wgsl"),
-                "initialize_active_label",
-            );
+        let pipeline = SingleComputePipeline::new::<FastIterativeInitializeActiveLabelResource>(
+            world,
+            "FastIterativeInitializeActiveLabelPipeline",
+            embedded_path!("shaders/fast_iterative_method/initialize_active_label.wgsl"),
+            "initialize_active_label",
+        );
 
         Self { pipeline }
     }
@@ -194,7 +193,7 @@ pub(crate) struct FastIterativeUpdatePipeline {
 
 impl FromWorld for FastIterativeUpdatePipeline {
     fn from_world(world: &mut World) -> Self {
-        let pipeline = SingleComputePipeline::new_with_uniform::<FastIterativeUpdateResource>(
+        let pipeline = SingleComputePipeline::new::<FastIterativeUpdateResource>(
             world,
             "FastIterativeUpdatePipeline",
             embedded_path!("shaders/fast_iterative_method/update.wgsl"),
