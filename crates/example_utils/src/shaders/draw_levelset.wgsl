@@ -9,6 +9,9 @@ fn fragment(
     mesh: VertexOutput,
 ) -> @location(0) vec4<f32> {
     var v = textureSample(levelset_texture, levelset_sampler, mesh.uv).r;
+    if abs(v) < 0.5 {
+        return vec4<f32>(vec3f(0.0), 1.0);
+    }
     v = step(v, 0.0);
-    return vec4<f32>(v * base_color, 0.7);
+    return vec4<f32>(v * base_color, v * 0.5);
 }

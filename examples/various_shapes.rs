@@ -1,5 +1,3 @@
-extern crate bevy_eulerian_fluid;
-
 use avian2d::{
     math::Vector,
     prelude::{ColliderDensity, Gravity, IntoCollider, RigidBody},
@@ -11,12 +9,9 @@ use bevy::{
     input::common_conditions::input_just_pressed,
     prelude::*,
     render::{
-        render_resource::AsBindGroup,
         settings::{Backends, WgpuSettings},
         RenderPlugin,
     },
-    shader::ShaderRef,
-    sprite_render::{Material2d, Material2dPlugin},
 };
 
 use bevy_eulerian_fluid::{
@@ -24,12 +19,17 @@ use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
+use example_utils::{
+    fps_counter::FpsCounterPlugin,
+    material::{BackGroundMaterial, ExampleMaterialsPlugin, LevelsetMaterial},
+    mouse_motion,
+    overlay::OverlayPlugin,
+};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
 const SIZE: UVec2 = UVec2::new(512, 256);
-const LENGTH_UNIT: f32 = 10.0;
+const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
     let mut app = App::new();
@@ -69,8 +69,11 @@ fn main() {
     )
     .add_plugins(FluidPlugin::new(LENGTH_UNIT))
     .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
-    .add_plugins(Material2dPlugin::<CustomMaterial>::default())
+    .add_plugins((
+        FpsCounterPlugin,
+        ExampleMaterialsPlugin,
+        OverlayPlugin::<16>,
+    ))
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
     .add_systems(
         Startup,
@@ -107,21 +110,29 @@ fn setup_scene(mut commands: Commands) {
     ));
 }
 
-fn setup_fluid(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    spawn_fluid(&mut commands, &mut meshes);
+fn setup_fluid(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<BackGroundMaterial>>,
+) {
+    spawn_fluid(&mut commands, &mut meshes, &mut materials);
 }
 
-fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
+fn spawn_fluid(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<BackGroundMaterial>>,
+) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands
         .spawn((
-        FluidSettings {
-            rho: 99.7, // water density in 2D
-            gravity: Vec2::Y * 9.8,
-            size: SIZE,
-        },
-        Mesh2d(meshes.add(fluid_domain_rectangle)),
-        Transform::default(),
+            FluidSettings {
+                rho: 99.7, // water density in 2D
+                gravity: Vec2::Y * 9.8,
+                size: SIZE,
+            },
+            Mesh2d(meshes.add(fluid_domain_rectangle.clone())),
+            Transform::default(),
         ))
         .with_children(|commands| {
             commands.spawn((
@@ -136,6 +147,12 @@ fn spawn_fluid(commands: &mut Commands, meshes: &mut ResMut<Assets<Mesh>>) {
                 FluidSourceOneshot,
             ));
         });
+
+    commands.spawn((
+        Mesh2d(meshes.add(fluid_domain_rectangle)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+        MeshMaterial2d(materials.add(BackGroundMaterial {})),
+    ));
 }
 
 fn setup_walls(
@@ -287,6 +304,7 @@ fn reset_scene(
     q_fluids: Query<Entity, With<FluidSettings>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut background_materials: ResMut<Assets<BackGroundMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     for (entity, rigid_body) in &q_rigid_bodies {
@@ -298,36 +316,21 @@ fn reset_scene(
         commands.entity(entity).despawn();
     }
 
-    spawn_fluid(&mut commands, &mut meshes);
+    spawn_fluid(&mut commands, &mut meshes, &mut background_materials);
     spawn_rigid_bodies(&mut commands, &mut materials, &mut meshes, asset_server);
 }
 
 fn on_fluid_setup(
     mut commands: Commands,
     query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut materials: ResMut<Assets<LevelsetMaterial>>,
 ) {
     for (entity, levelset_textures) in &query {
-        let material = materials.add(CustomMaterial {
+        let material = materials.add(LevelsetMaterial {
             levelset: levelset_textures.levelset_air.clone(),
-            base_color: Vec3::new(0.0, 0.0, 1.0),
+            base_color: Vec3::new(0.5, 0.78, 0.83),
         });
 
         commands.entity(entity).insert(MeshMaterial2d(material));
-    }
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct CustomMaterial {
-    #[texture(0)]
-    #[sampler(1)]
-    pub levelset: Handle<Image>,
-    #[uniform(2)]
-    pub base_color: Vec3,
-}
-
-impl Material2d for CustomMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/draw_levelset.wgsl".into()
     }
 }

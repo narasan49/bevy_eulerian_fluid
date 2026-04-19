@@ -6,12 +6,9 @@ use bevy::{
     camera::ScalingMode,
     prelude::*,
     render::{
-        render_resource::AsBindGroup,
         settings::{Backends, WgpuSettings},
         RenderPlugin,
     },
-    shader::ShaderRef,
-    sprite_render::{Material2d, Material2dPlugin},
 };
 
 use bevy_eulerian_fluid::{
@@ -21,7 +18,11 @@ use bevy_eulerian_fluid::{
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{
+    fps_counter::FpsCounterPlugin,
+    material::{ExampleMaterialsPlugin, LevelsetMaterial},
+    mouse_motion,
+};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
@@ -63,8 +64,7 @@ fn main() {
     )
     .add_plugins(FluidPlugin::new(LENGTH_UNIT))
     .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins(FpsCounterPlugin)
-    .add_plugins(Material2dPlugin::<CustomMaterial>::default())
+    .add_plugins((FpsCounterPlugin, ExampleMaterialsPlugin))
     .add_systems(Startup, setup_scene)
     .add_systems(Update, on_fluid_setup)
     .add_systems(Update, mouse_motion);
@@ -113,11 +113,11 @@ fn on_fluid_setup(
     mut commands: Commands,
     query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut materials: ResMut<Assets<LevelsetMaterial>>,
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
     for (entity, fluid_textures) in &query {
-        let material = materials.add(CustomMaterial {
+        let material = materials.add(LevelsetMaterial {
             levelset: fluid_textures.levelset_air.clone(),
             base_color: Vec3::new(0.0, 0.0, 1.0),
         });
@@ -148,20 +148,5 @@ fn on_fluid_setup(
             },
             TextColor::WHITE,
         ));
-    }
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct CustomMaterial {
-    #[texture(0)]
-    #[sampler(1)]
-    pub levelset: Handle<Image>,
-    #[uniform(2)]
-    pub base_color: Vec3,
-}
-
-impl Material2d for CustomMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/draw_levelset.wgsl".into()
     }
 }
