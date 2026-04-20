@@ -134,13 +134,13 @@ fn setup_fluid(
                 },
                 FluidSourceOneshot,
             ));
-        });
 
-    commands.spawn((
-        Mesh2d(meshes.add(fluid_domain_rectangle)),
-        Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
-        MeshMaterial2d(materials.add(BackGroundMaterial {})),
-    ));
+            commands.spawn((
+                Mesh2d(meshes.add(fluid_domain_rectangle)),
+                Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
+                MeshMaterial2d(materials.add(BackGroundMaterial {})),
+            ));
+        });
 }
 
 fn setup_rigid_bodies(
