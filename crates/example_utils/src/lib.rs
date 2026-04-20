@@ -27,10 +27,11 @@ pub fn mouse_motion(
 
             for (mut forces_to_fluid, settings, transform) in &mut q_fluid {
                 let position = screen_to_mesh_coordinate(
-                    cursor_position - transform.translation.xy() * Vec2::new(1.0, -1.0),
+                    cursor_position,
                     window,
                     q_camera.single().unwrap(),
                     settings.size.as_vec2(),
+                    transform,
                 );
                 let positions = vec![position; forces.len()];
 
@@ -56,6 +57,7 @@ pub fn mouse_motion(
                         q_window.single().unwrap(),
                         q_camera.single().unwrap(),
                         settings.size.as_vec2(),
+                        transform,
                     )
                 })
                 .collect::<Vec<_>>();
@@ -74,6 +76,7 @@ fn screen_to_mesh_coordinate(
     window: &Window,
     projection: &Projection,
     scale: Vec2,
+    transform: &Transform,
 ) -> Vec2 {
     let window_size = window.size();
     let normalized_position = 2.0 * (position - window_size) / window_size + 1.0;
@@ -86,5 +89,5 @@ fn screen_to_mesh_coordinate(
         1.0,
     ));
 
-    position_on_mesh.xy() + 0.5 * scale
+    position_on_mesh.xy() + 0.5 * scale - transform.translation.xy() * Vec2::new(1.0, -1.0)
 }
