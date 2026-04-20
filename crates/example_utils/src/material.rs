@@ -15,7 +15,7 @@ impl Plugin for ExampleMaterialsPlugin {
         embedded_asset!(app, "shaders/vorticity.wgsl");
 
         app.add_plugins((
-            Material2dPlugin::<BackGroundMaterial>::default(),
+            Material2dPlugin::<BackgroundMaterial>::default(),
             Material2dPlugin::<LevelsetMaterial>::default(),
             Material2dPlugin::<VorticityMaterial>::default(),
         ));
@@ -23,9 +23,9 @@ impl Plugin for ExampleMaterialsPlugin {
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub struct BackGroundMaterial {}
+pub struct BackgroundMaterial {}
 
-impl Material2d for BackGroundMaterial {
+impl Material2d for BackgroundMaterial {
     fn fragment_shader() -> ShaderRef {
         ShaderRef::Path(
             AssetPath::from_path_buf(embedded_path!("shaders/background.wgsl"))

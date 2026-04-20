@@ -26,7 +26,7 @@ use bevy_eulerian_fluid::{
 };
 use example_utils::{
     fps_counter::FpsCounterPlugin,
-    material::{BackGroundMaterial, ExampleMaterialsPlugin, LevelsetMaterial},
+    material::{BackgroundMaterial, ExampleMaterialsPlugin, LevelsetMaterial},
     mouse_motion,
     overlay::OverlayPlugin,
     scene_helper::spawn_walls,
@@ -114,7 +114,7 @@ fn setup_scene(mut commands: Commands) {
 fn setup_fluid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<BackGroundMaterial>>,
+    mut materials: ResMut<Assets<BackgroundMaterial>>,
 ) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands
@@ -168,7 +168,7 @@ fn setup_fluid(
             commands.spawn((
                 Mesh2d(meshes.add(fluid_domain_rectangle)),
                 Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
-                MeshMaterial2d(materials.add(BackGroundMaterial {})),
+                MeshMaterial2d(materials.add(BackgroundMaterial {})),
             ));
         });
 }
