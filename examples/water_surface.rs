@@ -6,25 +6,23 @@ use bevy::{
     camera::ScalingMode,
     prelude::*,
     render::{
-        render_resource::AsBindGroup,
         settings::{Backends, WgpuSettings},
         RenderPlugin,
     },
-    shader::ShaderRef,
-    sprite_render::{Material2d, Material2dPlugin},
 };
 
 use bevy_eulerian_fluid::{
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
-    projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
+use example_utils::{
+    fps_counter::FpsCounterPlugin,
+    material::{ExampleMaterialsPlugin, LevelsetMaterial},
+    mouse_motion,
+};
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 360;
 const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 10.0;
 
@@ -40,15 +38,6 @@ fn main() {
 
     app.add_plugins(
         DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: (WIDTH, HEIGHT).into(),
-                    title: "bevy fluid".to_string(),
-                    fit_canvas_to_parent: true,
-                    ..default()
-                }),
-                ..default()
-            })
             .set(RenderPlugin {
                 render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
                     backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
@@ -63,8 +52,7 @@ fn main() {
     )
     .add_plugins(FluidPlugin::new(LENGTH_UNIT))
     .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins(FpsCounterPlugin)
-    .add_plugins(Material2dPlugin::<CustomMaterial>::default())
+    .add_plugins((FpsCounterPlugin, ExampleMaterialsPlugin))
     .add_systems(Startup, setup_scene)
     .add_systems(Update, on_fluid_setup)
     .add_systems(Update, mouse_motion);
@@ -76,8 +64,9 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
-            scaling_mode: ScalingMode::FixedHorizontal {
-                viewport_width: WIDTH as f32,
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 2.4 * SIZE.x as f32,
+                min_height: 1.2 * SIZE.y as f32,
             },
             ..OrthographicProjection::default_2d()
         }),
@@ -91,7 +80,6 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
                 gravity: Vec2::Y * 9.8,
                 size: SIZE,
             },
-            ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
             Mesh2d(mesh),
             Transform::default()
                 .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
@@ -113,13 +101,13 @@ fn on_fluid_setup(
     mut commands: Commands,
     query: Query<(Entity, &FluidTextures), Added<FluidTextures>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<CustomMaterial>>,
+    mut materials: ResMut<Assets<LevelsetMaterial>>,
     mut velocity_materials: ResMut<Assets<VelocityMaterial>>,
 ) {
     for (entity, fluid_textures) in &query {
-        let material = materials.add(CustomMaterial {
+        let material = materials.add(LevelsetMaterial {
             levelset: fluid_textures.levelset_air.clone(),
-            base_color: Vec3::new(0.0, 0.0, 1.0),
+            base_color: Vec3::new(0.5, 0.78, 0.83),
         });
 
         commands.entity(entity).insert(MeshMaterial2d(material));
@@ -148,20 +136,5 @@ fn on_fluid_setup(
             },
             TextColor::WHITE,
         ));
-    }
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-struct CustomMaterial {
-    #[texture(0)]
-    #[sampler(1)]
-    pub levelset: Handle<Image>,
-    #[uniform(2)]
-    pub base_color: Vec3,
-}
-
-impl Material2d for CustomMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/draw_levelset.wgsl".into()
     }
 }

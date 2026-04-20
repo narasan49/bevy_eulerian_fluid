@@ -3,6 +3,7 @@ extern crate bevy_eulerian_fluid;
 use avian2d::PhysicsPlugins;
 use bevy::{
     asset::AssetMetaCheck,
+    camera::ScalingMode,
     prelude::*,
     render::{
         settings::{Backends, RenderCreation, WgpuSettings},
@@ -17,8 +18,6 @@ use bevy_eulerian_fluid::{
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 360;
 const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
@@ -33,15 +32,6 @@ fn main() {
     let _app = App::new()
         .add_plugins(
             DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        resolution: (WIDTH, HEIGHT).into(),
-                        title: "fluid component".to_string(),
-                        fit_canvas_to_parent: true,
-                        ..default()
-                    }),
-                    ..default()
-                })
                 .set(RenderPlugin {
                     render_creation: RenderCreation::Automatic(WgpuSettings {
                         backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
@@ -63,16 +53,26 @@ fn main() {
 }
 
 fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    info!("initialize scene.");
-    commands.spawn(Camera2d);
-
     let size = 128u32;
-    for i in 0..4 {
-        for j in 0..2 {
+    let nx = 4;
+    let ny = 2;
+    commands.spawn((
+        Camera2d,
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 1.2 * (size * nx) as f32,
+                min_height: 1.2 * (size * ny) as f32,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+    ));
+
+    for i in 0..nx {
+        for j in 0..ny {
             let mesh = meshes.add(Rectangle::from_size(Vec2::splat(size as f32)));
             let translation = Vec3::new(
                 (i * size) as f32 * 1.1 - size as f32 * 1.6,
-                (j * size) as f32 * 1.1 - size as f32 * 0.8,
+                (j * size) as f32 * 1.1 - size as f32 * 0.6,
                 0.0,
             );
             commands
@@ -91,7 +91,7 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
                         mode: FluidSourceMode::Source,
                     },
                     FluidSourceShape::Aabb {
-                        half_size: Vec2::splat(128.0),
+                        half_size: Vec2::splat(size as f32),
                     },
                     FluidSourceOneshot,
                     Transform::default(),
