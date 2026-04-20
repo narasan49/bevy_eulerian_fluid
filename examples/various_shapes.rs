@@ -121,14 +121,6 @@ fn setup_fluid(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<BackGroundMaterial>>,
 ) {
-    spawn_fluid(&mut commands, &mut meshes, &mut materials);
-}
-
-fn spawn_fluid(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<BackGroundMaterial>>,
-) {
     let fluid_domain_rectangle = Rectangle::from_size(SIZE.as_vec2());
     commands
         .spawn((
@@ -165,15 +157,6 @@ fn setup_rigid_bodies(
     mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    asset_server: Res<AssetServer>,
-) {
-    spawn_rigid_bodies(&mut commands, &mut materials, &mut meshes, asset_server);
-}
-
-fn spawn_rigid_bodies(
-    commands: &mut Commands,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
-    meshes: &mut ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
 ) {
     let circle = Circle::new(50.0);
@@ -270,10 +253,6 @@ fn reset_scene(
     mut commands: Commands,
     q_rigid_bodies: Query<(Entity, &RigidBody), With<RigidBody>>,
     q_fluids: Query<Entity, With<FluidSettings>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut background_materials: ResMut<Assets<BackGroundMaterial>>,
-    asset_server: Res<AssetServer>,
 ) {
     for (entity, rigid_body) in &q_rigid_bodies {
         if *rigid_body == RigidBody::Dynamic {
@@ -283,9 +262,8 @@ fn reset_scene(
     for entity in &q_fluids {
         commands.entity(entity).despawn();
     }
-
-    spawn_fluid(&mut commands, &mut meshes, &mut background_materials);
-    spawn_rigid_bodies(&mut commands, &mut materials, &mut meshes, asset_server);
+    commands.run_system_cached(setup_fluid);
+    commands.run_system_cached(setup_rigid_bodies);
 }
 
 fn on_fluid_setup(
