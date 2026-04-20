@@ -3,6 +3,7 @@ extern crate bevy_eulerian_fluid;
 use avian2d::PhysicsPlugins;
 use bevy::{
     asset::AssetMetaCheck,
+    camera::ScalingMode,
     prelude::*,
     render::{
         settings::{Backends, WgpuSettings},
@@ -18,8 +19,7 @@ use bevy_eulerian_fluid::{
 };
 use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion};
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 360;
+const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
@@ -34,15 +34,6 @@ fn main() {
 
     app.add_plugins(
         DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: (WIDTH, HEIGHT).into(),
-                    title: "bevy fluid".to_string(),
-                    fit_canvas_to_parent: true,
-                    ..default()
-                }),
-                ..default()
-            })
             .set(RenderPlugin {
                 render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
                     backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
@@ -66,16 +57,25 @@ fn main() {
 }
 
 fn setup_scene(mut commands: Commands) {
-    commands.spawn(Camera2d);
+    commands.spawn((
+        Camera2d,
+        Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 1.2 * SIZE.x as f32,
+                min_height: 1.2 * SIZE.y as f32,
+            },
+            ..OrthographicProjection::default_2d()
+        }),
+    ));
 
     commands
         .spawn((
             FluidSettings {
                 rho: 99.7, // water density in 2D
                 gravity: Vec2::ZERO,
-                size: UVec2::splat(256),
+                size: SIZE,
             },
-            Transform::default().with_scale(Vec3::splat(256.0)),
+            Transform::default().with_scale(SIZE.as_vec2().extend(1.0)),
         ))
         .with_child((
             FluidSource {
@@ -83,7 +83,7 @@ fn setup_scene(mut commands: Commands) {
                 mode: FluidSourceMode::Source,
             },
             FluidSourceShape::Aabb {
-                half_size: Vec2::splat(128.0),
+                half_size: SIZE.as_vec2() * 0.5,
             },
             FluidSourceOneshot,
             Transform::default(),
