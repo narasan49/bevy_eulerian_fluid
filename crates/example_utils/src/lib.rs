@@ -1,6 +1,7 @@
 pub mod fps_counter;
 pub mod material;
 pub mod overlay;
+pub mod scene_helper;
 
 use bevy::{camera::Projection, input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 use bevy_eulerian_fluid::{

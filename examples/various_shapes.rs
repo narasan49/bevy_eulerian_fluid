@@ -24,6 +24,7 @@ use example_utils::{
     material::{BackGroundMaterial, ExampleMaterialsPlugin, LevelsetMaterial},
     mouse_motion,
     overlay::OverlayPlugin,
+    scene_helper::spawn_walls,
 };
 
 const WIDTH: u32 = 640;
@@ -77,7 +78,12 @@ fn main() {
     .insert_resource(Gravity(Vector::NEG_Y * 9.8))
     .add_systems(
         Startup,
-        (setup_scene, setup_fluid, setup_walls, setup_rigid_bodies),
+        (
+            setup_scene,
+            setup_fluid,
+            spawn_walls::<{ SIZE.x }, { SIZE.y }>,
+            setup_rigid_bodies,
+        ),
     )
     .add_systems(Update, on_fluid_setup)
     .add_systems(Update, mouse_motion)
@@ -152,44 +158,6 @@ fn spawn_fluid(
         Mesh2d(meshes.add(fluid_domain_rectangle)),
         Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
         MeshMaterial2d(materials.add(BackGroundMaterial {})),
-    ));
-}
-
-fn setup_walls(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    let wall_thickness = 10.0;
-    let wall_rect = Rectangle::new(wall_thickness, SIZE.y as f32);
-    let wall_mesh = meshes.add(wall_rect);
-    let wall_material = materials.add(Color::srgb(0.5, 0.5, 0.5));
-
-    let floor_rect = Rectangle::new(SIZE.x as f32 + 2.0 * wall_thickness, wall_thickness);
-    let floor_mesh = meshes.add(floor_rect);
-
-    commands.spawn((
-        Mesh2d(wall_mesh.clone()),
-        MeshMaterial2d(wall_material.clone()),
-        Transform::from_xyz((SIZE.x as f32 + wall_thickness) * 0.5, 0.0, 0.0),
-        RigidBody::Static,
-        wall_rect.collider(),
-    ));
-
-    commands.spawn((
-        Mesh2d(wall_mesh.clone()),
-        MeshMaterial2d(wall_material.clone()),
-        Transform::from_xyz((SIZE.x as f32 + wall_thickness) * -0.5, 0.0, 0.0),
-        RigidBody::Static,
-        wall_rect.collider(),
-    ));
-
-    commands.spawn((
-        Mesh2d(floor_mesh.clone()),
-        MeshMaterial2d(wall_material.clone()),
-        Transform::from_xyz(0.0, (SIZE.y as f32 + wall_thickness) * -0.5, 0.0),
-        RigidBody::Static,
-        floor_rect.collider(),
     ));
 }
 
