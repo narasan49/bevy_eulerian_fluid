@@ -27,8 +27,6 @@ use example_utils::{
     scene_helper::spawn_walls,
 };
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 360;
 const SIZE: UVec2 = UVec2::new(512, 256);
 const LENGTH_UNIT: f32 = 50.0;
 
@@ -44,15 +42,6 @@ fn main() {
 
     app.add_plugins(
         DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: (WIDTH, HEIGHT).into(),
-                    title: "bevy fluid".to_string(),
-                    fit_canvas_to_parent: true,
-                    ..default()
-                }),
-                ..default()
-            })
             .set(RenderPlugin {
                 render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
                     backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
@@ -99,8 +88,9 @@ fn setup_scene(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
-            scaling_mode: ScalingMode::FixedHorizontal {
-                viewport_width: WIDTH as f32,
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 1.2 * SIZE.x as f32,
+                min_height: 1.2 * SIZE.y as f32,
             },
             ..OrthographicProjection::default_2d()
         }),

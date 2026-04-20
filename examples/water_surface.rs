@@ -14,7 +14,6 @@ use bevy::{
 use bevy_eulerian_fluid::{
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
-    projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -24,8 +23,6 @@ use example_utils::{
     mouse_motion,
 };
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 360;
 const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 10.0;
 
@@ -41,15 +38,6 @@ fn main() {
 
     app.add_plugins(
         DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    resolution: (WIDTH, HEIGHT).into(),
-                    title: "bevy fluid".to_string(),
-                    fit_canvas_to_parent: true,
-                    ..default()
-                }),
-                ..default()
-            })
             .set(RenderPlugin {
                 render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
                     backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
@@ -76,8 +64,9 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
-            scaling_mode: ScalingMode::FixedHorizontal {
-                viewport_width: WIDTH as f32,
+            scaling_mode: ScalingMode::AutoMin {
+                min_width: 2.4 * SIZE.x as f32,
+                min_height: 1.2 * SIZE.y as f32,
             },
             ..OrthographicProjection::default_2d()
         }),
@@ -91,7 +80,6 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
                 gravity: Vec2::Y * 9.8,
                 size: SIZE,
             },
-            ProjectionMethod::GaussSeidel(GaussSeidelConfig { num_iterations: 20 }),
             Mesh2d(mesh),
             Transform::default()
                 .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
@@ -119,7 +107,7 @@ fn on_fluid_setup(
     for (entity, fluid_textures) in &query {
         let material = materials.add(LevelsetMaterial {
             levelset: fluid_textures.levelset_air.clone(),
-            base_color: Vec3::new(0.0, 0.0, 1.0),
+            base_color: Vec3::new(0.5, 0.78, 0.83),
         });
 
         commands.entity(entity).insert(MeshMaterial2d(material));
