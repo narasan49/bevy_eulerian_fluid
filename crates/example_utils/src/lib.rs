@@ -53,7 +53,7 @@ pub fn mouse_motion(
                 .iter()
                 .map(|touch| {
                     screen_to_mesh_coordinate(
-                        touch.position() - transform.translation.xy() * Vec2::new(1.0, -1.0),
+                        touch.position(),
                         q_window.single().unwrap(),
                         q_camera.single().unwrap(),
                         settings.size.as_vec2(),
