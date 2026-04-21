@@ -1,4 +1,4 @@
-use bevy::{color::palettes, input::common_conditions::input_just_pressed, prelude::*};
+use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use bevy_eulerian_fluid::{
     settings::FluidSettings,
     velocity_overlay::{
