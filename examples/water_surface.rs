@@ -1,15 +1,7 @@
 extern crate bevy_eulerian_fluid;
 
 use avian2d::PhysicsPlugins;
-use bevy::{
-    asset::AssetMetaCheck,
-    camera::ScalingMode,
-    prelude::*,
-    render::{
-        settings::{Backends, WgpuSettings},
-        RenderPlugin,
-    },
-};
+use bevy::{camera::ScalingMode, prelude::*};
 
 use bevy_eulerian_fluid::{
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
@@ -20,7 +12,7 @@ use bevy_eulerian_fluid::{
 use example_utils::{
     fps_counter::FpsCounterPlugin,
     material::{ExampleMaterialsPlugin, LevelsetMaterial},
-    mouse_motion,
+    mouse_motion, ExampleDefaultPlugins,
 };
 
 const SIZE: UVec2 = UVec2::splat(256);
@@ -28,34 +20,14 @@ const LENGTH_UNIT: f32 = 10.0;
 
 fn main() {
     let mut app = App::new();
-    // [workaround] Asset meta files cannot be found on browser.
-    // see also: https://github.com/bevyengine/bevy/issues/10157
-    let meta_check = if cfg!(target_arch = "wasm32") {
-        AssetMetaCheck::Never
-    } else {
-        AssetMetaCheck::Always
-    };
 
-    app.add_plugins(
-        DefaultPlugins
-            .set(RenderPlugin {
-                render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
-                    backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
-                    ..default()
-                }),
-                ..default()
-            })
-            .set(AssetPlugin {
-                meta_check,
-                ..default()
-            }),
-    )
-    .add_plugins(FluidPlugin::new(LENGTH_UNIT))
-    .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins((FpsCounterPlugin, ExampleMaterialsPlugin))
-    .add_systems(Startup, setup_scene)
-    .add_systems(Update, on_fluid_setup)
-    .add_systems(Update, mouse_motion);
+    app.add_plugins(ExampleDefaultPlugins)
+        .add_plugins(FluidPlugin::new(LENGTH_UNIT))
+        .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
+        .add_plugins((FpsCounterPlugin, ExampleMaterialsPlugin))
+        .add_systems(Startup, setup_scene)
+        .add_systems(Update, on_fluid_setup)
+        .add_systems(Update, mouse_motion);
 
     app.run();
 }
