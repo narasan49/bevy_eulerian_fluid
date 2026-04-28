@@ -1,7 +1,7 @@
 extern crate bevy_eulerian_fluid;
 
 use avian2d::PhysicsPlugins;
-use bevy::{camera::ScalingMode, prelude::*};
+use bevy::{camera::ScalingMode, input::common_conditions::input_just_pressed, prelude::*};
 
 use bevy_eulerian_fluid::{
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
@@ -25,14 +25,18 @@ fn main() {
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
         .add_plugins((FpsCounterPlugin, ExampleMaterialsPlugin))
-        .add_systems(Startup, setup_scene)
+        .add_systems(Startup, (setup_scene, setup_fluid))
         .add_systems(Update, on_fluid_setup)
-        .add_systems(Update, mouse_motion);
+        .add_systems(Update, mouse_motion)
+        .add_systems(
+            Update,
+            reset_scene.run_if(input_just_pressed(KeyCode::KeyR)),
+        );
 
     app.run();
 }
 
-fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+fn setup_scene(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
@@ -43,7 +47,9 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
             ..OrthographicProjection::default_2d()
         }),
     ));
+}
 
+fn setup_fluid(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let mesh = meshes.add(Rectangle::from_size(SIZE.as_vec2()));
     commands
         .spawn((
@@ -109,4 +115,11 @@ fn on_fluid_setup(
             TextColor::WHITE,
         ));
     }
+}
+
+fn reset_scene(mut commands: Commands, q_fluids: Query<Entity, With<FluidSettings>>) {
+    for entity in &q_fluids {
+        commands.entity(entity).despawn();
+    }
+    commands.run_system_cached(setup_fluid);
 }
