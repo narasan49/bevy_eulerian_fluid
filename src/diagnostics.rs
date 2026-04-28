@@ -6,3 +6,5 @@ pub mod min_velocity;
 pub mod plugin;
 pub mod render_node;
 pub mod ui;
+
+pub use plugin::FluidDiagnosticsPlugin;
