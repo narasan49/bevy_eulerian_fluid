@@ -28,9 +28,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
-      - name: build
-        run: |
-          cargo build --release
-      - name: test
+      - name: build & test
         run: |
           cargo test
