@@ -2,6 +2,7 @@ use bevy::{
     ecs::query::QueryData,
     prelude::*,
     render::{
+        diagnostic::RecordDiagnostics,
         render_graph::{self, RenderLabel},
         render_resource::{ComputePass, ComputePassDescriptor, PipelineCache},
     },
@@ -275,12 +276,14 @@ impl render_graph::Node for EulerFluidNode {
                             );
                         }
                         FluidStatus::Initialized => {
+                            let diagnostics = render_context.diagnostic_recorder();
                             let mut pass = render_context.command_encoder().begin_compute_pass(
                                 &ComputePassDescriptor {
                                     label: Some("Eulerian fluid"),
                                     ..default()
                                 },
                             );
+                            let pass_span = diagnostics.pass_span(&mut pass, "eulerian_fluid");
                             let num_workgroups_grid =
                                 (fluid_settings.size / WORKGROUP_SIZE).extend(1);
 
@@ -458,6 +461,8 @@ impl render_graph::Node for EulerFluidNode {
                                 fluid_to_solid_forces_pipeline,
                                 fluid_settings.size,
                             );
+
+                            pass_span.end(&mut pass);
                         }
                         _ => {}
                     }
