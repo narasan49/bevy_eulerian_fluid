@@ -28,7 +28,7 @@ fn on_fluid_spawn<const I: u32>(
             VelocityOverlay {
                 max_clamp_speed: 20.0,
                 bin_size: UVec2::splat(I),
-                color: LinearRgba::WHITE,
+                color: LinearRgba::rgb(1.0, 0.549, 0.0),
             },
             InitialOverlayVisibility(Visibility::Hidden),
         ));

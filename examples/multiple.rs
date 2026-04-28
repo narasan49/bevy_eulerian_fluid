@@ -1,49 +1,22 @@
 extern crate bevy_eulerian_fluid;
 
 use avian2d::PhysicsPlugins;
-use bevy::{
-    asset::AssetMetaCheck,
-    camera::ScalingMode,
-    prelude::*,
-    render::{
-        settings::{Backends, RenderCreation, WgpuSettings},
-        RenderPlugin,
-    },
-};
+use bevy::{camera::ScalingMode, prelude::*};
 use bevy_eulerian_fluid::{
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin};
+use example_utils::{
+    fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin, ExampleDefaultPlugins,
+};
 
 const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
-    // [workaround] Asset meta files cannot be found on browser.
-    // see also: https://github.com/bevyengine/bevy/issues/10157
-    let meta_check = if cfg!(target_arch = "wasm32") {
-        AssetMetaCheck::Never
-    } else {
-        AssetMetaCheck::Always
-    };
-
-    let _app = App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(RenderPlugin {
-                    render_creation: RenderCreation::Automatic(WgpuSettings {
-                        backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(AssetPlugin {
-                    meta_check,
-                    ..default()
-                }),
-        )
+    App::new()
+        .add_plugins(ExampleDefaultPlugins)
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
         .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
