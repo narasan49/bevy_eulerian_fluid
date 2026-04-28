@@ -3,16 +3,7 @@ use avian2d::{
     prelude::{ColliderDensity, Gravity, IntoCollider, RigidBody},
     PhysicsPlugins,
 };
-use bevy::{
-    asset::{io::web::WebAssetPlugin, AssetMetaCheck},
-    camera::ScalingMode,
-    input::common_conditions::input_just_pressed,
-    prelude::*,
-    render::{
-        settings::{Backends, WgpuSettings},
-        RenderPlugin,
-    },
-};
+use bevy::{camera::ScalingMode, input::common_conditions::input_just_pressed, prelude::*};
 
 use bevy_eulerian_fluid::{
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
@@ -25,6 +16,7 @@ use example_utils::{
     mouse_motion,
     overlay::OverlayPlugin,
     scene_helper::spawn_walls,
+    ExampleDefaultPlugins,
 };
 
 const SIZE: UVec2 = UVec2::new(512, 256);
@@ -32,54 +24,30 @@ const LENGTH_UNIT: f32 = 50.0;
 
 fn main() {
     let mut app = App::new();
-    // [workaround] Asset meta files cannot be found on browser.
-    // see also: https://github.com/bevyengine/bevy/issues/10157
-    let meta_check = if cfg!(target_arch = "wasm32") {
-        AssetMetaCheck::Never
-    } else {
-        AssetMetaCheck::Always
-    };
-
-    app.add_plugins(
-        DefaultPlugins
-            .set(RenderPlugin {
-                render_creation: bevy::render::settings::RenderCreation::Automatic(WgpuSettings {
-                    backends: Some(Backends::DX12 | Backends::BROWSER_WEBGPU),
-                    ..default()
-                }),
-                ..default()
-            })
-            .set(AssetPlugin {
-                meta_check,
-                ..default()
-            })
-            .set(WebAssetPlugin {
-                silence_startup_warning: true,
-            }),
-    )
-    .add_plugins(FluidPlugin::new(LENGTH_UNIT))
-    .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-    .add_plugins((
-        FpsCounterPlugin,
-        ExampleMaterialsPlugin,
-        OverlayPlugin::<16>,
-    ))
-    .insert_resource(Gravity(Vector::NEG_Y * 9.8))
-    .add_systems(
-        Startup,
-        (
-            setup_scene,
-            setup_fluid,
-            spawn_walls::<{ SIZE.x }, { SIZE.y }>,
-            setup_rigid_bodies,
-        ),
-    )
-    .add_systems(Update, on_fluid_setup)
-    .add_systems(Update, mouse_motion)
-    .add_systems(
-        Update,
-        reset_scene.run_if(input_just_pressed(KeyCode::KeyR)),
-    );
+    app.add_plugins(ExampleDefaultPlugins)
+        .add_plugins(FluidPlugin::new(LENGTH_UNIT))
+        .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
+        .add_plugins((
+            FpsCounterPlugin,
+            ExampleMaterialsPlugin,
+            OverlayPlugin::<16>,
+        ))
+        .insert_resource(Gravity(Vector::NEG_Y * 9.8))
+        .add_systems(
+            Startup,
+            (
+                setup_scene,
+                setup_fluid,
+                spawn_walls::<{ SIZE.x }, { SIZE.y }>,
+                setup_rigid_bodies,
+            ),
+        )
+        .add_systems(Update, on_fluid_setup)
+        .add_systems(Update, mouse_motion)
+        .add_systems(
+            Update,
+            reset_scene.run_if(input_just_pressed(KeyCode::KeyR)),
+        );
 
     app.run();
 }
