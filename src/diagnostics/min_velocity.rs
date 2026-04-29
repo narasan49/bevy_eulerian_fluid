@@ -47,12 +47,13 @@ pub(crate) struct MinVelocityResource {
 }
 
 impl MinVelocityResource {
-    pub fn new(buffers: &mut Assets<ShaderStorageBuffer>, fluid_textures: &FluidTextures) -> Self {
-        let partial_sums = buffers.add(ShaderStorageBuffer::from(vec![
-            0.0;
-            WG_SIZE.element_product()
-                as usize
-        ]));
+    pub fn new(
+        buffers: &mut Assets<ShaderStorageBuffer>,
+        fluid_textures: &FluidTextures,
+        grid_size: UVec2,
+    ) -> Self {
+        let size_partial_sums = (grid_size / WG_SIZE).element_product() as usize;
+        let partial_sums = buffers.add(ShaderStorageBuffer::from(vec![0.0; size_partial_sums]));
         let mut sum_buffer = ShaderStorageBuffer::from(0.0);
         sum_buffer.buffer_description.usage |= BufferUsages::COPY_SRC;
         let sum = buffers.add(sum_buffer);

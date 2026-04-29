@@ -35,10 +35,13 @@ impl Plugin for FluidDiagnosticsPlugin {
             FluidComputePassPlugin::<MaxVelocityPass>::default(),
             ExtractComponentPlugin::<GridSize>::default(),
             FrameTimeDiagnosticsPlugin::default(),
-            RenderDiagnosticsPlugin,
         ))
         .add_systems(Startup, setup_diagnostics_ui)
         .add_systems(Update, (on_fluid_setup, update_diagnostics_ui));
+
+        if !app.is_plugin_added::<RenderDiagnosticsPlugin>() {
+            app.add_plugins(RenderDiagnosticsPlugin);
+        }
 
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
@@ -58,7 +61,8 @@ fn on_fluid_setup(
     query: Query<(Entity, &FluidTextures, &FluidSettings), Added<FluidTextures>>,
 ) {
     for (entity, fluid_textures, settings) in &query {
-        let calculate_volume_resource = CalculateVolumeResource::new(&mut buffers, fluid_textures);
+        let calculate_volume_resource =
+            CalculateVolumeResource::new(&mut buffers, fluid_textures, settings.size);
         let volume_entity = commands
             .spawn((
                 calculate_volume_resource.clone(),
@@ -68,7 +72,8 @@ fn on_fluid_setup(
             .observe(volume_readback)
             .id();
 
-        let min_velocity_resource = MinVelocityResource::new(&mut buffers, fluid_textures);
+        let min_velocity_resource =
+            MinVelocityResource::new(&mut buffers, fluid_textures, settings.size);
         let min_velocity_entity = commands
             .spawn((
                 min_velocity_resource.clone(),
@@ -78,7 +83,8 @@ fn on_fluid_setup(
             .observe(min_velocity_readback)
             .id();
 
-        let max_velocity_resource = MaxVelocityResource::new(&mut buffers, fluid_textures);
+        let max_velocity_resource =
+            MaxVelocityResource::new(&mut buffers, fluid_textures, settings.size);
         let max_velocity_entity = commands
             .spawn((
                 max_velocity_resource.clone(),
