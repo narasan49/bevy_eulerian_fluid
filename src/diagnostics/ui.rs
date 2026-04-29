@@ -32,8 +32,8 @@ pub(crate) fn setup_diagnostics_ui(mut commands: Commands) {
         ("Resolution: ", ItemMarker::Resolution),
         ("Projection Method: ", ItemMarker::ProjectionMethod),
         ("ReinitLevelSet Method: ", ItemMarker::ReinitLevelSetMethod),
-        ("GPU (ms): ", ItemMarker::ComputeShader),
-        ("Approx Volume (m^2): ", ItemMarker::Volume),
+        ("GPU (ms):               ", ItemMarker::ComputeShader),
+        ("Approx Volume (m^2):    ", ItemMarker::Volume),
         ("Min Velocity Mag (m/s): ", ItemMarker::MinVelocity),
         ("Max Velocity Mag (m/s): ", ItemMarker::MaxVelocity),
     ];
@@ -121,7 +121,7 @@ pub(crate) fn update_diagnostics_ui(
                     .get(&diagnostics_path)
                     .and_then(Diagnostic::average)
                 {
-                    **text = format!("{gpu:0.4}");
+                    **text = format!("{:>10.4}", gpu);
                 } else {
                     #[cfg(not(target_arch = "wasm32"))]
                     {
@@ -135,21 +135,21 @@ pub(crate) fn update_diagnostics_ui(
             }
             ItemMarker::Volume => {
                 if let Some(volume) = volume {
-                    **text = format!("{}", volume.0 * grid_length.0 * grid_length.0);
+                    **text = format!("{:>10.4}", volume.0 * grid_length.0 * grid_length.0);
                 } else {
                     **text = "N/A".into();
                 }
             }
             ItemMarker::MinVelocity => {
                 if let Some(min_velocity) = min_velocity {
-                    **text = format!("{}", min_velocity.0 * grid_length.0);
+                    **text = format!("{:>10.4}", min_velocity.0 * grid_length.0);
                 } else {
                     **text = "N/A".into();
                 }
             }
             ItemMarker::MaxVelocity => {
                 if let Some(max_velocity) = max_velocity {
-                    **text = format!("{:0.4}", max_velocity.0 * grid_length.0);
+                    **text = format!("{:>10.4}", max_velocity.0 * grid_length.0);
                 } else {
                     **text = "N/A".into();
                 }
