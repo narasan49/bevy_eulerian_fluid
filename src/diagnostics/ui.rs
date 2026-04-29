@@ -122,7 +122,14 @@ pub(crate) fn update_diagnostics_ui(
                 {
                     **text = format!("{gpu:0.4}");
                 } else {
-                    **text = "N/A".into();
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        **text = "N/A".into();
+                    }
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        **text = "N/A on Web".into();
+                    }
                 }
             }
             ItemMarker::Volume => {
