@@ -3,14 +3,13 @@ extern crate bevy_eulerian_fluid;
 use avian2d::PhysicsPlugins;
 use bevy::{camera::ScalingMode, prelude::*};
 use bevy_eulerian_fluid::{
+    diagnostics::FluidDiagnosticsPlugin,
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{
-    fps_counter::FpsCounterPlugin, mouse_motion, overlay::OverlayPlugin, ExampleDefaultPlugins,
-};
+use example_utils::{mouse_motion, overlay::OverlayPlugin, ExampleDefaultPlugins};
 
 const LENGTH_UNIT: f32 = 50.0;
 
@@ -19,7 +18,7 @@ fn main() {
         .add_plugins(ExampleDefaultPlugins)
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-        .add_plugins((FpsCounterPlugin, OverlayPlugin::<16>))
+        .add_plugins((FluidDiagnosticsPlugin, OverlayPlugin::<16>))
         .add_systems(Startup, setup_scene)
         .add_systems(Update, (mouse_motion, on_fluid_setup))
         .run();
