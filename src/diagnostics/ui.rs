@@ -7,7 +7,7 @@ use crate::{
     diagnostics::component::{FluidMaxVelocityMagnitude, FluidMinVelocityMagnitude, FluidVolume},
     projection::ProjectionMethod,
     reinitialize_levelset::ReinitializeMethod,
-    settings::FluidSettings,
+    settings::{FluidGridLength, FluidSettings},
 };
 
 #[derive(Component, Clone, Copy)]
@@ -33,9 +33,9 @@ pub(crate) fn setup_diagnostics_ui(mut commands: Commands) {
         ("Projection Method: ", ItemMarker::ProjectionMethod),
         ("ReinitLevelSet Method: ", ItemMarker::ReinitLevelSetMethod),
         ("GPU (ms): ", ItemMarker::ComputeShader),
-        ("Volume (Approx): ", ItemMarker::Volume),
-        ("Min Velocity Mag: ", ItemMarker::MinVelocity),
-        ("Max Velocity Mag: ", ItemMarker::MaxVelocity),
+        ("Approx Volume (m^2): ", ItemMarker::Volume),
+        ("Min Velocity Mag (m/s): ", ItemMarker::MinVelocity),
+        ("Max Velocity Mag (m/s): ", ItemMarker::MaxVelocity),
     ];
     commands
         .spawn((
@@ -79,6 +79,7 @@ pub(crate) fn update_diagnostics_ui(
         Option<&FluidMaxVelocityMagnitude>,
     )>,
     diagnostics: Res<DiagnosticsStore>,
+    grid_length: Res<FluidGridLength>,
 ) {
     let (settings, projection, reinit, volume, min_velocity, max_velocity) = fluid_query
         .single()
@@ -134,21 +135,21 @@ pub(crate) fn update_diagnostics_ui(
             }
             ItemMarker::Volume => {
                 if let Some(volume) = volume {
-                    **text = format!("{}", volume.0);
+                    **text = format!("{}", volume.0 * grid_length.0 * grid_length.0);
                 } else {
                     **text = "N/A".into();
                 }
             }
             ItemMarker::MinVelocity => {
                 if let Some(min_velocity) = min_velocity {
-                    **text = format!("{}", min_velocity.0);
+                    **text = format!("{}", min_velocity.0 * grid_length.0);
                 } else {
                     **text = "N/A".into();
                 }
             }
             ItemMarker::MaxVelocity => {
                 if let Some(max_velocity) = max_velocity {
-                    **text = format!("{:0.4}", max_velocity.0);
+                    **text = format!("{:0.4}", max_velocity.0 * grid_length.0);
                 } else {
                     **text = "N/A".into();
                 }
