@@ -32,15 +32,18 @@ pub(crate) fn setup_diagnostics_ui(mut commands: Commands) {
         ("Max Velocity Mag: ", ItemMarker::MaxVelocity),
     ];
     commands
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            flex_direction: FlexDirection::Column,
-            right: Val::Percent(1.0),
-            top: Val::Percent(1.0),
-            bottom: Val::Auto,
-            left: Val::Auto,
-            ..default()
-        })
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                flex_direction: FlexDirection::Column,
+                right: Val::Percent(1.0),
+                top: Val::Percent(1.0),
+                bottom: Val::Auto,
+                left: Val::Auto,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
+        ))
         .with_children(|commands| {
             items.iter().for_each(|(label, marker)| {
                 commands
