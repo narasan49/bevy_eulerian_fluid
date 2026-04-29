@@ -1,6 +1,8 @@
 pub mod gauss_seidel;
 pub mod multi_grid;
 
+use std::fmt::Display;
+
 use bevy::{
     ecs::query::QueryData,
     prelude::*,
@@ -52,6 +54,28 @@ pub enum ProjectionMethod {
 impl Default for ProjectionMethod {
     fn default() -> Self {
         ProjectionMethod::GaussSeidel(GaussSeidelConfig::default())
+    }
+}
+
+impl Display for ProjectionMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProjectionMethod::Jacobi => {
+                write!(f, "Jacobi")
+            }
+            ProjectionMethod::GaussSeidel(gauss_seidel_config) => {
+                write!(f, "Gauss-Seidel({})", gauss_seidel_config.num_iterations)
+            }
+            ProjectionMethod::MultiGrid(multi_grid_config) => {
+                write!(
+                    f,
+                    "Multigrid({}-{}-{})",
+                    multi_grid_config.pre_smooth_config.num_iterations,
+                    multi_grid_config.coarsest_config.num_iterations,
+                    multi_grid_config.post_smooth_config.num_iterations
+                )
+            }
+        }
     }
 }
 

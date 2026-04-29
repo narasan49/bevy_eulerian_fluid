@@ -1,6 +1,8 @@
 pub mod fast_iterative_method;
 pub mod jump_flooding;
 
+use std::fmt::Display;
+
 use bevy::{
     ecs::query::QueryData,
     prelude::*,
@@ -40,6 +42,23 @@ pub enum ReinitializeMethod {
 impl Default for ReinitializeMethod {
     fn default() -> Self {
         ReinitializeMethod::FastIterative(FastIterativeMethodConfig::default())
+    }
+}
+
+impl Display for ReinitializeMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReinitializeMethod::JumpFlooding => {
+                write!(f, "Jump Flooding")
+            }
+            ReinitializeMethod::FastIterative(fast_iterative_method_config) => {
+                write!(
+                    f,
+                    "Fast Iterative({})",
+                    fast_iterative_method_config.num_iterations
+                )
+            }
+        }
     }
 }
 

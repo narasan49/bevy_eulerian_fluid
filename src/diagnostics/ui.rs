@@ -5,6 +5,8 @@ use bevy::{
 
 use crate::{
     diagnostics::component::{FluidMaxVelocityMagnitude, FluidMinVelocityMagnitude, FluidVolume},
+    projection::ProjectionMethod,
+    reinitialize_levelset::ReinitializeMethod,
     settings::FluidSettings,
 };
 
@@ -13,6 +15,8 @@ pub(crate) enum ItemMarker {
     FPS,
     FrameCount,
     Resolution,
+    ProjectionMethod,
+    ReinitLevelSetMethod,
     ComputeShader,
     Volume,
     MinVelocity,
@@ -26,6 +30,8 @@ pub(crate) fn setup_diagnostics_ui(mut commands: Commands) {
         ("FPS: ", ItemMarker::FPS),
         ("Frame Count: ", ItemMarker::FrameCount),
         ("Resolution: ", ItemMarker::Resolution),
+        ("Projection Method: ", ItemMarker::ProjectionMethod),
+        ("ReinitLevelSet Method: ", ItemMarker::ReinitLevelSetMethod),
         ("GPU (ms): ", ItemMarker::ComputeShader),
         ("Volume (Approx): ", ItemMarker::Volume),
         ("Min Velocity Mag: ", ItemMarker::MinVelocity),
@@ -66,13 +72,15 @@ pub(crate) fn update_diagnostics_ui(
     mut query: Query<(&mut TextSpan, &ItemMarker)>,
     fluid_query: Query<(
         &FluidSettings,
+        &ProjectionMethod,
+        &ReinitializeMethod,
         Option<&FluidVolume>,
         Option<&FluidMinVelocityMagnitude>,
         Option<&FluidMaxVelocityMagnitude>,
     )>,
     diagnostics: Res<DiagnosticsStore>,
 ) {
-    let (settings, volume, min_velocity, max_velocity) = fluid_query
+    let (settings, projection, reinit, volume, min_velocity, max_velocity) = fluid_query
         .single()
         .expect("FluidDiagnostics can work when there is exactly one fluid compoent.");
     for (mut text, marker) in &mut query {
@@ -99,6 +107,12 @@ pub(crate) fn update_diagnostics_ui(
             }
             ItemMarker::Resolution => {
                 **text = format!("{}x{}", settings.size.x, settings.size.y);
+            }
+            ItemMarker::ProjectionMethod => {
+                **text = format!("{}", projection);
+            }
+            ItemMarker::ReinitLevelSetMethod => {
+                **text = format!("{}", reinit);
             }
             ItemMarker::ComputeShader => {
                 let diagnostics_path = DiagnosticPath::new("render/eulerian_fluid/elapsed_gpu");
