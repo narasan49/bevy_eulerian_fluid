@@ -4,12 +4,13 @@ use avian2d::PhysicsPlugins;
 use bevy::{camera::ScalingMode, prelude::*};
 
 use bevy_eulerian_fluid::{
+    diagnostics::FluidDiagnosticsPlugin,
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     material::VelocityMaterial,
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
-use example_utils::{fps_counter::FpsCounterPlugin, mouse_motion, ExampleDefaultPlugins};
+use example_utils::{mouse_motion, ExampleDefaultPlugins};
 
 const SIZE: UVec2 = UVec2::splat(256);
 const LENGTH_UNIT: f32 = 50.0;
@@ -19,7 +20,7 @@ fn main() {
     app.add_plugins(ExampleDefaultPlugins)
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-        .add_plugins(FpsCounterPlugin)
+        .add_plugins(FluidDiagnosticsPlugin)
         .add_systems(Startup, setup_scene)
         .add_systems(Update, on_fluid_setup)
         .add_systems(Update, mouse_motion);

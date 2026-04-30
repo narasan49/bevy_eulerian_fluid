@@ -4,6 +4,7 @@ use avian2d::PhysicsPlugins;
 use bevy::{camera::ScalingMode, input::common_conditions::input_just_pressed, prelude::*};
 
 use bevy_eulerian_fluid::{
+    diagnostics::FluidDiagnosticsPlugin,
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     projection::{multi_grid::MultiGridConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
@@ -23,7 +24,7 @@ fn main() {
     app.add_plugins(ExampleDefaultPlugins)
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
-        .add_plugins(ExampleMaterialsPlugin)
+        .add_plugins((FluidDiagnosticsPlugin, ExampleMaterialsPlugin))
         .add_systems(Startup, (setup_scene, setup_fluid))
         .add_systems(Update, on_fluid_setup)
         .add_systems(Update, mouse_motion)

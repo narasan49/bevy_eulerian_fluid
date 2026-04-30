@@ -1,4 +1,3 @@
-pub mod fps_counter;
 pub mod material;
 pub mod overlay;
 pub mod scene_helper;
