@@ -6,12 +6,12 @@ use avian2d::{
 use bevy::{camera::ScalingMode, input::common_conditions::input_just_pressed, prelude::*};
 
 use bevy_eulerian_fluid::{
+    diagnostics::FluidDiagnosticsPlugin,
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
 use example_utils::{
-    fps_counter::FpsCounterPlugin,
     material::{BackgroundMaterial, ExampleMaterialsPlugin, LevelsetMaterial},
     mouse_motion,
     overlay::OverlayPlugin,
@@ -28,7 +28,7 @@ fn main() {
         .add_plugins(FluidPlugin::new(LENGTH_UNIT))
         .add_plugins(PhysicsPlugins::default().with_length_unit(LENGTH_UNIT))
         .add_plugins((
-            FpsCounterPlugin,
+            FluidDiagnosticsPlugin,
             ExampleMaterialsPlugin,
             OverlayPlugin::<16>,
         ))
