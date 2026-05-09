@@ -8,16 +8,20 @@
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
-@compute @workgroup_size(1, 64, 1)
+@compute @workgroup_size(8, 8, 1)
 fn advect_u(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
-    let idx = vec2<i32>(invocation_id.xy);
+    let idx = invocation_id.xy;
+    let dim = textureDimensions(u0);
+    if any(idx >= dim) {
+        return;
+    }
     // backtrace the velocity at the point (i - 0.5, j).
     let x = vec2<f32>(idx) + vec2<f32>(-0.5, 0.0);
     let backtraced_x: vec2<f32> = runge_kutta(u0, v0, x, constants.dt);
-    let dim = vec2<f32>(textureDimensions(u0));
-    if (!is_inside_domain(backtraced_x, dim)) {
+    let dimf = vec2<f32>(dim);
+    if (!is_inside_domain(backtraced_x, dimf)) {
         let u = textureLoad(u0, idx).x;
         textureStore(u1, idx, vec4<f32>(u, 0.0, 0.0, 0.0));
     } else {
@@ -26,16 +30,20 @@ fn advect_u(
     }
 }
 
-@compute @workgroup_size(64, 1, 1)
+@compute @workgroup_size(8, 8, 1)
 fn advect_v(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
-    let idx = vec2<i32>(invocation_id.xy);
+    let idx = invocation_id.xy;
+    let dim = textureDimensions(v0);
+    if any(idx >= dim) {
+        return;
+    }
     // backtrace the velocity at the point (i, j - 0.5).
     let x = vec2<f32>(idx) + vec2<f32>(0.0, -0.5);
     let backtraced_x: vec2<f32> = runge_kutta(u0, v0, x, constants.dt);
-    let dim = vec2<f32>(textureDimensions(v0));
-    if (!is_inside_domain(backtraced_x, dim)) {
+    let dimf = vec2<f32>(dim);
+    if (!is_inside_domain(backtraced_x, dimf)) {
         let v = textureLoad(v0, idx).x;
         textureStore(v1, idx, vec4<f32>(v, 0.0, 0.0, 0.0));
     } else {

@@ -174,14 +174,33 @@ pub trait DispatchFluidPass {
 
 impl DispatchFluidPass for ComputePass<'_> {
     fn dispatch_center(&mut self, size: UVec2) {
-        self.dispatch_workgroups(size.x / WORKGROUP_SIZE, size.y / WORKGROUP_SIZE, 1);
+        let num = workgroup_size_center(size);
+        self.dispatch_workgroups(num.x, num.y, num.z);
     }
 
     fn dispatch_x_major(&mut self, size: UVec2) {
-        self.dispatch_workgroups(size.x + 1, size.y / WORKGROUP_SIZE / WORKGROUP_SIZE, 1);
+        let num = workgroup_size_x(size);
+        self.dispatch_workgroups(num.x, num.y, num.z);
     }
 
     fn dispatch_y_major(&mut self, size: UVec2) {
-        self.dispatch_workgroups(size.x / WORKGROUP_SIZE / WORKGROUP_SIZE, size.y + 1, 1);
+        let num = workgroup_size_y(size);
+        self.dispatch_workgroups(num.x, num.y, num.z);
     }
+}
+
+pub fn workgroup_size_center(size: UVec2) -> UVec3 {
+    ((size + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE).extend(1)
+}
+
+pub fn workgroup_size_x(size: UVec2) -> UVec3 {
+    ((size + UVec2::X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE).extend(1)
+}
+
+pub fn workgroup_size_y(size: UVec2) -> UVec3 {
+    ((size + UVec2::Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE).extend(1)
+}
+
+pub fn workgroup_size_xy(size: UVec2) -> UVec3 {
+    ((size + UVec2::ONE + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE).extend(1)
 }

@@ -3,11 +3,15 @@
 @group(0) @binding(0) var is_u_valid: texture_storage_2d<r32sint, write>;
 @group(0) @binding(1) var levelset_air: texture_storage_2d<r32float, read>;
 
-@compute @workgroup_size(1, 64, 1)
+@compute @workgroup_size(8, 8, 1)
 fn initialize_u_valid(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let idx = vec2<i32>(invocation_id.xy);
+    let dim = vec2<i32>(textureDimensions(is_u_valid));
+    if any(idx >= dim) {
+        return;
+    }
 
     let level_centers = array<f32, 6>(
         textureLoad(levelset_air, idx + vec2<i32>(-1, -1)).r,

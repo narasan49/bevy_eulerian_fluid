@@ -2,12 +2,15 @@
 @group(0) @binding(1) var in_is_v_valid: texture_storage_2d<r32sint, read>;
 @group(0) @binding(2) var out_is_v_valid: texture_storage_2d<r32sint, write>;
 
-@compute @workgroup_size(64, 1, 1)
+@compute @workgroup_size(8, 8, 1)
 fn extrapolate_v(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let idx = vec2<i32>(invocation_id.xy);
     let dim = vec2<i32>(textureDimensions(in_is_v_valid));
+    if any(idx >= dim) {
+        return;
+    }
     let is_valid = textureLoad(in_is_v_valid, idx).r;
     if (is_valid == 1) {
         textureStore(out_is_v_valid, idx, vec4<i32>(1, 0, 0, 0));
