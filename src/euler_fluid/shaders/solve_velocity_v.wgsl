@@ -12,10 +12,14 @@
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
-@compute @workgroup_size(64, 1, 1)
+@compute @workgroup_size(8, 8, 1)
 fn solve_velocity_v(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
     let x = vec2<i32>(invocation_id.xy);
+    let dim = vec2<i32>(textureDimensions(v0));
+    if any(x >= dim) {
+        return;
+    }
 //  Note: This breaks Neumann boundary condition.
 //  if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(v0)) - 1)) {
 //      textureStore(v0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
