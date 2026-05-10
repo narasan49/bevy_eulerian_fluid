@@ -37,7 +37,10 @@ use crate::{
         reseed::PLSReseedBindGroupsQuery,
     },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
-    pipeline::{DispatchFluidPass, Pipeline, WORKGROUP_SIZE},
+    pipeline::{
+        workgroup_size_center, workgroup_size_x, workgroup_size_xy, workgroup_size_y,
+        DispatchFluidPass, Pipeline,
+    },
     projection::{
         self, gauss_seidel::GaussSeidelPipeline, multi_grid::MultiGridPipelines,
         ProjectionBindGroupsQuery, ProjectionMethod,
@@ -223,11 +226,8 @@ impl render_graph::Node for EulerFluidNode {
                                     ..default()
                                 },
                             );
-                            let num_workgroups_grid =
-                                (fluid_settings.size / WORKGROUP_SIZE).extend(1);
-                            let num_workgroups_x_edge = ((fluid_settings.size + UVec2::X)
-                                / UVec2::new(1, WORKGROUP_SIZE * WORKGROUP_SIZE))
-                            .extend(1);
+                            let num_workgroups_center = workgroup_size_center(fluid_settings.size);
+                            let num_workgroups_xy = workgroup_size_xy(fluid_settings.size);
 
                             let initialize_center_pipeline =
                                 world.resource::<InitializeGridCenterPipeline>();
@@ -235,7 +235,7 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.initialize_center_bind_group.bind_group,
-                                num_workgroups_grid,
+                                num_workgroups_center,
                             );
 
                             let initialize_edge_pipeline =
@@ -244,7 +244,7 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.initialize_edge_bind_group.bind_group,
-                                num_workgroups_x_edge,
+                                num_workgroups_xy,
                             );
 
                             if let Some(pls_init_bind_groups) = pls_init_bind_groups {
@@ -263,7 +263,7 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 &bind_groups.update_fluid_source_bind_groups,
-                                num_workgroups_grid,
+                                num_workgroups_center,
                             );
 
                             reinitialize_levelset::dispatch(
@@ -284,8 +284,7 @@ impl render_graph::Node for EulerFluidNode {
                                 },
                             );
                             let pass_span = diagnostics.pass_span(&mut pass, "eulerian_fluid");
-                            let num_workgroups_grid =
-                                (fluid_settings.size / WORKGROUP_SIZE).extend(1);
+                            let num_workgroups_grid = workgroup_size_center(fluid_settings.size);
 
                             let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                             let obstacles_bind_groups =
@@ -544,6 +543,8 @@ fn extrapolate_velocity(
     extrapolate_velocity_pipeline: &ExtrapolateVelocityPipeline,
     size: UVec2,
 ) {
+    let num_workgroups_u = workgroup_size_x(size);
+    let num_workgroups_v = workgroup_size_y(size);
     pass.push_debug_group("Extrapolate velocity");
     let initialize_u_valid_pipeline = pipeline_cache
         .get_compute_pipeline(extrapolate_velocity_pipeline.initialize_u_valid_pipeline)
@@ -564,7 +565,7 @@ fn extrapolate_velocity(
         &extrapolate_velocity_bind_groups.initialize_u_valid_bind_group,
         &[],
     );
-    pass.dispatch_x_major(size);
+    pass.dispatch_workgroups(num_workgroups_u.x, num_workgroups_u.y, num_workgroups_u.z);
 
     pass.set_pipeline(&initialize_v_valid_pipeline);
     pass.set_bind_group(
@@ -572,7 +573,7 @@ fn extrapolate_velocity(
         &extrapolate_velocity_bind_groups.initialize_v_valid_bind_group,
         &[],
     );
-    pass.dispatch_y_major(size);
+    pass.dispatch_workgroups(num_workgroups_v.x, num_workgroups_v.y, num_workgroups_v.z);
 
     for _ in 0..(10 / 2) {
         pass.set_pipeline(&extrapolate_u_pipeline);
@@ -581,13 +582,14 @@ fn extrapolate_velocity(
             &extrapolate_velocity_bind_groups.extrapolate_u_bind_group,
             &[],
         );
-        pass.dispatch_x_major(size);
+        pass.dispatch_workgroups(num_workgroups_u.x, num_workgroups_u.y, num_workgroups_u.z);
+
         pass.set_bind_group(
             0,
             &extrapolate_velocity_bind_groups.extrapolate_u_reverse_bind_group,
             &[],
         );
-        pass.dispatch_x_major(size);
+        pass.dispatch_workgroups(num_workgroups_u.x, num_workgroups_u.y, num_workgroups_u.z);
 
         pass.set_pipeline(&extrapolate_v_pipeline);
         pass.set_bind_group(
@@ -595,13 +597,13 @@ fn extrapolate_velocity(
             &extrapolate_velocity_bind_groups.extrapolate_v_bind_group,
             &[],
         );
-        pass.dispatch_y_major(size);
+        pass.dispatch_workgroups(num_workgroups_v.x, num_workgroups_v.y, num_workgroups_v.z);
         pass.set_bind_group(
             0,
             &extrapolate_velocity_bind_groups.extrapolate_v_reverse_bind_group,
             &[],
         );
-        pass.dispatch_y_major(size);
+        pass.dispatch_workgroups(num_workgroups_v.x, num_workgroups_v.y, num_workgroups_v.z);
     }
 
     pass.pop_debug_group();

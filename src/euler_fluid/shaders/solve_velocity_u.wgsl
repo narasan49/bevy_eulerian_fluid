@@ -12,10 +12,14 @@
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
-@compute @workgroup_size(1, 64, 1)
+@compute @workgroup_size(8, 8, 1)
 fn solve_velocity_u(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let factor = constants.dt / (constants.dx * constants.rho);
     let x = vec2<i32>(invocation_id.xy);
+    let dim = vec2<i32>(textureDimensions(u0));
+    if any(x >= dim) {
+        return;
+    }
 //  if (any(x == vec2<i32>(0)) || any(x == vec2<i32>(textureDimensions(u0)) - 1)) {
 //      textureStore(u0, x, vec4<f32>(0.0, 0.0, 0.0, 0.0));
 //      return;

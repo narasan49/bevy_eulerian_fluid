@@ -14,11 +14,15 @@ struct Force {
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
-@compute @workgroup_size(1, 64, 1)
+@compute @workgroup_size(8, 8, 1)
 fn apply_forces_u(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let idx = vec2<i32>(invocation_id.xy);
+    let dim = vec2<i32>(textureDimensions(u1));
+    if any(idx >= dim) {
+        return;
+    }
 
     let f = area_fractions(levelset_air0, idx);
     let f_solid = textureLoad(area_fraction_solid, idx).x;
@@ -42,11 +46,15 @@ fn apply_forces_u(
     textureStore(u1, idx, vec4<f32>(u_val + net_force * constants.dt / constants.dx, 0.0, 0.0, 0.0));
 }
 
-@compute @workgroup_size(64, 1, 1)
+@compute @workgroup_size(8, 8, 1)
 fn apply_forces_v(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
 ) {
     let idx = vec2<i32>(invocation_id.xy);
+    let dim = vec2<i32>(textureDimensions(v1));
+    if any(idx >= dim) {
+        return;
+    }
 
     let f = area_fractions(levelset_air0, idx);
     let f_solid = textureLoad(area_fraction_solid, idx).z;
