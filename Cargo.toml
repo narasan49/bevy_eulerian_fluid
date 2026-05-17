@@ -23,9 +23,10 @@ bevy = {version = "0.18", default-features = false, features = [
 avian2d = "0.6"
 bytemuck = "1.24.0"
 bevy_eulerian_fluid_3d = {path = "crates/euler_fluid_3d", optional = true}
+bevy_marching_cubes_sdf = {path = "crates/bevy_marching_cubes_sdf", optional = true}
 
 [features]
-3d = ["dep:bevy_eulerian_fluid_3d"]
+3d = ["dep:bevy_eulerian_fluid_3d", "dep:bevy_marching_cubes_sdf"]
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
