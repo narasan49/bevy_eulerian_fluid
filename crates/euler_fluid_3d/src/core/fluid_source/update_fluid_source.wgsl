@@ -92,17 +92,34 @@ fn level_aabb(half_size: vec3f, center: vec3f, x: vec3f) -> f32 {
     let d = abs(center - x) - half_size;
     let is_inside_x = d.x < 0;
     let is_inside_y = d.y < 0;
+    let is_inside_z = d.z < 0;
     if (is_inside_x) {
         if (is_inside_y) {
-            level = max(d.x, d.y);
+            if (is_inside_z) {
+                level = max(d.x, max(d.y,  d.z));
+            } else {
+                level = d.z;
+            }
         } else {
-            level = d.y;
+            if (is_inside_z) {
+                level = d.y;
+            } else {
+                level  = length(d.yz);
+            }
         }
     } else {
         if (is_inside_y) {
-            level = d.x;
+            if (is_inside_z) {
+                level = d.x;
+            } else {
+                level = length(d.xz);
+            }
         } else {
-            level = length(d);
+            if (is_inside_z) {
+                level = length(d.xy);
+            } else {
+                level = length(d);
+            }
         }
     }
     return level;
