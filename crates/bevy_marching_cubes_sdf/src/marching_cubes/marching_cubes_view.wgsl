@@ -36,6 +36,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4f {
-    // return vec4f(1.0, 0.0, 0.0, 1.0);
-    return vec4f(in.world_normal.xyz, 1.0);
+    let normal = normalize(in.world_normal.xyz);
+    let light_dir = normalize(vec3f(0.5, 1.0, 0.5));
+    let light_color = vec3f(1.0, 1.0, 0.95);
+    let n_dot_l = max(dot(light_dir, normal), 0.0);
+    let diffuse = light_color * n_dot_l;
+    let albedo = vec3f(0.5, 0.78, 0.83);
+    let color = albedo * diffuse;
+    return vec4f(color, 1.0);
 }
