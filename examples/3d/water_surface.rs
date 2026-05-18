@@ -94,7 +94,8 @@ fn on_fluid_setup(
     for (entity, fluid, fluid_textures) in &query {
         commands.entity(entity).insert(MarchingCubes {
             half_size: Vec3::ONE,
-            levelset: fluid_textures.levelset_air0.clone(),
+            sdf: fluid_textures.levelset_air0.clone(),
+            grad_sdf: fluid_textures.grad_levelset_air.clone(),
             resolution: fluid.resolution,
         });
     }

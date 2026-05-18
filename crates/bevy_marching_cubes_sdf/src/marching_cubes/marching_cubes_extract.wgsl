@@ -18,9 +18,10 @@ struct MarchingCubesConfig {
 
 @group(0) @binding(0) var<storage, read_write> vertices: array<Vertex>;
 @group(0) @binding(1) var<storage, read_write> indirect_args: DrawIndirectArgs;
-@group(0) @binding(2) var levelset: texture_storage_3d<r32float, read>;
-@group(0) @binding(3) var<storage, read> lookup_table: array<EdgeTriangles, 256>;
-@group(0) @binding(4) var<uniform> config: MarchingCubesConfig;
+@group(0) @binding(2) var sdf: texture_storage_3d<r32float, read>;
+@group(0) @binding(3) var grad_sdf: texture_storage_3d<rgba32float, read>;
+@group(0) @binding(4) var<storage, read> lookup_table: array<EdgeTriangles, 256>;
+@group(0) @binding(5) var<uniform> config: MarchingCubesConfig;
 
 @compute @workgroup_size(8, 8, 8)
 fn extract(
@@ -36,7 +37,7 @@ fn extract(
         vec3u(0, 1, 1),
         vec3u(1, 1, 1),
     );
-    let dim = textureDimensions(levelset);
+    let dim = textureDimensions(sdf);
     if (any(gid >= dim)) {
         return;
     }
@@ -55,25 +56,25 @@ fn extract(
     );
     
     let cube_levels = array<f32, 8>(
-        textureLoad(levelset, gid + offsets_unit[0]).r,
-        textureLoad(levelset, gid + offsets_unit[1]).r,
-        textureLoad(levelset, gid + offsets_unit[2]).r,
-        textureLoad(levelset, gid + offsets_unit[3]).r,
-        textureLoad(levelset, gid + offsets_unit[4]).r,
-        textureLoad(levelset, gid + offsets_unit[5]).r,
-        textureLoad(levelset, gid + offsets_unit[6]).r,
-        textureLoad(levelset, gid + offsets_unit[7]).r,
+        textureLoad(sdf, gid + offsets_unit[0]).r,
+        textureLoad(sdf, gid + offsets_unit[1]).r,
+        textureLoad(sdf, gid + offsets_unit[2]).r,
+        textureLoad(sdf, gid + offsets_unit[3]).r,
+        textureLoad(sdf, gid + offsets_unit[4]).r,
+        textureLoad(sdf, gid + offsets_unit[5]).r,
+        textureLoad(sdf, gid + offsets_unit[6]).r,
+        textureLoad(sdf, gid + offsets_unit[7]).r,
     );
 
     let cube_normals = array<vec3f, 8>(
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
-        vec3f(1.0, 0.0, 0.0),
+        textureLoad(grad_sdf, gid + offsets_unit[0]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[1]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[2]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[3]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[4]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[5]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[6]).xyz,
+        textureLoad(grad_sdf, gid + offsets_unit[7]).xyz,
     );
 
     // let center = vec3f(0.0);
@@ -102,14 +103,14 @@ fn extract(
     // );
 
     let cube = array<u32, 8>(
-        levelset_bit(cube_levels[0]),
-        levelset_bit(cube_levels[1]),
-        levelset_bit(cube_levels[2]),
-        levelset_bit(cube_levels[3]),
-        levelset_bit(cube_levels[4]),
-        levelset_bit(cube_levels[5]),
-        levelset_bit(cube_levels[6]),
-        levelset_bit(cube_levels[7]),
+        sdf_bit(cube_levels[0]),
+        sdf_bit(cube_levels[1]),
+        sdf_bit(cube_levels[2]),
+        sdf_bit(cube_levels[3]),
+        sdf_bit(cube_levels[4]),
+        sdf_bit(cube_levels[5]),
+        sdf_bit(cube_levels[6]),
+        sdf_bit(cube_levels[7]),
     );
 
     let lut_idx = cube_to_idx(cube);
@@ -132,7 +133,7 @@ fn extract(
     }
 }
 
-fn levelset_bit(value: f32) -> u32 {
+fn sdf_bit(value: f32) -> u32 {
     if value < 0.0 {
         // inside
         return 0;

@@ -14,7 +14,8 @@ use crate::marching_cubes::{draw_pipeline::MarchingCubesUniform, lookup_table::L
 #[require(Transform)]
 pub struct MarchingCubes {
     pub half_size: Vec3,
-    pub levelset: Handle<Image>,
+    pub sdf: Handle<Image>,
+    pub grad_sdf: Handle<Image>,
     pub resolution: UVec3,
 }
 
@@ -36,10 +37,12 @@ pub struct MarchingCubesExtractResource {
     #[storage(1, visibility(compute))]
     pub indirect_args: Handle<ShaderStorageBuffer>,
     #[storage_texture(2, image_format = R32Float, access = ReadOnly, dimension = "3d")]
-    pub levelset: Handle<Image>,
-    #[storage(3, read_only, visibility(compute))]
+    pub sdf: Handle<Image>,
+    #[storage_texture(3, image_format = Rgba32Float, access = ReadOnly, dimension = "3d")]
+    pub grad_sdf: Handle<Image>,
+    #[storage(4, read_only, visibility(compute))]
     pub lookup_table: Handle<ShaderStorageBuffer>,
-    #[uniform(4)]
+    #[uniform(5)]
     pub config: MarchingCubesConfigUniform,
 }
 
@@ -83,7 +86,8 @@ pub fn setup_resources(
         let compute_resource = MarchingCubesExtractResource {
             vertices: vertices.clone(),
             indirect_args: indirect_args.clone(),
-            levelset: marching_cubes.levelset.clone(),
+            sdf: marching_cubes.sdf.clone(),
+            grad_sdf: marching_cubes.grad_sdf.clone(),
             lookup_table,
             config: MarchingCubesConfigUniform {
                 half_size: marching_cubes.half_size,
