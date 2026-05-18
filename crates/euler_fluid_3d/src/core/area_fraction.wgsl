@@ -7,9 +7,9 @@ fn load_area_fraction(
     let dim = textureDimensions(area_fraction);
 
     let f_minus = textureLoad(area_fraction, idx);
-    let f_plus_x = textureLoad(area_fraction, idx + vec3u(1, 0, 0)).r;
-    let f_plus_y = textureLoad(area_fraction, idx + vec3u(0, 1, 0)).r;
-    let f_plus_z = textureLoad(area_fraction, idx + vec3u(0, 0, 1)).r;
+    let f_plus_x = textureLoad(area_fraction, idx + vec3u(1, 0, 0)).x;
+    let f_plus_y = textureLoad(area_fraction, idx + vec3u(0, 1, 0)).y;
+    let f_plus_z = textureLoad(area_fraction, idx + vec3u(0, 0, 1)).z;
 
     return array<f32, 6>(
         f_minus[0],
@@ -187,7 +187,7 @@ fn area_fraction_triangle(triangle: vec3f) -> f32 {
     }
 
     if 0.0 < ordered.x {
-        return 0.0;
+        return 1.0;
     } else if ordered.x < 0.0 && 0.0 <= ordered.y {
         let theta10 = ordered.x / (ordered.x - ordered.y);
         let theta20 = ordered.x / (ordered.x - ordered.z);
@@ -197,6 +197,6 @@ fn area_fraction_triangle(triangle: vec3f) -> f32 {
         let theta12 = ordered.z / (ordered.z - ordered.y);
         return theta02 * theta12;
     } else {
-        return 1.0;
+        return 0.0;
     }
 }
