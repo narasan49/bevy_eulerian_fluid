@@ -47,6 +47,7 @@ bevy = {version = "0.18", default-features = false, features = [
     "png",
     "x11",
     "webgpu",
+    "3d_bevy_render",
 ]}
 example_utils = { path = "crates/example_utils" }
 
@@ -59,3 +60,8 @@ opt-level = 1
 [profile.dev-debug]
 inherits = "dev"
 opt-level = 0
+
+[[example]]
+name = "water_surface_3d"
+path = "examples/3d/water_surface.rs"
+required-features = ["3d", "bevy/free_camera"]
