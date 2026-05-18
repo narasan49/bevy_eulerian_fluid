@@ -84,7 +84,7 @@ impl SolveWPipeline {
         workgroup_shape: &WorkgroupShape,
         size: UVec3,
     ) {
-        pass.push_debug_group("solve_u");
+        pass.push_debug_group("solve_w");
         let pipeline = pipeline_cache.get_compute_pipeline(self.pipeline).unwrap();
 
         let num_workgroups = workgroup_size_z(size, workgroup_shape);

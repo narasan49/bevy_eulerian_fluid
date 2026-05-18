@@ -15,6 +15,8 @@ use bevy::{
     shader::load_shader_library,
 };
 
+use crate::resource::{EulerFluid3d, FluidGridLength};
+
 pub struct FluidUniformPlugin;
 
 impl Plugin for FluidUniformPlugin {
@@ -23,7 +25,8 @@ impl Plugin for FluidUniformPlugin {
         app.add_plugins((
             ExtractComponentPlugin::<FluidUniform>::default(),
             UniformComponentPlugin::<FluidUniform>::default(),
-        ));
+        ))
+        .add_systems(Update, update_simulation_uniform);
 
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
@@ -89,17 +92,17 @@ pub(crate) fn prepare_bind_groups(
     }
 }
 
-// fn update_simulation_uniform(
-//     mut query: Query<(&mut FluidUniform, &Fluid3d, &Transform)>,
-//     time_step: Res<FluidTimeStep>,
-//     grid_length: Res<FluidGridLength>,
-// ) {
-//     for (mut uniform, settings, transform) in &mut query {
-//         uniform.dx = grid_length.0;
-//         uniform.dt = time_step.0;
-//         uniform.rho = settings.rho;
-//         uniform.gravity = settings.gravity;
-//         uniform.fluid_transform = transform.to_matrix();
-//         uniform.size = settings.size.as_vec2();
-//     }
-// }
+fn update_simulation_uniform(
+    mut query: Query<(&mut FluidUniform, &EulerFluid3d, &Transform)>,
+    time: Res<Time>,
+    grid_length: Res<FluidGridLength>,
+) {
+    for (mut uniform, settings, transform) in &mut query {
+        uniform.dx = grid_length.0;
+        uniform.dt = time.delta_secs();
+        uniform.rho = settings.rho;
+        uniform.gravity = settings.gravity;
+        uniform.transform = transform.to_matrix();
+        uniform.resolution = settings.resolution;
+    }
+}

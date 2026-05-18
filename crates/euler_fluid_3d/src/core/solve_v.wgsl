@@ -20,8 +20,8 @@ fn solve_v(@builtin(global_invocation_id) gid: vec3u) {
         return;
     }
 
-    let f = load_area_fraction(area_fraction_solid, gid);
-    if (fully_solid(f)) {
+    let f = textureLoad(area_fraction_solid, gid);
+    if (f.y == 0.0) {
         textureStore(v0, x, textureLoad(v_solid, x));
         return;
     }

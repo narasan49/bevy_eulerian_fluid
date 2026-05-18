@@ -42,7 +42,7 @@ fn advect_v(
     let backtraced_x = backtrace(u0, v0, w0, x, constants.dt);
     let dimf = vec3f(dim);
     if inside(backtraced_x, dimf) {
-        let backtraced_v = trilinear_x(v0, backtraced_x);
+        let backtraced_v = trilinear_y(v0, backtraced_x);
         textureStore(v1, gid, vec4f(backtraced_v, 0.0, 0.0, 0.0));
     } else {
         textureStore(v1, gid, textureLoad(v0, gid));
@@ -61,7 +61,7 @@ fn advect_w(
     let backtraced_x = backtrace(u0, v0, w0, x, constants.dt);
     let dimf = vec3f(dim);
     if inside(backtraced_x, dimf) {
-        let backtraced_w = trilinear_x(w0, backtraced_x);
+        let backtraced_w = trilinear_z(w0, backtraced_x);
         textureStore(w1, gid, vec4f(backtraced_w, 0.0, 0.0, 0.0));
     } else {
         textureStore(w1, gid, textureLoad(w0, gid));
