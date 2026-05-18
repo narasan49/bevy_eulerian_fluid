@@ -20,6 +20,7 @@ use crate::{
         },
         fluid_uniform::FluidUniformBindGroup,
         initialize_resources::{InitializeResourcesBindGroup, InitializeResourcesPipeline},
+        levelset_gradient::{LevelSetGradientBindGroup, LevelSetGradientPipeline},
         projection::{
             self, gauss_seidel::GaussSeidelPipeline, multigrid::MultiGridPipelines,
             ProjectionBindGroupsQuery, ProjectionMethod,
@@ -64,7 +65,7 @@ struct FluidBindGroupsQueryData {
     reinit_levelset_bind_groups: ReinitializeLevelSetBindGroupQuery,
     // fluid_to_solid_bind_groups: &'static FluidToSolidForcesBindGroups,
     fluid_uniform: &'static FluidUniformBindGroup,
-    // levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
+    levelset_gradient_bind_group: &'static LevelSetGradientBindGroup,
     projection_bind_groups: ProjectionBindGroupsQuery,
 }
 
@@ -118,6 +119,7 @@ impl render_graph::Node for EulerFluidNode {
                 let extrapolate_velocity_pipeline = world.resource::<ExtrapolateVelocityPipeline>();
                 let advect_levelset_pipeline = world.resource::<AdvectLevelSetPipeline>();
                 // let fluid_to_solid_forces_pipeline = world.resource::<FluidToSolidForcesPipeline>();
+                let levelset_gradient_pipeline = world.resource::<LevelSetGradientPipeline>();
                 let update_fluid_source_pipeline = world.resource::<UpdateFluidSourcePipeline>();
 
                 if initialize_resources_pipeline
@@ -136,6 +138,7 @@ impl render_graph::Node for EulerFluidNode {
                     && advect_levelset_pipeline.is_ready(pipeline_cache)
                     && reinitialize_levelset::is_pipeline_ready(world, pipeline_cache)
                     // && fluid_to_solid_forces_pipeline.is_pipeline_state_ready(pipeline_cache)
+                    && levelset_gradient_pipeline.is_ready(pipeline_cache)
                     && update_fluid_source_pipeline.is_ready(pipeline_cache)
                 {
                     self.state = State::Update;
@@ -218,6 +221,16 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.reinit_levelset_bind_groups,
+                                workgroup_shape,
+                                fluid3d.resolution,
+                            );
+
+                            let levelset_gradient_pipeline =
+                                world.resource::<LevelSetGradientPipeline>();
+                            levelset_gradient_pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.levelset_gradient_bind_group,
                                 workgroup_shape,
                                 fluid3d.resolution,
                             );
@@ -362,6 +375,16 @@ impl render_graph::Node for EulerFluidNode {
                                 pipeline_cache,
                                 &mut pass,
                                 bind_groups.reinit_levelset_bind_groups,
+                                workgroup_shape,
+                                fluid3d.resolution,
+                            );
+
+                            let levelset_gradient_pipeline =
+                                world.resource::<LevelSetGradientPipeline>();
+                            levelset_gradient_pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                bind_groups.levelset_gradient_bind_group,
                                 workgroup_shape,
                                 fluid3d.resolution,
                             );

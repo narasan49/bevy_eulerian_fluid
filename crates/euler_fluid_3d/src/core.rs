@@ -6,6 +6,7 @@ pub mod extrapolate_velocity;
 pub mod fluid_source;
 pub mod fluid_uniform;
 pub mod initialize_resources;
+pub mod levelset_gradient;
 pub mod projection;
 pub mod reinitialize_levelset;
 pub mod solid_body;
@@ -75,6 +76,7 @@ impl Plugin for Fluid3dCorePlugin {
             ExtrapolateVelocityPassPlugin,
             FluidComputePassPlugin::<advect_levelset::AdvectLevelSetPass>::default(),
             ReinitializeLevelSetPlugin,
+            FluidComputePassPlugin::<levelset_gradient::LevelSetGradientPass>::default(),
         ))
         .add_plugins((
             FluidComputePassPlugin::<UpdateSolidPass>::default(),

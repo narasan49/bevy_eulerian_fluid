@@ -20,6 +20,7 @@ use crate::{
         },
         fluid_uniform::FluidUniform,
         initialize_resources::InitializeResourcesResource,
+        levelset_gradient::LevelSetGradientResource,
         projection::{
             gauss_seidel::GaussSeidelResource, multigrid::setup_multigrid_resources,
             ProjectionMethod,
@@ -74,6 +75,7 @@ pub struct FluidResources {
     pub levelset_air0: Handle<Image>,
     pub levelset_air1: Handle<Image>,
     pub levelset_solid: Handle<Image>,
+    pub grad_levelset_air: Handle<Image>,
     pub area_fraction_solid: Handle<Image>,
     pub p: Handle<Image>,
     pub div: Handle<Image>,
@@ -109,6 +111,8 @@ impl FluidResources {
         let levelset_solid = new_texture_storage_3d(images, resolution, TextureFormat::R32Float);
         let area_fraction_solid =
             new_texture_storage_3d(images, resolution_uvw, TextureFormat::Rgba32Float);
+        let grad_levelset_air =
+            new_texture_storage_3d(images, resolution, TextureFormat::Rgba32Float);
 
         let p = new_texture_storage_3d(images, resolution, TextureFormat::R32Float);
         let div = new_texture_storage_3d(images, resolution, TextureFormat::R32Float);
@@ -134,6 +138,7 @@ impl FluidResources {
             levelset_air1,
             levelset_solid,
             area_fraction_solid,
+            grad_levelset_air,
             p,
             div,
             in_is_u_valid,
@@ -193,6 +198,7 @@ pub fn setup_fluid_resources(
             &resources,
             reinitialize_method,
         );
+        let levelset_gradient = LevelSetGradientResource::new(&resources);
         let update_fluid_source = UpdateFluidSourceResource::new(&resources);
 
         commands.entity(entity).insert((
@@ -209,6 +215,7 @@ pub fn setup_fluid_resources(
             solve_v,
             solve_w,
             advect_levelset,
+            levelset_gradient,
             update_fluid_source,
         ));
     }
