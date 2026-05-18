@@ -7,28 +7,33 @@ use bevy::{
 };
 use bevy_eulerian_fluid_common::texture::new_texture_storage_3d;
 
-use crate::core::{
-    advect_levelset::AdvectLevelSetResource,
-    advect_velocity::AdvectVelocityResource,
-    apply_forces::ApplyForcesResource,
-    divergence::DivergenceResource,
-    extrapolate_velocity::ExtrapolateVelocityResource,
-    fluid_source::{
-        fluid_source_uniform::{FluidSourceInitUniform, FluidSourceUniform},
-        update_fluid_source::UpdateFluidSourceResource,
+use crate::{
+    core::{
+        advect_levelset::AdvectLevelSetResource,
+        advect_velocity::AdvectVelocityResource,
+        apply_forces::ApplyForcesResource,
+        divergence::DivergenceResource,
+        extrapolate_velocity::ExtrapolateVelocityResource,
+        fluid_source::{
+            fluid_source_uniform::{FluidSourceInitUniform, FluidSourceUniform},
+            update_fluid_source::UpdateFluidSourceResource,
+        },
+        fluid_uniform::FluidUniform,
+        initialize_resources::InitializeResourcesResource,
+        projection::{
+            gauss_seidel::GaussSeidelResource, multigrid::setup_multigrid_resources,
+            ProjectionMethod,
+        },
+        reinitialize_levelset::{self, ReinitializeMethod},
+        solid_body::{
+            update_area_fraction_solid::UpdateAreaFractionResource,
+            update_solid::UpdateSolidResource,
+        },
+        solve_u::SolveUResource,
+        solve_v::SolveVResource,
+        solve_w::SolveWResource,
     },
-    fluid_uniform::FluidUniform,
-    initialize_resources::InitializeResourcesResource,
-    projection::{
-        gauss_seidel::GaussSeidelResource, multigrid::setup_multigrid_resources, ProjectionMethod,
-    },
-    reinitialize_levelset::{self, ReinitializeMethod},
-    solid_body::{
-        update_area_fraction_solid::UpdateAreaFractionResource, update_solid::UpdateSolidResource,
-    },
-    solve_u::SolveUResource,
-    solve_v::SolveVResource,
-    solve_w::SolveWResource,
+    fluid_status::FluidStatus,
 };
 
 #[derive(Component, ExtractComponent, Clone)]
@@ -37,7 +42,8 @@ use crate::core::{
     ProjectionMethod,
     ReinitializeMethod,
     FluidSourceUniform,
-    FluidSourceInitUniform
+    FluidSourceInitUniform,
+    FluidStatus
 )]
 pub struct EulerFluid3d {
     pub rho: f32,

@@ -35,6 +35,7 @@ use crate::{
         },
         workgroup::WorkgroupShape,
     },
+    fluid_status::FluidStatusPlugin,
     render::{EulerFluidNode, FluidLabel},
     resource::{setup_fluid_resources, EulerFluid3d, FluidGridLength},
 };
@@ -61,6 +62,7 @@ impl Plugin for Fluid3dCorePlugin {
         app.add_plugins((
             ExtractComponentPlugin::<EulerFluid3d>::default(),
             fluid_uniform::FluidUniformPlugin,
+            FluidStatusPlugin,
         ))
         .add_plugins((
             FluidComputePassPlugin::<initialize_resources::InitializeResourcesPass>::default(),
