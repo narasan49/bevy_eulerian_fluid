@@ -23,7 +23,7 @@ use crate::{
     core::{
         fluid_uniform::{FluidUniformBindGroup, FluidUniformBindGroupLayout},
         projection::gauss_seidel::{GaussSeidelConfig, GaussSeidelPipeline},
-        workgroup::{workgroup_size_center, WorkgroupShape},
+        workgroup::{workgroup_size_center, workgroup_size_xyz, WorkgroupShape},
     },
     resource::FluidResources,
 };
@@ -68,9 +68,9 @@ pub struct MultiGridConfig {
 impl Default for MultiGridConfig {
     fn default() -> Self {
         Self {
-            pre_smooth_config: GaussSeidelConfig { num_iterations: 2 },
-            post_smooth_config: GaussSeidelConfig { num_iterations: 2 },
-            coarsest_config: GaussSeidelConfig { num_iterations: 3 },
+            pre_smooth_config: GaussSeidelConfig { num_iterations: 5 },
+            post_smooth_config: GaussSeidelConfig { num_iterations: 5 },
+            coarsest_config: GaussSeidelConfig { num_iterations: 20 },
         }
     }
 }
@@ -95,7 +95,7 @@ pub(crate) fn setup_multigrid_resources(
     images: &mut ResMut<Assets<Image>>,
 ) {
     let num_levels = ((grid_size.min_element() as f32).log2() as usize)
-        .saturating_sub(2)
+        .saturating_sub(4)
         .max(1);
 
     let mut x = Vec::<Handle<Image>>::with_capacity(num_levels);
@@ -132,7 +132,7 @@ pub(crate) fn setup_multigrid_resources(
         ));
         area_fraction_solids.push(new_texture_storage_3d(
             images,
-            grid_size,
+            grid_size + UVec3::ONE,
             TextureFormat::Rgba32Float,
         ));
         r.push(new_texture_storage_3d(
@@ -433,6 +433,7 @@ fn v_cycle(
 ) {
     pass.push_debug_group(format!("V-Cycle (Level {i})").as_str());
     let num_workgroups = workgroup_size_center(grid_size, workgroup_shape);
+    let num_workgroups_xyz = workgroup_size_xyz(grid_size, workgroup_shape);
 
     if i == levels.0 - 1 {
         pass.push_debug_group("Solve");
@@ -470,7 +471,11 @@ fn v_cycle(
 
     pass.set_pipeline(restriction_pipeline);
     pass.set_bind_group(0, &bind_groups.restriction_bind_groups[i], &[]);
-    pass.dispatch_workgroups(num_workgroups.x, num_workgroups.y, num_workgroups.z);
+    pass.dispatch_workgroups(
+        num_workgroups_xyz.x,
+        num_workgroups_xyz.y,
+        num_workgroups_xyz.z,
+    );
 
     v_cycle(
         i + 1,

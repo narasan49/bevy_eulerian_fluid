@@ -72,7 +72,8 @@ fn update_pressure(idx: vec3i) -> f32 {
                 denom += f[i];
                 nume += f[i] * textureLoad(p, j).r;
             } else {
-                denom += f[i] * (1.0 - level / level_air_ij);
+                let theta = clamp(level_air_ij / (level_air_ij - level), 0.1, 1.0);
+                denom += f[i] / theta;
             }
         }
     }
