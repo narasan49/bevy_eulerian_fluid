@@ -51,7 +51,8 @@ fn residual(
             if phi_nb < 0.0 {
                 residual -= f[i] * (x_center - textureLoad(x, idx_nb).r) * factor;
             } else {
-                residual -= f[i] * (1.0 - phi_nb / phi) * x_center * factor;
+                let theta = clamp(phi / (phi - phi_nb), 0.1, 1.0);
+                residual -= f[i] / theta * x_center * factor;
             }
         }
     }
