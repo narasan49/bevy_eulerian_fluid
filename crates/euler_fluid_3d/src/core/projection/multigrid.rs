@@ -68,8 +68,8 @@ pub struct MultiGridConfig {
 impl Default for MultiGridConfig {
     fn default() -> Self {
         Self {
-            pre_smooth_config: GaussSeidelConfig { num_iterations: 5 },
-            post_smooth_config: GaussSeidelConfig { num_iterations: 5 },
+            pre_smooth_config: GaussSeidelConfig { num_iterations: 3 },
+            post_smooth_config: GaussSeidelConfig { num_iterations: 3 },
             coarsest_config: GaussSeidelConfig { num_iterations: 20 },
         }
     }
@@ -95,7 +95,7 @@ pub(crate) fn setup_multigrid_resources(
     images: &mut ResMut<Assets<Image>>,
 ) {
     let num_levels = ((grid_size.min_element() as f32).log2() as usize)
-        .saturating_sub(4)
+        .saturating_sub(2)
         .max(1);
 
     let mut x = Vec::<Handle<Image>>::with_capacity(num_levels);
