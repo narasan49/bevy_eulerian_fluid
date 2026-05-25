@@ -53,7 +53,7 @@ pub enum ProjectionMethod {
 
 impl Default for ProjectionMethod {
     fn default() -> Self {
-        ProjectionMethod::GaussSeidel(GaussSeidelConfig::default())
+        ProjectionMethod::MultiGrid(MultiGridConfig::default())
     }
 }
 

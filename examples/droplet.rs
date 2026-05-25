@@ -6,7 +6,6 @@ use bevy::{camera::ScalingMode, input::common_conditions::input_just_pressed, pr
 use bevy_eulerian_fluid::{
     diagnostics::FluidDiagnosticsPlugin,
     fluid_source::{FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape},
-    projection::{multi_grid::MultiGridConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -63,7 +62,6 @@ fn setup_fluid(
                 gravity: Vec2::Y * 9.8,
                 size: SIZE,
             },
-            ProjectionMethod::MultiGrid(MultiGridConfig::default()),
             Mesh2d(mesh),
             Transform::default()
                 .with_translation((SIZE.as_vec2() * Vec2::new(-0.5, 0.0)).extend(0.0)),
