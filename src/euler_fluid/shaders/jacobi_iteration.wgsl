@@ -80,12 +80,12 @@ fn update_pressure(
         return 0.0;
     }
     let div_ij = textureLoad(div, x).r;
-    let factor = constants.dx * constants.rho / constants.dt;
+    let factor = constants.dx * constants.dx * constants.rho / constants.dt;
 
     let dp00 = f.iminusj * step(0.0, f_fluid_iminusj) * p_iminusj;
     let dp10 = f.iplusj * step(0.0, f_fluid_iplusj) * p_iplusj;
     let dp01 = f.ijminus * step(0.0, f_fluid_ijminus) * p_ijminus;
     let dp11 = f.ijplus * step(0.0, f_fluid_ijplus) * p_ijplus;
 
-    return (dp00 + dp10 + dp01 + dp11 - factor * div_ij) / coef;
+    return (dp00 + dp10 + dp01 + dp11 + factor * div_ij) / coef;
 }
