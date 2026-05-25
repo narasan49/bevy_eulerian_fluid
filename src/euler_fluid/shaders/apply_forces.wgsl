@@ -14,6 +14,8 @@ struct Force {
 
 @group(1) @binding(0) var<uniform> constants: SimulationUniform;
 
+const CFL_SCALE: f32 = 5.0;
+
 @compute @workgroup_size(8, 8, 1)
 fn apply_forces_u(
     @builtin(global_invocation_id) invocation_id: vec3<u32>,
@@ -43,7 +45,12 @@ fn apply_forces_u(
     }
 
     let u_val = textureLoad(u1, idx).r;
-    textureStore(u1, idx, vec4<f32>(u_val + net_force * constants.dt / constants.dx, 0.0, 0.0, 0.0));
+    var u_new = u_val + net_force * constants.dt / constants.dx;
+    let u_cfl = CFL_SCALE / constants.dt;
+    if abs(u_new) > u_cfl {
+        u_new = sign(u_new) * u_cfl;
+    }
+    textureStore(u1, idx, vec4<f32>(u_new, 0.0, 0.0, 0.0));
 }
 
 @compute @workgroup_size(8, 8, 1)
@@ -75,7 +82,12 @@ fn apply_forces_v(
     }
 
     let v_val = textureLoad(v1, idx).r;
-    textureStore(v1, idx, vec4<f32>(v_val + net_force * constants.dt / constants.dx, 0.0, 0.0, 0.0));
+    var v_new = v_val + net_force * constants.dt / constants.dx;
+    let v_cfl = CFL_SCALE / constants.dt;
+    if abs(v_new) > v_cfl {
+        v_new = sign(v_new) * v_cfl;
+    }
+    textureStore(v1, idx, vec4<f32>(v_new, 0.0, 0.0, 0.0));
 }
 
 fn gaussian_2d(x: vec2<f32>, x0: vec2<f32>, sigma: f32) -> f32 {
