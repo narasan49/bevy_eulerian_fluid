@@ -12,7 +12,6 @@ use bevy_eulerian_fluid::{
     fluid_source::{
         FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape, FluidSourceVelocity,
     },
-    projection::{gauss_seidel::GaussSeidelConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -93,9 +92,6 @@ fn setup_fluid(
                 gravity: Vec2::Y * 9.8,
                 size: SIZE,
             },
-            ProjectionMethod::GaussSeidel(GaussSeidelConfig {
-                num_iterations: 100,
-            }),
             Mesh2d(meshes.add(fluid_domain_rectangle.clone())),
             Transform::default(),
         ))
