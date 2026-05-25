@@ -11,7 +11,6 @@ use bevy_eulerian_fluid::{
     fluid_source::{
         FluidSource, FluidSourceMode, FluidSourceOneshot, FluidSourceShape, FluidSourceVelocity,
     },
-    projection::{multi_grid::MultiGridConfig, ProjectionMethod},
     settings::{FluidSettings, FluidTextures},
     FluidPlugin,
 };
@@ -62,7 +61,6 @@ fn setup_scene(
                 gravity: Vec2::ZERO,
                 size: SIZE,
             },
-            ProjectionMethod::MultiGrid(MultiGridConfig::default()),
             Mesh2d(meshes.add(Rectangle::from_size(SIZE.as_vec2()))),
         ))
         .with_children(|commands| {
