@@ -14,7 +14,7 @@ use bevy_eulerian_fluid_3d::{
     },
     resource::{EulerFluid3d, FluidResources},
 };
-use bevy_marching_cubes_sdf::marching_cubes::{resource::MarchingCubes, MarchingCubesPlugin};
+use bevy_sdf_marching_cubes::marching_cubes::{resource::MarchingCubes, MarchingCubesPlugin};
 use example_utils::{mouse_motion, ExampleDefaultPlugins};
 
 const SIZE: UVec3 = UVec3::splat(64);

@@ -1,5 +1,5 @@
 [package]
-name = "bevy_marching_cubes_sdf"
+name = "bevy_sdf_marching_cubes"
 version = "0.4.0"
 edition = "2021"
 description = "A marching cubes plugin for Bevy."

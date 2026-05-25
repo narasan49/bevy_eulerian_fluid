@@ -14,4 +14,4 @@ bevy = {version = "0.18", default-features = false, features = [
     "bevy_render",
     "bevy_sprite_render"
 ]}
-bevy_eulerian_fluid_common = {path = "../euler_fluid_common"}
+bevy_eulerian_fluid_common = {path = "../bevy_eulerian_fluid_common"}
