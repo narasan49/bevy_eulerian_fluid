@@ -27,7 +27,7 @@ fn main() {
         .add_plugins(Fluid3dCorePlugin::new(LENGTH_UNIT))
         .add_plugins(MarchingCubesPlugin)
         .add_plugins(FreeCameraPlugin)
-        .add_systems(Startup, (setup_scene, setup_fluid, setup_reference_mesh))
+        .add_systems(Startup, (setup_scene, setup_fluid))
         .add_systems(Update, on_fluid_setup)
         .add_systems(Update, mouse_motion)
         .add_systems(
@@ -73,18 +73,6 @@ fn setup_fluid(mut commands: Commands) {
             },
             FluidSourceOneshot,
         ));
-}
-
-fn setup_reference_mesh(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::from_length(1.0))),
-        Transform::from_translation(Vec3::new(1.0, 0.0, -10.0)),
-        MeshMaterial3d(materials.add(Color::WHITE)),
-    ));
 }
 
 fn on_fluid_setup(
