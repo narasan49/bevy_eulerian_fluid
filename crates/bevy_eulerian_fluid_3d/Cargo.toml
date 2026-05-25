@@ -1,0 +1,17 @@
+[package]
+name = "bevy_eulerian_fluid_3d"
+version = "0.4.0"
+edition = "2021"
+description = "An eularian fluid simulation plugin for Bevy."
+categories = ["game-development", "science", "simulation"]
+keywords = ["bevy", "fluid", "simulation", "physics", "graphics"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/narasan49/bevy_eulerian_fluid"
+
+[dependencies]
+bevy = {version = "0.18", default-features = false, features = [
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_sprite_render"
+]}
+bevy_eulerian_fluid_common = {path = "../bevy_eulerian_fluid_common"}
