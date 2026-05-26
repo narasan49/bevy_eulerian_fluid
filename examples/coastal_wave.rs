@@ -34,6 +34,10 @@ struct WaveSource;
 #[derive(Component)]
 struct FluidLevelAdjustment;
 
+#[derive(Component)]
+
+struct RigidBodyRoot;
+
 fn main() {
     let mut app = App::new();
 
@@ -144,46 +148,48 @@ fn setup_rigid_bodies(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    // Wave source
-    let rectangle = Rectangle::new(10.0, 50.0);
-    let rectangle_mesh = meshes.add(rectangle);
-    let material = materials.add(Color::srgb(0.0, 1.0, 0.0));
-    commands.spawn((
-        Mesh2d(rectangle_mesh.clone()),
-        MeshMaterial2d(material.clone()),
-        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.4, -0.3)).extend(1.0)),
-        rectangle.collider(),
-        RigidBody::Kinematic,
-        LinearVelocity(WAVE_SOURCE_V * Vec2::X),
-        WaveSource,
-    ));
+    commands
+        .spawn((RigidBodyRoot, Transform::default(), Visibility::default()))
+        .with_children(|commands| {
+            // Wave source
+            let rectangle = Rectangle::new(10.0, 50.0);
+            let rectangle_mesh = meshes.add(rectangle);
+            let material = materials.add(Color::srgb(0.0, 1.0, 0.0));
+            commands.spawn((
+                Mesh2d(rectangle_mesh.clone()),
+                MeshMaterial2d(material.clone()),
+                Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.4, -0.3)).extend(1.0)),
+                rectangle.collider(),
+                RigidBody::Kinematic,
+                LinearVelocity(WAVE_SOURCE_V * Vec2::X),
+                WaveSource,
+            ));
 
-    // Beach
-    let triangle = Triangle2d::new(
-        Vec2::new(0.0, 0.0),
-        Vec2::new(SIZE.x as f32 * 0.6, 0.0),
-        Vec2::new(SIZE.x as f32 * 0.6, SIZE.y as f32 * 0.5),
-    );
-    let triangle_mesh = meshes.add(triangle);
-    let triangle_material = materials.add(COLOR_SAND);
-    commands.spawn((
-        Mesh2d(triangle_mesh.clone()),
-        MeshMaterial2d(triangle_material.clone()),
-        Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.1, -0.5)).extend(1.0)),
-        triangle.collider(),
-        RigidBody::Static,
-    ));
+            // Beach
+            let triangle = Triangle2d::new(
+                Vec2::new(0.0, 0.0),
+                Vec2::new(SIZE.x as f32 * 0.6, 0.0),
+                Vec2::new(SIZE.x as f32 * 0.6, SIZE.y as f32 * 0.5),
+            );
+            let triangle_mesh = meshes.add(triangle);
+            let triangle_material = materials.add(COLOR_SAND);
+            commands.spawn((
+                Mesh2d(triangle_mesh.clone()),
+                MeshMaterial2d(triangle_material.clone()),
+                Transform::from_translation((SIZE.as_vec2() * Vec2::new(-0.1, -0.5)).extend(1.0)),
+                triangle.collider(),
+                RigidBody::Static,
+            ));
+        });
 }
 
 fn reset_scene(
     mut commands: Commands,
-    q_rigid_bodies: Query<(Entity, &RigidBody), With<RigidBody>>,
+    q_rigid_bodies: Query<Entity, With<RigidBodyRoot>>,
     q_fluids: Query<Entity, With<FluidSettings>>,
 ) {
-    for (entity, rigid_body) in &q_rigid_bodies {
-        if rigid_body.is_dynamic() || rigid_body.is_kinematic() {
-            commands.entity(entity).despawn();
-        }
+    for entity in &q_rigid_bodies {
+        commands.entity(entity).despawn();
     }
     for entity in &q_fluids {
         commands.entity(entity).despawn();
