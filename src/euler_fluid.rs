@@ -58,7 +58,6 @@ impl Plugin for FluidPlugin {
         app.add_plugins(ExtractComponentPlugin::<FluidSettings>::default())
             .add_plugins((
                 FluidComputePassPlugin::<initialize::InitializeGridCenterPass>::default(),
-                FluidComputePassPlugin::<initialize::InitializeGridEdgePass>::default(),
             ))
             .add_plugins((
                 update_solid::UpdateSolidPlugin,
