@@ -15,7 +15,10 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
+use crate::{
+    fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline,
+    resource_management::FluidResource,
+};
 
 pub(crate) struct ApplyForcesPlugin;
 
@@ -31,6 +34,18 @@ pub(crate) struct ApplyForcesResource {
     pub forces_to_fluid: Handle<ShaderStorageBuffer>,
     #[storage_texture(4, image_format = Rgba32Float, access = ReadOnly)]
     pub area_fraction_solid: Handle<Image>,
+}
+
+impl FluidResource for ApplyForcesResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u1: resources.u1.clone(),
+            v1: resources.v1.clone(),
+            levelset_air0: resources.levelset_air0.clone(),
+            forces_to_fluid: resources.forces_to_fluid.clone(),
+            area_fraction_solid: resources.area_fraction_solid.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Default, ShaderType)]

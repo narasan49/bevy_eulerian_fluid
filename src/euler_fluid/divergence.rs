@@ -10,6 +10,7 @@ use bevy::{
 use crate::{
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 
 pub(crate) struct DivergencePass;
@@ -38,6 +39,19 @@ pub(crate) struct DivergenceResource {
     pub levelset_solid: Handle<Image>,
     #[storage_texture(5, image_format = R32Float, access = WriteOnly)]
     pub div: Handle<Image>,
+}
+
+impl FluidResource for DivergenceResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u1: resources.u1.clone(),
+            v1: resources.v1.clone(),
+            u_solid: resources.u_solid.clone(),
+            v_solid: resources.v_solid.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+            div: resources.div.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

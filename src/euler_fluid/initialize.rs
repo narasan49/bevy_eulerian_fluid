@@ -10,6 +10,7 @@ use bevy::{
 use crate::{
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 
 pub(crate) struct InitializeGridCenterPass;
@@ -48,6 +49,17 @@ pub(crate) struct InitializeGridEdgeResource {
     pub v1: Handle<Image>,
 }
 
+impl FluidResource for InitializeGridEdgeResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u0: resources.u0.clone(),
+            v0: resources.v0.clone(),
+            u1: resources.u1.clone(),
+            v1: resources.v1.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct InitializeGridCenterResource {
     #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
@@ -56,6 +68,16 @@ pub(crate) struct InitializeGridCenterResource {
     pub levelset_air1: Handle<Image>,
     #[storage_texture(2, image_format = Rg32Float, access = WriteOnly)]
     pub grad_levelset_air: Handle<Image>,
+}
+
+impl FluidResource for InitializeGridCenterResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            levelset_air0: resources.levelset_air0.clone(),
+            levelset_air1: resources.levelset_air1.clone(),
+            grad_levelset_air: resources.grad_levelset_air.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

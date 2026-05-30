@@ -11,6 +11,7 @@ use bevy::{
         render_resource::{ComputePass, PipelineCache, TextureFormat},
     },
 };
+use bevy_eulerian_fluid_common::texture::new_texture_storage_2d;
 
 use crate::{
     pipeline::{is_pipeline_loaded, DispatchFluidPass, WORKGROUP_SIZE},
@@ -30,6 +31,7 @@ use crate::{
             JumpFloodingSeedsTextures,
         },
     },
+    resource_management::{FluidResource, FluidResources},
     texture::NewTexture,
 };
 
@@ -109,25 +111,21 @@ pub(crate) fn setup(
     entity: Entity,
     images: &mut ResMut<Assets<Image>>,
     grid_size: UVec2,
-    levelset_air0: &Handle<Image>,
-    levelset_air1: &Handle<Image>,
+    resources: &FluidResources,
     method: &ReinitializeMethod,
 ) {
     match method {
         ReinitializeMethod::JumpFlooding => {
             let jump_flooding_seeds0 =
-                images.new_texture_storage(grid_size, TextureFormat::Rg32Float);
+                new_texture_storage_2d(images, grid_size, TextureFormat::Rg32Float);
             let jump_flooding_seeds1 =
-                images.new_texture_storage(grid_size, TextureFormat::Rg32Float);
+                new_texture_storage_2d(images, grid_size, TextureFormat::Rg32Float);
 
-            let reinit_levelset_initialize_seeds_resource = JumpFloodingInitializeSeedsResource {
-                levelset_air1: levelset_air1.clone(),
-            };
+            let reinit_levelset_initialize_seeds_resource =
+                JumpFloodingInitializeSeedsResource::new(resources);
 
-            let reinit_levelset_calculate_sdf_resource = JumpFloodingCalculateSdfResource {
-                levelset_air0: levelset_air0.clone(),
-                levelset_air1: levelset_air1.clone(),
-            };
+            let reinit_levelset_calculate_sdf_resource =
+                JumpFloodingCalculateSdfResource::new(resources);
 
             let reinit_levelset_seeds_textures =
                 JumpFloodingSeedsTextures([jump_flooding_seeds0, jump_flooding_seeds1]);
@@ -142,13 +140,12 @@ pub(crate) fn setup(
             let labels0 = images.new_texture_storage(grid_size, TextureFormat::R32Uint);
             let labels = images.new_texture_storage(grid_size, TextureFormat::R32Uint);
 
-            let init_textures =
-                FastIterativeInitializeResource::new(levelset_air1, levelset_air0, &labels0);
+            let init_textures = FastIterativeInitializeResource::new(resources, &labels0);
 
             let init_active_label_textures =
                 FastIterativeInitializeActiveLabelResource::new(&labels0, &labels);
 
-            let update_textures = FastIterativeUpdateResource::new(levelset_air0, &labels);
+            let update_textures = FastIterativeUpdateResource::new(resources, &labels);
 
             commands.entity(entity).insert((
                 init_textures,

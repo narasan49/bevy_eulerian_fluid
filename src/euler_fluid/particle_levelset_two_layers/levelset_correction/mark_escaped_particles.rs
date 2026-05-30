@@ -2,6 +2,7 @@ use crate::{
     particle_levelset_two_layers::plugin::PLSResources,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -40,7 +41,7 @@ pub(crate) struct MarkEscapedParticlesResource {
 }
 
 impl MarkEscapedParticlesResource {
-    pub fn new(pls_resources: &PLSResources, levelset_air: &Handle<Image>) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let positive_particles_count = pls_resources.positive_particles_count.clone();
         let positive_particles = pls_resources.positive_particles.clone();
         let negative_particles_count = pls_resources.negative_particles_count.clone();
@@ -51,7 +52,7 @@ impl MarkEscapedParticlesResource {
             positive_particles,
             negative_particles_count,
             negative_particles,
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air1.clone(),
         }
     }
 }

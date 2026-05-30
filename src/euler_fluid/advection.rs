@@ -15,6 +15,7 @@ use crate::{
     fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup},
     pipeline::{DispatchFluidPass, HasBindGroupLayout, Pipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 
 pub(crate) struct AdvectionPass;
@@ -39,6 +40,17 @@ pub(crate) struct AdvectionResource {
     pub u1: Handle<Image>,
     #[storage_texture(3, image_format = R32Float, access = WriteOnly)]
     pub v1: Handle<Image>,
+}
+
+impl FluidResource for AdvectionResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u0: resources.u0.clone(),
+            v0: resources.v0.clone(),
+            u1: resources.u1.clone(),
+            v1: resources.v1.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

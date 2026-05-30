@@ -84,6 +84,7 @@ use crate::{
     },
     pipeline::WORKGROUP_SIZE,
     plugin::FluidComputePassPlugin,
+    resource_management::FluidResources,
     settings::FluidSettings,
     texture::NewTexture,
 };
@@ -291,45 +292,39 @@ pub(crate) fn setup(
     images: &mut ResMut<Assets<Image>>,
     buffers: &mut ResMut<Assets<ShaderStorageBuffer>>,
     grid_size: UVec2,
-    u0: &Handle<Image>,
-    v0: &Handle<Image>,
-    levelset_air0: &Handle<Image>,
-    levelset_air1: &Handle<Image>,
-    grad_levelset_air: &Handle<Image>,
+    resources: &FluidResources,
 ) {
     let pls_resources = PLSResources::new(images, buffers, grid_size);
 
     let update_interface_band_mask =
-        UpdateInterfaceBandMaskResource::new(&pls_resources, levelset_air0);
-    let initialize_particles =
-        InitializeParticlesResource::new(&pls_resources, levelset_air0, grad_levelset_air);
+        UpdateInterfaceBandMaskResource::new(&pls_resources, resources);
+    let initialize_particles = InitializeParticlesResource::new(&pls_resources, resources);
 
-    let advect_particles = AdvectParticlesResource::new(&pls_resources, u0, v0, levelset_air0);
+    let advect_particles = AdvectParticlesResource::new(&pls_resources, resources);
 
     // level set correction
-    let mark_escaped_particles = MarkEscapedParticlesResource::new(&pls_resources, levelset_air1);
-    let reset_levelset_correction =
-        ResetLevelSetCorrectionResource::new(&pls_resources, levelset_air1);
+    let mark_escaped_particles = MarkEscapedParticlesResource::new(&pls_resources, resources);
+    let reset_levelset_correction = ResetLevelSetCorrectionResource::new(&pls_resources, resources);
     let accumulate_levelset_correction_plus =
-        AccumulateLevelSetCorrectionPlusResource::new(&pls_resources, levelset_air1);
+        AccumulateLevelSetCorrectionPlusResource::new(&pls_resources, resources);
     let accumulate_levelset_correction_minus =
-        AccumulateLevelSetCorrectionMinusResource::new(&pls_resources, levelset_air1);
-    let correct_levelset = CorrectLevelSetResource::new(&pls_resources, levelset_air1);
+        AccumulateLevelSetCorrectionMinusResource::new(&pls_resources, resources);
+    let correct_levelset = CorrectLevelSetResource::new(&pls_resources, resources);
 
     // level set correction second
     let mark_escaped_particles_second =
-        MarkEscapedParticlesSecondResource::new(&pls_resources, levelset_air0);
+        MarkEscapedParticlesSecondResource::new(&pls_resources, resources);
     let reset_levelset_correction_second =
-        ResetLevelSetCorrectionSecondResource::new(&pls_resources, levelset_air0);
+        ResetLevelSetCorrectionSecondResource::new(&pls_resources, resources);
     let accumulate_levelset_correction_plus_second =
-        AccumulateLevelSetCorrectionPlusSecondResource::new(&pls_resources, levelset_air0);
+        AccumulateLevelSetCorrectionPlusSecondResource::new(&pls_resources, resources);
     let accumulate_levelset_correction_minus_second =
-        AccumulateLevelSetCorrectionMinusSecondResource::new(&pls_resources, levelset_air0);
-    let correct_levelset_second = CorrectLevelSetSecondResource::new(&pls_resources, levelset_air0);
+        AccumulateLevelSetCorrectionMinusSecondResource::new(&pls_resources, resources);
+    let correct_levelset_second = CorrectLevelSetSecondResource::new(&pls_resources, resources);
     let uodate_positive_particle_radii =
-        UpdatePositiveParticleRadiiResource::new(&pls_resources, levelset_air0);
+        UpdatePositiveParticleRadiiResource::new(&pls_resources, resources);
     let uodate_negative_particle_radii =
-        UpdateNegativeParticleRadiiResource::new(&pls_resources, levelset_air0);
+        UpdateNegativeParticleRadiiResource::new(&pls_resources, resources);
 
     // reseed particles
     let count_positive_particles_in_cell =
@@ -344,9 +339,9 @@ pub(crate) fn setup(
     let sort_negative_particles = SortNegativeParticlesResource::new(&pls_resources, grid_size);
 
     let reseed_positive_particles =
-        ReseedPositiveParticlesResource::new(&pls_resources, levelset_air0, grid_size);
+        ReseedPositiveParticlesResource::new(&pls_resources, resources, grid_size);
     let reseed_negative_particles =
-        ReseedNegativeParticlesResource::new(&pls_resources, levelset_air0, grid_size);
+        ReseedNegativeParticlesResource::new(&pls_resources, resources, grid_size);
     let prefix_sum_alive_positive_particles =
         PrefixSumAlivePositiveParticlesResource::new(&pls_resources);
     let prefix_sum_alive_negative_particles =
@@ -355,10 +350,8 @@ pub(crate) fn setup(
     let delete_negative_particles = DeleteNegativeParticlesResource::new(&pls_resources);
     let update_positive_particles_count = UpdatePositiveParticlesCountResource::new(&pls_resources);
     let update_negative_particles_count = UpdateNegativeParticlesCountResource::new(&pls_resources);
-    let add_positive_particles =
-        AddPositiveParticlesResource::new(&pls_resources, levelset_air0, grad_levelset_air);
-    let add_negative_particles =
-        AddNegativeParticlesResource::new(&pls_resources, levelset_air0, grad_levelset_air);
+    let add_positive_particles = AddPositiveParticlesResource::new(&pls_resources, resources);
+    let add_negative_particles = AddNegativeParticlesResource::new(&pls_resources, resources);
 
     commands
         .entity(entity)

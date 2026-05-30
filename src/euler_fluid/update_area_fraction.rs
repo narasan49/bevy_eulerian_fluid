@@ -1,6 +1,7 @@
 use crate::{
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -31,11 +32,11 @@ pub(crate) struct UpdateAreaFractionResource {
     pub area_fraction_solid: Handle<Image>,
 }
 
-impl UpdateAreaFractionResource {
-    pub fn new(levelset_solid: &Handle<Image>, area_fraction_solid: &Handle<Image>) -> Self {
+impl FluidResource for UpdateAreaFractionResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
         Self {
-            levelset_solid: levelset_solid.clone(),
-            area_fraction_solid: area_fraction_solid.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+            area_fraction_solid: resources.area_fraction_solid.clone(),
         }
     }
 }

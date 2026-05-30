@@ -1,6 +1,7 @@
 use crate::{
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -31,11 +32,11 @@ pub(crate) struct LevelSetGradientResource {
     pub grad_levelset: Handle<Image>,
 }
 
-impl LevelSetGradientResource {
-    pub fn new(levelset_air: &Handle<Image>, grad_levelset: &Handle<Image>) -> Self {
+impl FluidResource for LevelSetGradientResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
         Self {
-            levelset_air: levelset_air.clone(),
-            grad_levelset: grad_levelset.clone(),
+            levelset_air: resources.levelset_air0.clone(),
+            grad_levelset: resources.grad_levelset_air.clone(),
         }
     }
 }

@@ -18,7 +18,7 @@ use bevy::{
     },
 };
 
-use crate::{pipeline::Pipeline, settings::FluidSettings};
+use crate::{pipeline::Pipeline, resource_management::FluidResource, settings::FluidSettings};
 
 pub(crate) struct JumpFloodingPlugin;
 
@@ -28,12 +28,29 @@ pub(crate) struct JumpFloodingInitializeSeedsResource {
     pub levelset_air1: Handle<Image>,
 }
 
+impl FluidResource for JumpFloodingInitializeSeedsResource {
+    fn new(resources: &crate::resource_management::FluidResources) -> Self {
+        Self {
+            levelset_air1: resources.levelset_air1.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct JumpFloodingCalculateSdfResource {
     #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
     pub levelset_air0: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
     pub levelset_air1: Handle<Image>,
+}
+
+impl FluidResource for JumpFloodingCalculateSdfResource {
+    fn new(resources: &crate::resource_management::FluidResources) -> Self {
+        Self {
+            levelset_air0: resources.levelset_air0.clone(),
+            levelset_air1: resources.levelset_air1.clone(),
+        }
+    }
 }
 
 #[derive(Component, Clone, ExtractComponent)]

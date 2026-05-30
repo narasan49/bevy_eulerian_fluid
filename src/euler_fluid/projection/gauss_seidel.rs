@@ -15,6 +15,7 @@ use crate::{
     fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup},
     pipeline::{is_pipeline_loaded, queue_compute_pipeline, HasBindGroupLayout},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 
 pub(crate) struct GaussSeidelPass;
@@ -57,18 +58,13 @@ pub(crate) struct GaussSeidelResource {
     resolution_scale: f32,
 }
 
-impl GaussSeidelResource {
-    pub fn new(
-        p: &Handle<Image>,
-        div: &Handle<Image>,
-        levelset_air: &Handle<Image>,
-        area_fraction_solid: &Handle<Image>,
-    ) -> Self {
+impl FluidResource for GaussSeidelResource {
+    fn new(resources: &crate::resource_management::FluidResources) -> Self {
         Self {
-            p: p.clone(),
-            div: div.clone(),
-            levelset_air: levelset_air.clone(),
-            area_fraction_solid: area_fraction_solid.clone(),
+            p: resources.p0.clone(),
+            div: resources.div.clone(),
+            levelset_air: resources.levelset_air0.clone(),
+            area_fraction_solid: resources.area_fraction_solid.clone(),
             weight: 1.9,
             resolution_scale: 1.0,
         }

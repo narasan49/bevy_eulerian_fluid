@@ -2,6 +2,7 @@ use crate::{
     particle_levelset_two_layers::plugin::PLSResources,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -44,12 +45,7 @@ pub(crate) struct AdvectParticlesResource {
 }
 
 impl AdvectParticlesResource {
-    pub fn new(
-        pls_resources: &PLSResources,
-        u0: &Handle<Image>,
-        v0: &Handle<Image>,
-        levelset_air: &Handle<Image>,
-    ) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let positive_particles_count = pls_resources.positive_particles_count.clone();
         let positive_particles = pls_resources.positive_particles.clone();
         let negative_particles_count = pls_resources.negative_particles_count.clone();
@@ -60,9 +56,9 @@ impl AdvectParticlesResource {
             positive_particles,
             negative_particles_count,
             negative_particles,
-            u0: u0.clone(),
-            v0: v0.clone(),
-            levelset_air: levelset_air.clone(),
+            u0: fluid_resources.u0.clone(),
+            v0: fluid_resources.v0.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
         }
     }
 }

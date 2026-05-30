@@ -2,6 +2,7 @@ use crate::{
     particle_levelset_two_layers::plugin::PLSResources,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -48,11 +49,11 @@ pub(crate) struct UpdatePositiveParticleRadiiResource {
 }
 
 impl UpdatePositiveParticleRadiiResource {
-    pub fn new(pls_resources: &PLSResources, levelset_air: &Handle<Image>) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let positive_particles_count = pls_resources.positive_particles_count.clone();
         let positive_particles = pls_resources.positive_particles.clone();
         Self {
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
             positive_particles_count,
             positive_particles,
         }
@@ -70,11 +71,11 @@ pub(crate) struct UpdateNegativeParticleRadiiResource {
 }
 
 impl UpdateNegativeParticleRadiiResource {
-    pub fn new(pls_resources: &PLSResources, levelset_air: &Handle<Image>) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let negative_particles_count = pls_resources.negative_particles_count.clone();
         let negative_particles = pls_resources.negative_particles.clone();
         Self {
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
             negative_particles_count,
             negative_particles,
         }

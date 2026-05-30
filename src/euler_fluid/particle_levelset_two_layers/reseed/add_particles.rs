@@ -12,6 +12,7 @@ use crate::{
     particle_levelset_two_layers::plugin::PLSResources,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 
 pub(super) struct AddPositiveParticlesPass;
@@ -55,11 +56,7 @@ pub(crate) struct AddPositiveParticlesResource {
 }
 
 impl AddPositiveParticlesResource {
-    pub fn new(
-        pls_resources: &PLSResources,
-        levelset_air: &Handle<Image>,
-        grad_levelset_air: &Handle<Image>,
-    ) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let positive_particles_to_be_added = pls_resources.positive_particles_to_be_added.clone();
         let positive_particles = pls_resources.positive_particles.clone();
         let positive_particles_count = pls_resources.positive_particles_count.clone();
@@ -68,8 +65,8 @@ impl AddPositiveParticlesResource {
             positive_particles_to_be_added,
             positive_particles,
             positive_particles_count,
-            levelset_air: levelset_air.clone(),
-            grad_levelset_air: grad_levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
+            grad_levelset_air: fluid_resources.grad_levelset_air.clone(),
             sign: 1.0,
         }
     }
@@ -92,11 +89,7 @@ pub(crate) struct AddNegativeParticlesResource {
 }
 
 impl AddNegativeParticlesResource {
-    pub fn new(
-        pls_resources: &PLSResources,
-        levelset_air: &Handle<Image>,
-        grad_levelset_air: &Handle<Image>,
-    ) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let negative_particles_to_be_added = pls_resources.negative_particles_to_be_added.clone();
         let negative_particles = pls_resources.negative_particles.clone();
         let negative_particles_count = pls_resources.negative_particles_count.clone();
@@ -105,8 +98,8 @@ impl AddNegativeParticlesResource {
             negative_particles_to_be_added,
             negative_particles,
             negative_particles_count,
-            levelset_air: levelset_air.clone(),
-            grad_levelset_air: grad_levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
+            grad_levelset_air: fluid_resources.grad_levelset_air.clone(),
             sign: -1.0,
         }
     }

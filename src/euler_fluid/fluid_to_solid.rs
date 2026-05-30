@@ -3,6 +3,7 @@ use crate::{
     obstacle::{SolidEntities, SolidObstaclesBuffer},
     physics_time::PhysicsFrameInfo,
     pipeline::Pipeline,
+    resource_management::FluidResource,
     settings::FluidGridLength,
 };
 use avian2d::prelude::{Forces, RigidBody, WriteRigidBodyForces};
@@ -45,6 +46,19 @@ pub(crate) struct SampleForcesResource {
     pub p0: Handle<Image>,
 }
 
+impl FluidResource for SampleForcesResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            bins_force_x: resources.bins_force_x.clone(),
+            bins_force_y: resources.bins_force_y.clone(),
+            bins_torque: resources.bins_torque.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+            solid_id: resources.solid_id.clone(),
+            p0: resources.p0.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct AccumulateForcesResource {
     #[storage(0, visibility(compute))]
@@ -55,6 +69,17 @@ pub(crate) struct AccumulateForcesResource {
     pub bins_torque: Handle<ShaderStorageBuffer>,
     #[storage(3, visibility(compute))]
     pub forces: Handle<ShaderStorageBuffer>,
+}
+
+impl FluidResource for AccumulateForcesResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            bins_force_x: resources.bins_force_x.clone(),
+            bins_force_y: resources.bins_force_y.clone(),
+            bins_torque: resources.bins_torque.clone(),
+            forces: resources.forces_to_solid_buffer.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Default, ShaderType)]
