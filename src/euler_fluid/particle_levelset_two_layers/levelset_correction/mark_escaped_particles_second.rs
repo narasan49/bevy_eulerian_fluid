@@ -4,6 +4,7 @@ use crate::{
         plugin::PLSResources,
     },
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::embedded_asset,
@@ -42,7 +43,7 @@ pub(crate) struct MarkEscapedParticlesSecondResource {
 }
 
 impl MarkEscapedParticlesSecondResource {
-    pub fn new(pls_resources: &PLSResources, levelset_air: &Handle<Image>) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let positive_particles_count = pls_resources.positive_particles_count.clone();
         let positive_particles = pls_resources.positive_particles.clone();
         let negative_particles_count = pls_resources.negative_particles_count.clone();
@@ -53,7 +54,7 @@ impl MarkEscapedParticlesSecondResource {
             positive_particles,
             negative_particles_count,
             negative_particles,
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
         }
     }
 }

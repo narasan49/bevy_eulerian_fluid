@@ -17,7 +17,7 @@ use bevy::{
 
 use crate::{
     fluid_uniform::uniform_bind_group_layout_desc, obstacle::SolidObstaclesBuffer,
-    pipeline::Pipeline,
+    pipeline::Pipeline, resource_management::FluidResource,
 };
 
 pub(crate) struct UpdateSolidPlugin;
@@ -32,6 +32,17 @@ pub(crate) struct UpdateSolidResource {
     pub levelset_solid: Handle<Image>,
     #[storage_texture(3, image_format = R32Sint, access = WriteOnly)]
     pub solid_id: Handle<Image>,
+}
+
+impl FluidResource for UpdateSolidResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u_solid: resources.u_solid.clone(),
+            v_solid: resources.v_solid.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+            solid_id: resources.solid_id.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

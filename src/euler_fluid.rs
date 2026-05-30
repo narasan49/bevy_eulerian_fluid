@@ -16,6 +16,7 @@ pub mod physics_time;
 pub mod projection;
 pub mod reinitialize_levelset;
 pub mod render_node;
+pub mod resource_management;
 pub mod settings;
 pub mod setup_components;
 pub mod solve_pressure;

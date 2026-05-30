@@ -15,7 +15,10 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
+use crate::{
+    fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline,
+    resource_management::FluidResource,
+};
 
 pub(crate) struct SolvePressurePlugin;
 
@@ -33,6 +36,18 @@ pub(crate) struct JacobiIterationResource {
     pub levelset_solid: Handle<Image>,
 }
 
+impl FluidResource for JacobiIterationResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            p0: resources.p0.clone(),
+            p1: resources.p1.clone(),
+            div: resources.div.clone(),
+            levelset_air0: resources.levelset_air0.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct JacobiIterationReverseResource {
     #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
@@ -45,6 +60,18 @@ pub(crate) struct JacobiIterationReverseResource {
     pub levelset_air0: Handle<Image>,
     #[storage_texture(4, image_format = R32Float, access = ReadOnly)]
     pub levelset_solid: Handle<Image>,
+}
+
+impl FluidResource for JacobiIterationReverseResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            p0: resources.p0.clone(),
+            p1: resources.p1.clone(),
+            div: resources.div.clone(),
+            levelset_air0: resources.levelset_air0.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

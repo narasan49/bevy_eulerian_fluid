@@ -1,6 +1,7 @@
 use crate::{
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -45,10 +46,13 @@ pub(crate) struct FastIterativeInitializeResource {
 }
 
 impl FastIterativeInitializeResource {
-    pub fn new(levelset_air: &Handle<Image>, phi: &Handle<Image>, labels: &Handle<Image>) -> Self {
+    pub fn new(
+        resources: &crate::resource_management::FluidResources,
+        labels: &Handle<Image>,
+    ) -> Self {
         Self {
-            levelset_air: levelset_air.clone(),
-            phi: phi.clone(),
+            levelset_air: resources.levelset_air1.clone(),
+            phi: resources.levelset_air0.clone(),
             labels: labels.clone(),
         }
     }
@@ -178,9 +182,9 @@ pub(crate) struct FastIterativeUpdateResource {
 }
 
 impl FastIterativeUpdateResource {
-    pub fn new(phi: &Handle<Image>, labels: &Handle<Image>) -> Self {
+    pub fn new(resources: &FluidResources, labels: &Handle<Image>) -> Self {
         Self {
-            phi: phi.clone(),
+            phi: resources.levelset_air0.clone(),
             labels: labels.clone(),
         }
     }
