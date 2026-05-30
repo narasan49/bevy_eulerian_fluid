@@ -21,7 +21,7 @@ use crate::{
         SampleForcesResource, MAX_SOLIDS,
     },
     fluid_uniform::SimulationUniform,
-    initialize::InitializeGridCenterResource,
+    initialize::{InitializeGridCenterResource, InitializeGridEdgeResource},
     levelset_gradient::LevelSetGradientResource,
     obstacle::SolidEntities,
     particle_levelset_two_layers,
@@ -119,6 +119,13 @@ pub(crate) fn watch_fluid_component(
             v_solid: v_solid.clone(),
             levelset_air: levelset_air0.clone(),
             levelset_solid: levelset_solid.clone(),
+        };
+
+        let initialize_resource = InitializeGridEdgeResource {
+            u0: u0.clone(),
+            u1: u1.clone(),
+            v0: v0.clone(),
+            v1: v1.clone(),
         };
 
         let initialize_grid_center_resource = InitializeGridCenterResource {
@@ -255,6 +262,7 @@ pub(crate) fn watch_fluid_component(
             .entity(entity)
             .insert((
                 fluid_textures,
+                initialize_resource,
                 initialize_grid_center_resource,
                 update_solid_resource,
                 update_area_fraction_resource,

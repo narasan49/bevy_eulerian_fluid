@@ -25,6 +25,7 @@ use crate::{
     fluid_uniform::SimulationUniformBindGroup,
     initialize::{
         InitializeGridCenterBindGroup, InitializeGridCenterPipeline, InitializeGridCenterResource,
+        InitializeGridEdgeBindGroup, InitializeGridEdgePipeline,
     },
     levelset_gradient::{LevelSetGradientBindGroup, LevelSetGradientPipeline},
     particle_levelset_two_layers::{
@@ -37,7 +38,8 @@ use crate::{
     },
     physics_time::{CurrentPhysicsStepNumberRenderWorld, PhysicsFrameInfo},
     pipeline::{
-        workgroup_size_center, workgroup_size_x, workgroup_size_y, DispatchFluidPass, Pipeline,
+        workgroup_size_center, workgroup_size_x, workgroup_size_xy, workgroup_size_y,
+        DispatchFluidPass, Pipeline,
     },
     projection::{
         self, gauss_seidel::GaussSeidelPipeline, multi_grid::MultiGridPipelines,
@@ -65,6 +67,7 @@ enum State {
 #[derive(QueryData)]
 struct FluidBindGroupsQueryData {
     initialize_center_bind_group: &'static InitializeGridCenterBindGroup,
+    initialize_edge_bind_group: &'static InitializeGridEdgeBindGroup,
     update_solid_bind_groups: &'static UpdateSolidBindGroups,
     update_area_fraction_bind_group: &'static UpdateAreaFractionBindGroup,
     advection_bind_groups: &'static AdvectionBindGroup,
@@ -120,6 +123,7 @@ impl render_graph::Node for EulerFluidNode {
         match self.state {
             State::Loading => {
                 let initialize_center_pipeline = world.resource::<InitializeGridCenterPipeline>();
+                let initialize_edge_pipeline = world.resource::<InitializeGridEdgePipeline>();
 
                 let update_solid_pipeline = world.resource::<UpdateSolidPipeline>();
                 let update_area_fraction_pipeline = world.resource::<UpdateAreaFractionPipeline>();
@@ -136,6 +140,7 @@ impl render_graph::Node for EulerFluidNode {
                 let update_fluid_source_pipeline = world.resource::<UpdateFluidSourcePipeline>();
 
                 if initialize_center_pipeline.pipeline.is_ready(pipeline_cache)
+                    && initialize_edge_pipeline.pipeline.is_ready(pipeline_cache)
                     && update_solid_pipeline.is_pipeline_state_ready(pipeline_cache)
                     && update_area_fraction_pipeline
                         .pipeline
@@ -222,6 +227,7 @@ impl render_graph::Node for EulerFluidNode {
                                 },
                             );
                             let num_workgroups_center = workgroup_size_center(fluid_settings.size);
+                            let num_workgroups_xy = workgroup_size_xy(fluid_settings.size);
 
                             let initialize_center_pipeline =
                                 world.resource::<InitializeGridCenterPipeline>();
@@ -230,6 +236,15 @@ impl render_graph::Node for EulerFluidNode {
                                 &mut pass,
                                 &bind_groups.initialize_center_bind_group.bind_group,
                                 num_workgroups_center,
+                            );
+
+                            let initialize_edge_pipeline =
+                                world.resource::<InitializeGridEdgePipeline>();
+                            initialize_edge_pipeline.pipeline.dispatch(
+                                pipeline_cache,
+                                &mut pass,
+                                &bind_groups.initialize_edge_bind_group.bind_group,
+                                num_workgroups_xy,
                             );
 
                             if let Some(pls_init_bind_groups) = pls_init_bind_groups {
