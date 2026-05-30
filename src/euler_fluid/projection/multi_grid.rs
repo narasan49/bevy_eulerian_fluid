@@ -15,12 +15,13 @@ use bevy::{
         Render, RenderApp, RenderSystems,
     },
 };
+use bevy_eulerian_fluid_common::texture::new_texture_storage_2d;
 
 use crate::{
     fluid_uniform::{uniform_bind_group_layout_desc, SimulationUniformBindGroup},
     pipeline::{is_pipeline_loaded, WORKGROUP_SIZE},
     projection::gauss_seidel::{GaussSeidelConfig, GaussSeidelPipeline},
-    texture::NewTexture,
+    resource_management::FluidResources,
 };
 
 pub(crate) struct MultiGridPassPlugin;
@@ -86,10 +87,7 @@ pub(crate) fn setup_multigrid_resources(
     commands: &mut Commands,
     entity: Entity,
     grid_size: UVec2,
-    div: &Handle<Image>,
-    p: &Handle<Image>,
-    levelset_air: &Handle<Image>,
-    area_fraction_solid: &Handle<Image>,
+    resources: &FluidResources,
     images: &mut ResMut<Assets<Image>>,
 ) {
     let num_levels = ((grid_size.min_element() as f32).log2() as usize)
@@ -101,20 +99,43 @@ pub(crate) fn setup_multigrid_resources(
     let mut levelset = Vec::<Handle<Image>>::with_capacity(num_levels);
     let mut area_fraction_solids = Vec::<Handle<Image>>::with_capacity(num_levels);
     let mut r = Vec::<Handle<Image>>::with_capacity(num_levels);
-    x.push(p.clone());
-    b.push(div.clone());
-    levelset.push(levelset_air.clone());
-    area_fraction_solids.push(area_fraction_solid.clone());
-    r.push(images.new_texture_storage(grid_size, TextureFormat::R32Float));
+    x.push(resources.p0.clone());
+    b.push(resources.div.clone());
+    levelset.push(resources.levelset_air0.clone());
+    area_fraction_solids.push(resources.area_fraction_solid.clone());
+    r.push(new_texture_storage_2d(
+        images,
+        grid_size,
+        TextureFormat::R32Float,
+    ));
     let mut grid_size = grid_size;
     for _ in 1..num_levels {
         grid_size /= 2;
-        x.push(images.new_texture_storage(grid_size, TextureFormat::R32Float));
-        b.push(images.new_texture_storage(grid_size, TextureFormat::R32Float));
-        levelset.push(images.new_texture_storage(grid_size, TextureFormat::R32Float));
-        area_fraction_solids
-            .push(images.new_texture_storage(grid_size, TextureFormat::Rgba32Float));
-        r.push(images.new_texture_storage(grid_size, TextureFormat::R32Float));
+        x.push(new_texture_storage_2d(
+            images,
+            grid_size,
+            TextureFormat::R32Float,
+        ));
+        b.push(new_texture_storage_2d(
+            images,
+            grid_size,
+            TextureFormat::R32Float,
+        ));
+        levelset.push(new_texture_storage_2d(
+            images,
+            grid_size,
+            TextureFormat::R32Float,
+        ));
+        area_fraction_solids.push(new_texture_storage_2d(
+            images,
+            grid_size,
+            TextureFormat::Rgba32Float,
+        ));
+        r.push(new_texture_storage_2d(
+            images,
+            grid_size,
+            TextureFormat::R32Float,
+        ));
     }
 
     let resources = MultiGridResources {

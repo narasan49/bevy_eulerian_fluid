@@ -2,6 +2,7 @@ use crate::{
     particle_levelset_two_layers::plugin::PLSResources,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::{embedded_asset, embedded_path},
@@ -58,7 +59,7 @@ pub(crate) struct ReseedPositiveParticlesResource {
 impl ReseedPositiveParticlesResource {
     pub fn new(
         pls_rersources: &PLSResources,
-        levelset_air: &Handle<Image>,
+        fluid_resources: &FluidResources,
         grid_size: UVec2,
     ) -> Self {
         let sorted_particles = pls_rersources.sorted_positive_particles.clone();
@@ -73,7 +74,7 @@ impl ReseedPositiveParticlesResource {
             num_perticles_in_cell,
             particles_to_be_added,
             cell_offsets,
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
             grid_size,
         }
     }
@@ -100,7 +101,7 @@ pub(crate) struct ReseedNegativeParticlesResource {
 impl ReseedNegativeParticlesResource {
     pub fn new(
         pls_resources: &PLSResources,
-        levelset_air: &Handle<Image>,
+        fluid_resources: &FluidResources,
         grid_size: UVec2,
     ) -> Self {
         let sorted_particles = pls_resources.sorted_negative_particles.clone();
@@ -115,7 +116,7 @@ impl ReseedNegativeParticlesResource {
             num_perticles_in_cell,
             particles_to_be_added,
             cell_offsets,
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
             grid_size,
         }
     }

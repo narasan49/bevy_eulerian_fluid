@@ -11,6 +11,7 @@ use crate::{
     particle_levelset_two_layers::plugin::PLSResources,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 
 pub(super) struct UpdateInterfaceBandMaskPass;
@@ -34,12 +35,10 @@ pub(crate) struct UpdateInterfaceBandMaskResource {
 }
 
 impl UpdateInterfaceBandMaskResource {
-    pub fn new(pls_resources: &PLSResources, levelset_air: &Handle<Image>) -> Self {
-        let interface_band_mask = pls_resources.interface_band_mask.clone();
-
+    pub fn new(pls_resources: &PLSResources, resources: &FluidResources) -> Self {
         Self {
-            levelset_air: levelset_air.clone(),
-            interface_band_mask,
+            levelset_air: resources.levelset_air0.clone(),
+            interface_band_mask: pls_resources.interface_band_mask.clone(),
         }
     }
 }

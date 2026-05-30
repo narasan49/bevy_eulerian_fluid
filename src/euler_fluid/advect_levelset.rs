@@ -15,6 +15,7 @@ use crate::{
     fluid_uniform::uniform_bind_group_layout_desc,
     pipeline::{HasBindGroupLayout, SingleComputePipeline},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 
 pub(crate) struct AdvectLevelSetPass;
@@ -39,6 +40,17 @@ pub(crate) struct AdvectLevelSetResource {
     pub levelset_air0: Handle<Image>,
     #[storage_texture(3, image_format = R32Float, access = WriteOnly)]
     pub levelset_air1: Handle<Image>,
+}
+
+impl FluidResource for AdvectLevelSetResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u0: resources.u0.clone(),
+            v0: resources.v0.clone(),
+            levelset_air0: resources.levelset_air0.clone(),
+            levelset_air1: resources.levelset_air1.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

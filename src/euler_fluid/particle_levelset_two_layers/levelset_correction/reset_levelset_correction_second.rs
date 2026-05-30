@@ -4,6 +4,7 @@ use crate::{
         plugin::PLSResources,
     },
     plugin::FluidComputePass,
+    resource_management::FluidResources,
 };
 use bevy::{
     asset::embedded_asset,
@@ -38,12 +39,12 @@ pub(crate) struct ResetLevelSetCorrectionSecondResource {
 }
 
 impl ResetLevelSetCorrectionSecondResource {
-    pub fn new(pls_resources: &PLSResources, levelset_air: &Handle<Image>) -> Self {
+    pub fn new(pls_resources: &PLSResources, fluid_resources: &FluidResources) -> Self {
         let phi_plus = pls_resources.phi_plus.clone();
         let phi_minus = pls_resources.phi_minus.clone();
 
         Self {
-            levelset_air: levelset_air.clone(),
+            levelset_air: fluid_resources.levelset_air0.clone(),
             phi_plus,
             phi_minus,
         }

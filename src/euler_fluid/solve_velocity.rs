@@ -15,7 +15,10 @@ use bevy::{
     },
 };
 
-use crate::{fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline};
+use crate::{
+    fluid_uniform::uniform_bind_group_layout_desc, pipeline::Pipeline,
+    resource_management::FluidResource,
+};
 
 pub(crate) struct SolveVelocityPlugin;
 
@@ -35,6 +38,19 @@ pub(crate) struct SolveUResource {
     pub area_fraction_solid: Handle<Image>,
 }
 
+impl FluidResource for SolveUResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u0: resources.u0.clone(),
+            u1: resources.u1.clone(),
+            u_solid: resources.u_solid.clone(),
+            p0: resources.p0.clone(),
+            levelset_air0: resources.levelset_air0.clone(),
+            area_fraction_solid: resources.area_fraction_solid.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub(crate) struct SolveVResource {
     #[storage_texture(0, image_format = R32Float, access = WriteOnly)]
@@ -49,6 +65,19 @@ pub(crate) struct SolveVResource {
     pub levelset_air0: Handle<Image>,
     #[storage_texture(5, image_format = Rgba32Float, access = ReadOnly)]
     pub area_fraction_solid: Handle<Image>,
+}
+
+impl FluidResource for SolveVResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            v0: resources.v0.clone(),
+            v1: resources.v1.clone(),
+            v_solid: resources.v_solid.clone(),
+            p0: resources.p0.clone(),
+            levelset_air0: resources.levelset_air0.clone(),
+            area_fraction_solid: resources.area_fraction_solid.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

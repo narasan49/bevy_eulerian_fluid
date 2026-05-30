@@ -17,6 +17,7 @@ use crate::{
     fluid_source::fluid_source_uniform::{FluidSourceUniform, FluidSourceUniformBindGroup},
     pipeline::{is_pipeline_loaded, queue_compute_pipeline, HasBindGroupLayout},
     plugin::FluidComputePass,
+    resource_management::FluidResource,
 };
 
 pub(crate) struct UpdateFluidSourcePass;
@@ -138,12 +139,12 @@ pub(crate) struct UpdateFluidSourceResource {
     pub v: Handle<Image>,
 }
 
-impl UpdateFluidSourceResource {
-    pub fn new(levelset_air: &Handle<Image>, u: &Handle<Image>, v: &Handle<Image>) -> Self {
+impl FluidResource for UpdateFluidSourceResource {
+    fn new(resources: &crate::resource_management::FluidResources) -> Self {
         Self {
-            levelset_air: levelset_air.clone(),
-            u: u.clone(),
-            v: v.clone(),
+            levelset_air: resources.levelset_air1.clone(),
+            u: resources.u0.clone(),
+            v: resources.v0.clone(),
         }
     }
 }

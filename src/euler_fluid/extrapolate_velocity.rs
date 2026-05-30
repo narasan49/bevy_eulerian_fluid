@@ -15,7 +15,7 @@ use bevy::{
     },
 };
 
-use crate::pipeline::Pipeline;
+use crate::{pipeline::Pipeline, resource_management::FluidResource};
 
 pub(crate) struct ExtrapolateVelocityPlugin;
 
@@ -27,12 +27,30 @@ pub struct InitializeUValid {
     pub levelset_air: Handle<Image>,
 }
 
+impl FluidResource for InitializeUValid {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            is_u_valid: resources.in_is_u_valid.clone(),
+            levelset_air: resources.levelset_air0.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct InitializeVValid {
     #[storage_texture(0, image_format = R32Sint, access = WriteOnly)]
     pub is_v_valid: Handle<Image>,
     #[storage_texture(1, image_format = R32Float, access = ReadOnly)]
     pub levelset_air: Handle<Image>,
+}
+
+impl FluidResource for InitializeVValid {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            is_v_valid: resources.in_is_v_valid.clone(),
+            levelset_air: resources.levelset_air0.clone(),
+        }
+    }
 }
 
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
@@ -45,6 +63,16 @@ pub struct ExtrapolateUResource {
     pub out_is_u_valid: Handle<Image>,
 }
 
+impl FluidResource for ExtrapolateUResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            u0: resources.u0.clone(),
+            in_is_u_valid: resources.in_is_u_valid.clone(),
+            out_is_u_valid: resources.out_is_u_valid.clone(),
+        }
+    }
+}
+
 #[derive(Component, Clone, ExtractComponent, AsBindGroup)]
 pub struct ExtrapolateVResource {
     #[storage_texture(0, image_format = R32Float, access = ReadWrite)]
@@ -53,6 +81,16 @@ pub struct ExtrapolateVResource {
     pub in_is_v_valid: Handle<Image>,
     #[storage_texture(2, image_format = R32Sint, access = WriteOnly)]
     pub out_is_v_valid: Handle<Image>,
+}
+
+impl FluidResource for ExtrapolateVResource {
+    fn new(resources: &super::resource_management::FluidResources) -> Self {
+        Self {
+            v0: resources.v0.clone(),
+            in_is_v_valid: resources.in_is_v_valid.clone(),
+            out_is_v_valid: resources.out_is_v_valid.clone(),
+        }
+    }
 }
 
 #[derive(Resource)]

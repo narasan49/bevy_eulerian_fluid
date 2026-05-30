@@ -6,6 +6,7 @@ use crate::{
     fluid_status::FluidStatus,
     projection::ProjectionMethod,
     reinitialize_levelset::ReinitializeMethod,
+    resource_management::FluidResources,
 };
 
 /// Setting for fluid simulation. Spawning a FluidSettings automatically inserts the components required to the simulation and the simulation will start.
@@ -144,4 +145,17 @@ pub struct FluidTextures {
     pub v_solid: Handle<Image>,
     pub levelset_air: Handle<Image>,
     pub levelset_solid: Handle<Image>,
+}
+
+impl FluidTextures {
+    pub(crate) fn new(resources: &FluidResources) -> Self {
+        Self {
+            u: resources.u0.clone(),
+            v: resources.v0.clone(),
+            u_solid: resources.u_solid.clone(),
+            v_solid: resources.v_solid.clone(),
+            levelset_air: resources.levelset_air0.clone(),
+            levelset_solid: resources.levelset_solid.clone(),
+        }
+    }
 }
